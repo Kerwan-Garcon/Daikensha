@@ -4614,6 +4614,17 @@
    "pt-BR": "Ative primeiro a assinatura do Claude nas Configurações.",
    "ru": "Сначала включите подписку Claude в настройках.",
    "id": "Aktifkan dulu langganan Claude di Pengaturan."
+  },
+  "Claude Code stopped unexpectedly.": {
+   "zh-Hans": "Claude Code 意外停止了。",
+   "hi": "Claude Code अचानक बंद हो गया।",
+   "es": "Claude Code se detuvo inesperadamente.",
+   "ar": "توقف Claude Code بشكل غير متوقع.",
+   "fr": "Claude Code s'est arrêté de façon inattendue.",
+   "bn": "Claude Code অপ্রত্যাশিতভাবে বন্ধ হয়ে গেছে।",
+   "pt-BR": "O Claude Code parou inesperadamente.",
+   "ru": "Claude Code неожиданно остановился.",
+   "id": "Claude Code berhenti secara tak terduga."
   }
  }
 }

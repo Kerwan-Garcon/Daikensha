@@ -2,7 +2,9 @@
 // pills, music, the user's own data, opening an app, preparing an email (the
 // mail app opens with it filled in; the user sends it) and Anthropic's web
 // search. The conversation lives in memory only and is forgotten 90 s after
-// the last turn. Port of ClaudeVoiceBrain.swift.
+// the last turn. Port of ClaudeVoiceBrain.swift. With the Claude subscription
+// on, the same prompt and tools go through the user's Claude Code instead
+// (claude_cli/voice.rs), and never to the API.
 
 use std::time::{Duration, Instant};
 
@@ -15,11 +17,15 @@ const FORGET_AFTER: Duration = Duration::from_secs(90);
 pub struct Brain {
     messages: Vec<Value>,
     last: Instant,
+    /// The subscription's kept `claude` process and its conversation.
+    cli: crate::claude_cli::voice::Voice,
+    /// Why the last turn had no answer, when the subscription says (shown in the pill).
+    error: Option<String>,
 }
 
 impl Default for Brain {
     fn default() -> Self {
-        Self { messages: Vec::new(), last: Instant::now() }
+        Self { messages: Vec::new(), last: Instant::now(), cli: Default::default(), error: None }
     }
 }
 
@@ -29,6 +35,14 @@ pub struct Reply {
 }
 
 fn tools() -> Vec<Value> {
+    let mut tools = coucou_tools();
+    tools.push(json!({ "type": "web_search_20250305", "name": "web_search", "max_uses": 3 }));
+    tools
+}
+
+/// Coucou's own five tools, which run_tool carries out. The subscription's MCP
+/// server (claude_cli/mcp.rs) serves exactly these, with the same schemas.
+pub(crate) fn coucou_tools() -> Vec<Value> {
     vec![
         json!({
             "name": "pills",
@@ -78,7 +92,6 @@ fn tools() -> Vec<Value> {
                 "required": ["recipient", "subject", "body"]
             }
         }),
-        json!({ "type": "web_search_20250305", "name": "web_search", "max_uses": 3 }),
     ]
 }
 
@@ -103,7 +116,48 @@ Pills: {pills}",
 }
 
 impl Brain {
+    /// « OK Coucou » was heard: with the subscription, start Claude Code now
+    /// so it is ready when the question comes.
+    pub fn warm(&mut self, app: &AppHandle) {
+        if !crate::claude_cli::enabled() {
+            return;
+        }
+        let system = system_prompt(&super::ask_island(app, "pills", json!({ "action": "list" })).unwrap_or_default());
+        let tools = crate::claude_cli::voice::runner(app);
+        if let Err(f) = tauri::async_runtime::block_on(self.cli.warm(&tools, &system)) {
+            crate::log::line(format!("voice: Claude Code did not start: {f:?}"));
+        }
+    }
+
+    /// Called on every tick of the voice loop: lets the subscription's process
+    /// go once the conversation is forgotten.
+    pub fn idle(&mut self) {
+        self.cli.idle();
+    }
+
+    /// Why the last turn had no answer, if the subscription said.
+    pub fn take_error(&mut self) -> Option<String> {
+        self.error.take()
+    }
+
+    fn respond_cli(&mut self, app: &AppHandle, transcript: &str) -> Option<Reply> {
+        let pills = super::ask_island(app, "pills", json!({ "action": "list" })).unwrap_or_default();
+        let system = system_prompt(&pills);
+        let tools = crate::claude_cli::voice::runner(app);
+        match tauri::async_runtime::block_on(self.cli.ask(&tools, &system, transcript)) {
+            Ok((text, acted)) => Some(Reply { text: spoken_text(&text), acted }),
+            Err(f) => {
+                crate::log::line(format!("voice: Claude Code turn failed: {f:?}"));
+                self.error = Some(f.message());
+                None
+            }
+        }
+    }
+
     pub fn respond(&mut self, app: &AppHandle, transcript: &str) -> Option<Reply> {
+        if crate::claude_cli::enabled() {
+            return self.respond_cli(app, transcript);
+        }
         if self.last.elapsed() > FORGET_AFTER {
             self.messages.clear();
         }
@@ -223,6 +277,20 @@ mod tests {
         for tool in tools() {
             assert!(tool["name"].is_string());
             assert!(tool.get("input_schema").is_some() || tool["type"] == "web_search_20250305");
+        }
+    }
+
+    #[test]
+    fn the_mcp_server_serves_exactly_coucous_five_tools() {
+        let names: Vec<String> = coucou_tools().iter().map(|t| t["name"].as_str().unwrap().to_string()).collect();
+        assert_eq!(names, ["pills", "music", "service_info", "open_app", "prepare_email"]);
+        // And the guard's list names each of them, and web search, and nothing else.
+        let mut expected: Vec<String> = names.iter().map(|n| format!("mcp__coucou__{n}")).collect();
+        expected.insert(0, "WebSearch".into());
+        assert_eq!(crate::claude_cli::Mode::Voice.tools(), expected.as_slice());
+        let served = crate::claude_cli::mcp::tool_definitions(&coucou_tools());
+        for (mcp, api) in served.iter().zip(coucou_tools()) {
+            assert_eq!(mcp["inputSchema"], api["input_schema"]);
         }
     }
 }

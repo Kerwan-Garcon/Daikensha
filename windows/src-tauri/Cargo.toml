@@ -85,6 +85,9 @@ windows = { version = "0.61", features = [
   "Win32_UI_WindowsAndMessaging",
   # Flow dictation's keyboard hook.
   "Win32_System_LibraryLoader",
+  # The Claude subscription mode: the claude processes live in a Job Object
+  # (claude_cli/job.rs), killed with it and capped in memory.
+  "Win32_System_JobObjects",
 ] }
 # The clipboard for Flow dictation, kept out of the clipboard history. MIT/Apache-2.0.
 arboard = { version = "3.6", default-features = false }

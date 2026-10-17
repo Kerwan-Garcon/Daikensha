@@ -9,7 +9,14 @@ mod tool_guard;
 const GUARD: &str = "'/x/coucou-hook' --tool-guard text";
 
 fn request(mode: Mode) -> Request<'static> {
-    Request { mode, model: "sonnet", system: "You are Mochi.", resume: None, persist: false, guard: GUARD }
+    Request { mode, model: "sonnet", system: "You are Mochi.", resume: None, persist: false, guard: GUARD, mcp_config: None }
+}
+
+const VOICE_GUARD: &str = "'/x/coucou-hook' --tool-guard voice";
+const MCP: &str = r#"{"mcpServers":{"coucou":{"type":"http","url":"http://127.0.0.1:40123/mcp","headers":{"Authorization":"Bearer ${COUCOU_MCP_TOKEN}"}}}}"#;
+
+fn voice() -> Request<'static> {
+    Request { mode: Mode::Voice, model: "haiku", system: "You are Coucou.", resume: None, persist: false, guard: VOICE_GUARD, mcp_config: Some(MCP) }
 }
 
 fn value<'a>(args: &'a [String], flag: &str) -> Option<&'a str> {
@@ -164,6 +171,75 @@ fn models_are_the_cli_aliases() {
     assert_eq!(models().len(), 3);
 }
 
+// ── The voice ─────────────────────────────────────────────────────────────────
+
+#[test]
+fn the_voice_gets_web_search_and_coucous_tools_only() {
+    let args = build_args(&voice()).unwrap();
+    assert_eq!(value(&args, "--tools"), Some("WebSearch"));
+    assert_eq!(
+        value(&args, "--allowedTools"),
+        Some("WebSearch,mcp__coucou__pills,mcp__coucou__music,mcp__coucou__service_info,mcp__coucou__open_app,mcp__coucou__prepare_email")
+    );
+    for tool in ["Bash", "Edit", "Write", "Read", "WebFetch", "Agent", "Task"] {
+        assert!(value(&args, "--disallowedTools").unwrap().split(',').any(|t| t == tool), "{tool}");
+    }
+    assert_eq!(value(&args, "--mcp-config"), Some(MCP));
+    assert_eq!(settings_of(&args)["permissions"]["allow"].as_array().unwrap().len(), 6);
+    assert_eq!(settings_of(&args)["hooks"]["PreToolUse"][0]["hooks"][0]["command"], VOICE_GUARD);
+    // No token anywhere in the command line.
+    assert!(!args.iter().any(|a| a.contains("Bearer ") && !a.contains("${COUCOU_MCP_TOKEN}")));
+}
+
+#[test]
+fn only_coucous_own_server_with_its_token_from_the_environment_is_allowed() {
+    let bad = [
+        r#"{"mcpServers":{"coucou":{"type":"http","url":"http://127.0.0.1:40123/mcp","headers":{"Authorization":"Bearer 0123abcd"}}}}"#,
+        r#"{"mcpServers":{"coucou":{"type":"http","url":"http://evil.example:40123/mcp","headers":{"Authorization":"Bearer ${COUCOU_MCP_TOKEN}"}}}}"#,
+        r#"{"mcpServers":{"coucou":{"type":"http","url":"https://127.0.0.1:40123/mcp","headers":{"Authorization":"Bearer ${COUCOU_MCP_TOKEN}"}}}}"#,
+        r#"{"mcpServers":{"coucou":{"type":"stdio","command":"bash","url":"http://127.0.0.1:40123/mcp","headers":{"Authorization":"Bearer ${COUCOU_MCP_TOKEN}"}}}}"#,
+        r#"{"mcpServers":{"other":{"type":"http","url":"http://127.0.0.1:40123/mcp","headers":{"Authorization":"Bearer ${COUCOU_MCP_TOKEN}"}}}}"#,
+        r#"{"mcpServers":{"coucou":{"type":"http","url":"http://127.0.0.1:40123/mcp","headers":{"Authorization":"Bearer ${COUCOU_MCP_TOKEN}"}},"fs":{"type":"stdio","command":"npx"}}}"#,
+        r#"{"mcpServers":{}}"#,
+        "{",
+    ];
+    for config in bad {
+        let r = Request { mcp_config: Some(config), ..voice() };
+        assert!(build_args(&r).is_err(), "{config}");
+    }
+    // The voice without its server, and a text mode with one, are refused too.
+    assert!(build_args(&Request { mcp_config: None, ..voice() }).is_err());
+    for mode in [Mode::Chat, Mode::Phone, Mode::Complete] {
+        assert!(build_args(&Request { mcp_config: Some(MCP), ..request(mode) }).is_err(), "{mode:?}");
+    }
+    // A guard for the wrong mode, or a tool beyond the voice's.
+    assert!(build_args(&Request { guard: GUARD, ..voice() }).is_err());
+    let args = build_args(&voice()).unwrap();
+    assert!(check(&with(&args, "--tools", "WebSearch,Bash"), Mode::Voice).is_err());
+    assert!(check(&with(&args, "--allowedTools", "WebSearch,mcp__coucou__send_email"), Mode::Voice).is_err());
+    assert!(check(&with(&args, "--disallowedTools", "Edit"), Mode::Voice).is_err());
+}
+
+#[test]
+fn the_voice_stream_allows_its_tools_and_kills_on_any_other() {
+    let mut s = Stream::new(Mode::Voice);
+    let init = init(json!(["WebSearch", "mcp__coucou__pills", "mcp__coucou__music"]), json!([{"name":"coucou","status":"connected"}]), "none");
+    assert_eq!(s.feed(&init), Ok(false));
+    let call = |name: &str| line(json!({"type":"assistant","message":{"content":[{"type":"tool_use","name":name,"input":{}}]}}));
+    assert_eq!(s.feed(&call("mcp__coucou__pills")), Ok(false));
+    assert_eq!(s.feed(&call("WebSearch")), Ok(false));
+    assert_eq!(s.feed(&call("Bash")), Err(Violation::Tool("Bash".into())));
+    let mut s = Stream::new(Mode::Voice);
+    assert_eq!(s.feed(&call("mcp__other__x")), Err(Violation::Tool("mcp__other__x".into())));
+    let mut s = Stream::new(Mode::Voice);
+    let other_server = init_line_with_server("filesystem");
+    assert_eq!(s.feed(&other_server), Err(Violation::McpServer("filesystem".into())));
+}
+
+fn init_line_with_server(name: &str) -> String {
+    line(json!({"type":"system","subtype":"init","tools":[],"mcp_servers":[{"name":name}],"apiKeySource":"none"}))
+}
+
 // ── Layer 4: the stream ───────────────────────────────────────────────────────
 
 fn init(tools: Value, mcp: Value, key: &str) -> String {
@@ -261,32 +337,39 @@ fn layers(args: &[String], mode: Mode) -> [bool; 4] {
 
 #[test]
 fn with_any_one_layer_down_the_other_three_still_block_bash() {
-    let good = build_args(&request(Mode::Chat)).unwrap();
-    assert_eq!(layers(&good, Mode::Chat), [false, true, true, true], "a good line passes layer 1, the rest block");
+    for (mode, good) in [(Mode::Chat, build_args(&request(Mode::Chat)).unwrap()), (Mode::Voice, build_args(&voice()).unwrap())] {
+        one_layer_down(mode, &good);
+    }
+}
+
+fn one_layer_down(mode: Mode, good: &[String]) {
+    let good = good.to_vec();
+    let tools_with_bash = format!("{},Bash", value(&good, "--tools").unwrap());
+    assert_eq!(layers(&good, mode), [false, true, true, true], "a good line passes layer 1, the rest block");
 
     // Layer 1 down: the line asks for Bash and nobody checks it.
-    let l1_down = with(&good, "--tools", "Bash");
-    let [_, l2, l3, l4] = layers(&l1_down, Mode::Chat);
+    let l1_down = with(&good, "--tools", &tools_with_bash);
+    let [_, l2, l3, l4] = layers(&l1_down, mode);
     assert!(l2 && l3 && l4);
 
     // Layer 2 down: no deny rules.
     let mut inline = settings_of(&good);
     inline["permissions"]["deny"] = json!([]);
-    let l2_down = with(&with(&good, "--settings", &inline.to_string()), "--tools", "Bash");
-    let [l1, _, l3, l4] = layers(&l2_down, Mode::Chat);
+    let l2_down = with(&with(&good, "--settings", &inline.to_string()), "--tools", &tools_with_bash);
+    let [l1, _, l3, l4] = layers(&l2_down, mode);
     assert!(l1 && l3 && l4);
 
     // Layer 3 down: no guard hook.
     let mut inline = settings_of(&good);
     inline["hooks"] = json!({});
-    let l3_down = with(&with(&good, "--settings", &inline.to_string()), "--tools", "Bash");
-    let [l1, l2, _, l4] = layers(&l3_down, Mode::Chat);
+    let l3_down = with(&with(&good, "--settings", &inline.to_string()), "--tools", &tools_with_bash);
+    let [l1, l2, _, l4] = layers(&l3_down, mode);
     assert!(l1 && l2 && l4);
 
     // Layer 4 down: the stream is not read. The line itself is refused, the
     // rules deny Bash and the guard denies it.
-    let l4_down = with(&good, "--tools", "Bash");
-    let [l1, l2, l3, _] = layers(&l4_down, Mode::Chat);
+    let l4_down = with(&good, "--tools", &tools_with_bash);
+    let [l1, l2, l3, _] = layers(&l4_down, mode);
     assert!(l1 && l2 && l3);
 }
 
@@ -346,7 +429,7 @@ fn earlier_turns_ride_along_as_text() {
 fn live_turn_and_injection() {
     let rt = tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap();
     let guard = guard_command(Mode::Complete);
-    let req = Request { mode: Mode::Complete, model: "haiku", system: "Answer in one short sentence.", resume: None, persist: false, guard: &guard };
+    let req = Request { mode: Mode::Complete, model: "haiku", system: "Answer in one short sentence.", resume: None, persist: false, guard: &guard, mcp_config: None };
     let answer = rt.block_on(run(&req, vec![json!({"type":"text","text":"Say hello."})], Duration::from_secs(90)));
     let answer = answer.unwrap_or_else(|f| panic!("{}", f.message()));
     assert!(!answer.text.is_empty());

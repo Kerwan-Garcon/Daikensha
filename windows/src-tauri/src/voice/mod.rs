@@ -137,6 +137,7 @@ fn run(app: AppHandle, stop: Arc<AtomicBool>) {
             Err(mpsc::RecvTimeoutError::Disconnected) => break,
         };
         let now = Instant::now();
+        brain.idle();
         // The pill's last answer goes away after a while.
         if hide_at.is_some_and(|t| now > t) {
             hide_at = None;
@@ -169,6 +170,7 @@ fn run(app: AppHandle, stop: Arc<AtomicBool>) {
                     Some(rest) => {
                         crate::log::line("voice: « OK Coucou » heard");
                         hide_at = None;
+                        brain.warm(&app);
                         if crate::flow::text::word_count(&rest) >= 2 {
                             Some(rest)
                         } else {
@@ -198,7 +200,11 @@ fn run(app: AppHandle, stop: Arc<AtomicBool>) {
                 show(&app, Some(VoiceView {
                     phase: "speaking".into(),
                     heard: question,
-                    answer: if done { "✓".into() } else { crate::i18n::t("Coucou couldn't answer: check your Claude key in Notch → Chat.") },
+                    answer: if done {
+                        "✓".into()
+                    } else {
+                        brain.take_error().unwrap_or_else(|| crate::i18n::t("Coucou couldn't answer: check your Claude key in Notch → Chat."))
+                    },
                 }));
                 hide_at = Some(Instant::now() + Duration::from_secs(5));
                 continue;

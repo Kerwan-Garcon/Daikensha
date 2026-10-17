@@ -38,6 +38,10 @@ use crate::{agents, platform, settings};
 #[path = "../../hook/src/tool_lists.rs"]
 mod tool_lists;
 
+mod job;
+pub mod mcp;
+pub mod voice;
+
 /// The chat provider id of the subscription (chat.rs, the island's providers.ts).
 pub const PROVIDER: &str = "anthropic-subscription";
 
@@ -124,12 +128,18 @@ pub enum Mode {
     Phone,
     /// One question, one answer: dictation clean-up, the Notetaker's summary.
     Complete,
+    /// « OK Coucou »: web search and the voice's five tools, through the
+    /// local MCP server (mcp.rs), in a process kept for the conversation.
+    Voice,
 }
 
 impl Mode {
     /// The guard's name for the mode's list.
     fn guard(self) -> &'static str {
-        "text"
+        match self {
+            Mode::Voice => "voice",
+            _ => "text",
+        }
     }
 
     pub fn tools(self) -> &'static [&'static str] {
@@ -143,6 +153,7 @@ impl Mode {
             Mode::Chat => "chat",
             Mode::Phone => "phone",
             Mode::Complete => "oneshot",
+            Mode::Voice => "voice",
         }
     }
 }
@@ -157,6 +168,8 @@ pub struct Request<'a> {
     pub persist: bool,
     /// The PreToolUse hook command (`coucou-hook --tool-guard <mode>`).
     pub guard: &'a str,
+    /// The voice's `--mcp-config` (mcp::Server::config), for `Mode::Voice` only.
+    pub mcp_config: Option<&'a str>,
 }
 
 /// The inline settings of layers 2 and 3.
@@ -202,8 +215,17 @@ pub fn build_args(r: &Request) -> Result<Vec<String>, String> {
     .collect();
     args.extend(["--model".into(), model_alias(r.model).to_string()]);
     args.extend(["--system-prompt".into(), r.system.to_string()]);
-    args.extend(["--tools".into(), r.mode.tools().join(",")]);
+    // --tools takes Claude Code's own tools; the MCP ones come with the server.
+    let builtin: Vec<&str> = r.mode.tools().iter().copied().filter(|t| !t.starts_with("mcp__")).collect();
+    args.extend(["--tools".into(), builtin.join(",")]);
+    if !r.mode.tools().is_empty() {
+        args.extend(["--allowedTools".into(), r.mode.tools().join(",")]);
+    }
+    args.extend(["--disallowedTools".into(), DENY.join(",")]);
     args.extend(["--settings".into(), inline_settings(r.mode, r.guard)]);
+    if let Some(config) = r.mcp_config {
+        args.extend(["--mcp-config".into(), config.to_string()]);
+    }
     if let Some(id) = r.resume {
         args.extend(["--resume".into(), id.to_string()]);
     }
@@ -263,8 +285,16 @@ pub fn check(args: &[String], mode: Mode) -> Result<(), String> {
             return refuse("bad session id".into());
         }
     }
-    if args.iter().any(|a| a == "--mcp-config") {
-        return refuse("no MCP server is allowed in this mode".into());
+    let denied_flag: Vec<&str> = value("--disallowedTools").map(|v| v.split(',').collect()).unwrap_or_default();
+    if DENY.iter().any(|d| !denied_flag.contains(d)) {
+        return refuse("--disallowedTools is incomplete".into());
+    }
+    match (mode, value("--mcp-config")) {
+        (Mode::Voice, Some(config)) => check_mcp_config(config).map_err(|why| format!("claude command refused: {why}"))?,
+        (Mode::Voice, None) => return refuse("the voice needs Coucou's MCP server".into()),
+        (_, Some(_)) => return refuse("no MCP server is allowed in this mode".into()),
+        (_, None) if args.iter().any(|a| a == "--mcp-config") => return refuse("an empty --mcp-config".into()),
+        _ => {}
     }
     let Some(inline) = value("--settings").and_then(|s| serde_json::from_str::<Value>(s).ok()) else {
         return refuse("the inline settings are missing".into());
@@ -287,6 +317,27 @@ pub fn check(args: &[String], mode: Mode) -> Result<(), String> {
     let guard = inline.pointer("/hooks/PreToolUse/0/hooks/0/command").and_then(Value::as_str).unwrap_or("");
     if !guard.contains(&format!("--tool-guard {}", mode.guard())) {
         return refuse("the tool guard is missing".into());
+    }
+    Ok(())
+}
+
+/// The only MCP config allowed: Coucou's own server on this machine, its token
+/// read from the environment, never written in the command line.
+fn check_mcp_config(config: &str) -> Result<(), String> {
+    let v: Value = serde_json::from_str(config).map_err(|_| "unreadable --mcp-config".to_string())?;
+    let servers = v.get("mcpServers").and_then(Value::as_object).ok_or("no mcpServers")?;
+    if servers.len() != 1 {
+        return Err("only Coucou's MCP server is allowed".into());
+    }
+    let server = servers.get(mcp::NAME).ok_or("only Coucou's MCP server is allowed")?;
+    let url = server.get("url").and_then(Value::as_str).unwrap_or_default();
+    let port = url.strip_prefix("http://127.0.0.1:").and_then(|r| r.strip_suffix("/mcp")).unwrap_or_default();
+    if server.get("type").and_then(Value::as_str) != Some("http") || port.parse::<u16>().is_err() {
+        return Err("the MCP server must be Coucou's, on 127.0.0.1".into());
+    }
+    let expected = json!({ "Authorization": format!("Bearer ${{{}}}", mcp::TOKEN_VAR) });
+    if server.get("headers") != Some(&expected) || server.as_object().is_some_and(|o| o.keys().any(|k| !matches!(k.as_str(), "type" | "url" | "headers"))) {
+        return Err("the MCP token must come from the environment".into());
     }
     Ok(())
 }
@@ -345,11 +396,20 @@ pub fn locate() -> Option<Launcher> {
 /// A `claude` command ready to start: arguments as a list (no shell), no
 /// console window, the scrubbed environment, its own folder, killed with us.
 fn command(launcher: &Launcher, args: &[String], cwd: &Path) -> tokio::process::Command {
+    command_with(launcher, args, cwd, None)
+}
+
+/// The same, with the MCP server's token in the child's environment (voice).
+fn command_with(launcher: &Launcher, args: &[String], cwd: &Path, token: Option<&str>) -> tokio::process::Command {
     let mut std_cmd = std::process::Command::new(&launcher.program);
     std_cmd.args(&launcher.pre).args(args).current_dir(cwd);
     for var in SCRUBBED_ENV {
         std_cmd.env_remove(var);
     }
+    match token {
+        Some(token) => std_cmd.env(mcp::TOKEN_VAR, token),
+        None => std_cmd.env_remove(mcp::TOKEN_VAR),
+    };
     platform::no_console(&mut std_cmd);
     let mut cmd = tokio::process::Command::from(std_cmd);
     cmd.stdin(Stdio::piped()).stdout(Stdio::piped()).stderr(Stdio::piped()).kill_on_drop(true);
@@ -491,6 +551,8 @@ pub enum Failure {
     ResumeLost,
     /// Layer 4 killed the child: the tool or server it reported.
     Blocked(String),
+    /// A kept process (the voice's) ended before its answer.
+    Exited,
     Other(String),
 }
 
@@ -522,6 +584,7 @@ impl Failure {
             Failure::ApiKey => t("Claude Code is signed in with an API key, not a subscription. Run claude and sign in with your Claude account."),
             Failure::Timeout => t("Claude Code did not answer in time."),
             Failure::ResumeLost => t("Claude Code lost this conversation. Start a new chat."),
+            Failure::Exited => t("Claude Code stopped unexpectedly."),
             Failure::Blocked(tool) => tf("Stopped: Claude Code tried a tool Coucou does not allow ({tool}).", &[("tool", tool)]),
             Failure::Other(text) => text.clone(),
         }
@@ -565,6 +628,7 @@ pub async fn run(req: &Request<'_>, content: Vec<Value>, timeout: Duration) -> R
         std::io::ErrorKind::NotFound => Failure::NotInstalled,
         _ => Failure::Other(tf("Claude Code: {error}", &[("error", &e.to_string())])),
     })?;
+    let _job = contain(&child);
 
     let message = json!({
         "type": "user",
@@ -653,6 +717,15 @@ fn blocked(v: Violation) -> Failure {
     }
 }
 
+/// The child in a Job Object (Windows), or why not in the log.
+fn contain(child: &tokio::process::Child) -> Option<job::Job> {
+    let job = job::contain(child);
+    if job.is_none() {
+        crate::log::line("claude-cli: could not put claude in a job object");
+    }
+    job
+}
+
 fn guard_command(mode: Mode) -> String {
     agents::relay_command(agents::Shell::Sh, &format!("--tool-guard {}", mode.guard()))
 }
@@ -669,7 +742,7 @@ pub async fn complete(model: &str, system: &str, user: &str, timeout: Duration) 
         return Err(not_enabled());
     }
     let guard = guard_command(Mode::Complete);
-    let req = Request { mode: Mode::Complete, model, system, resume: None, persist: false, guard: &guard };
+    let req = Request { mode: Mode::Complete, model, system, resume: None, persist: false, guard: &guard, mcp_config: None };
     let content = vec![json!({ "type": "text", "text": user })];
     run(&req, content, timeout).await.map(|a| a.text).map_err(|f| f.message())
 }
@@ -697,7 +770,7 @@ pub async fn chat(chat: &Chat, model: &str, query: String, context: Option<ChatC
             }
         }
         content.extend(blocks.iter().cloned());
-        let req = Request { mode, model, system: &system, resume: resume.as_deref(), persist: true, guard: &guard };
+        let req = Request { mode, model, system: &system, resume: resume.as_deref(), persist: true, guard: &guard, mcp_config: None };
         match run(&req, content, CHAT_TIMEOUT).await {
             Err(Failure::ResumeLost) if resume.is_some() => resume = None,
             other => break other.map_err(|f| f.message())?,
@@ -713,7 +786,7 @@ pub async fn chat(chat: &Chat, model: &str, query: String, context: Option<ChatC
 }
 
 /// Earlier plain turns as one block of text, or None when there are none.
-fn transcript(history: &[Value]) -> Option<String> {
+pub(crate) fn transcript(history: &[Value]) -> Option<String> {
     let lines: Vec<String> = history
         .iter()
         .filter_map(|m| {
