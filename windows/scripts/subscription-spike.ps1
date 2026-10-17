@@ -215,13 +215,16 @@ if ($j) {
 $coldMs = $r.Ms
 
 # The same through stdin, with every flag Phase 1 plans to pass.
-$phase1 = @('-p', '--output-format', 'stream-json', '--verbose', '--model', 'haiku', '--strict-mcp-config',
+$phase1 = @('-p', '--output-format', 'stream-json', '--verbose', '--restricted', '--model', 'haiku', '--strict-mcp-config',
     '--system-prompt', $System, '--disable-slash-commands', '--permission-mode', 'dontAsk',
-    '--permission-prompts', 'none', '--tools', '', '--no-session-persistence')
+    '--permission-prompts', 'none', '--setting-sources', '', '--tools', '',
+    '--disallowedTools', 'Bash,PowerShell,Edit,MultiEdit,Write,Read,NotebookEdit,Glob,Grep,WebFetch,Agent,Task,Skill',
+    '--settings', '{"permissions":{"allow":[],"deny":["Bash","Read"],"defaultMode":"dontAsk","disableBypassPermissionsMode":"disable"}}',
+    '--no-session-persistence')
 $r = Invoke-Claude $phase1 -Stdin 'Dis bonjour'
 $s = Summarize-Stream @(Read-Lines $r.Out)
 Say ''
-Say '**Phase 1 flag set, prompt on stdin** (`-p --output-format stream-json --verbose --model haiku --strict-mcp-config --system-prompt … --disable-slash-commands --permission-mode dontAsk --permission-prompts none --tools ""`)'
+Say '**The flags Coucou uses, prompt on stdin** (`-p --output-format stream-json --verbose --restricted --model haiku --strict-mcp-config --system-prompt … --disable-slash-commands --permission-mode dontAsk --permission-prompts none --setting-sources "" --tools "" --disallowedTools … --settings {…}`)'
 Say ''
 Say "- Exit $($r.Exit), $($r.Ms) ms, result: $(Excerpt $s.Result.result 120), is_error: $($s.Result.is_error)"
 if ($s.Init) { Say "- init tools: [$($s.Init.tools -join ', ')], mcp_servers: $(Excerpt ($s.Init.mcp_servers | ConvertTo-Json -Compress) 200), permissionMode: $($s.Init.permissionMode), apiKeySource: $($s.Init.apiKeySource)" }
