@@ -11,7 +11,8 @@ import { DEFAULT_SETTINGS } from "../src/core/state.ts";
 const settings = (over = {}) => ({ ...DEFAULT_SETTINGS, ...over });
 
 test("the ids and key names match the Rust side and the Mac", () => {
-  assert.deepEqual(PROVIDERS.map((p) => p.id), ["anthropic", "google", "openai", "openrouter", "ollama", "lmstudio", "custom"]);
+  assert.deepEqual(PROVIDERS.map((p) => p.id), ["anthropic", "anthropic-subscription", "google", "openai", "openrouter", "ollama", "lmstudio", "custom"]);
+  assert.equal(providerDef("anthropic-subscription").key, null);
   assert.equal(providerDef("google").key, "google-api-key");
   assert.equal(providerDef("openai").key, "openai-api-key");
   assert.equal(providerDef("openrouter").key, "openrouter-api-key");
@@ -39,6 +40,14 @@ test("model servers show in the picker once connected, or while in use", () => {
   assert.deepEqual(ids(settings()), ["anthropic", "google", "openai", "openrouter"]);
   assert.deepEqual(ids(settings({ ollamaUrl: "http://127.0.0.1:11434" })), ["anthropic", "google", "openai", "openrouter", "ollama"]);
   assert.deepEqual(ids(settings({ chatProvider: "custom" })), ["anthropic", "google", "openai", "openrouter", "custom"]);
+});
+
+test("the Claude subscription shows only once it is on in Settings, or while in use", () => {
+  const ids = (s) => visibleProviders(s).map((p) => p.id);
+  assert.deepEqual(ids(settings({ claudeSubscription: true })), ["anthropic", "anthropic-subscription", "google", "openai", "openrouter"]);
+  assert.ok(ids(settings({ chatProvider: "anthropic-subscription" })).includes("anthropic-subscription"));
+  assert.equal(activeModel(settings({ chatProvider: "anthropic-subscription" })), "sonnet");
+  assert.equal(activeModel(withModel(settings({ chatProvider: "anthropic-subscription" }), "anthropic-subscription", "haiku")), "haiku");
 });
 
 test("the saved model is kept when offered, else a sensible one is picked", () => {

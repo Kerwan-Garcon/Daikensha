@@ -1,8 +1,9 @@
 // The clean-up of Flow dictation: Claude removes the "um", the repeats and the
 // corrections said on the way ("at 3, no, at 4" → "at 4"), fixes the
 // punctuation and writes in the app's style. Only when it is turned on in the
-// Coucou window and a Claude key is set; the text (never the audio) then goes
-// to Anthropic with that key, and nowhere else. Any problem (no network, slow
+// Coucou window and a Claude key is set (or the Claude subscription is on, and
+// the text goes through the user's Claude Code instead); the text (never the
+// audio) then goes to Anthropic, and nowhere else. Any problem (no network, slow
 // answer, odd reply) and the words are pasted as they were heard. Port of
 // FlowCleanup.swift.
 
@@ -14,9 +15,12 @@ use super::text;
 pub const MODEL: &str = "claude-haiku-4-5";
 /// Past this, the words are pasted as heard rather than keeping you waiting.
 const TIMEOUT: Duration = Duration::from_secs(4);
+/// Claude Code takes about 3 s just to start, so the subscription gets longer.
+const SUBSCRIPTION_TIMEOUT: Duration = Duration::from_secs(10);
 
+/// Claude can clean up: a key, or the subscription (which then is the only way).
 pub fn has_key() -> bool {
-    crate::secrets::present(crate::claude::KEY)
+    crate::claude_cli::enabled() || crate::secrets::present(crate::claude::KEY)
 }
 
 pub async fn clean(raw: &str, style: Style, app: Option<&str>, words: &[String]) -> String {
@@ -24,7 +28,8 @@ pub async fn clean(raw: &str, style: Style, app: Option<&str>, words: &[String])
         return raw.to_string();
     }
     let user = format!("<dictation>\n{raw}\n</dictation>");
-    match crate::claude::complete(MODEL, &system(style, app, words), &user, 2048, TIMEOUT).await {
+    let timeout = if crate::claude_cli::enabled() { SUBSCRIPTION_TIMEOUT } else { TIMEOUT };
+    match crate::claude::complete(MODEL, &system(style, app, words), &user, 2048, timeout).await {
         Ok(reply) => {
             let cleaned = reply.replace("<dictation>", "").replace("</dictation>", "").trim().to_string();
             if plausible(&cleaned, raw) {

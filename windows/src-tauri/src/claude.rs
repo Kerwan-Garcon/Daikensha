@@ -67,7 +67,7 @@ fn models_endpoint(messages: &Url) -> Url {
 
 /// The user's content blocks for one turn. File / window context rides along
 /// with the first message only, exactly like ClaudeService.chat().
-fn user_content(first: bool, context: Option<&ChatContext>, query: &str) -> Vec<Value> {
+pub(crate) fn user_content(first: bool, context: Option<&ChatContext>, query: &str) -> Vec<Value> {
     let mut content: Vec<Value> = Vec::new();
     if first {
         match context {
@@ -161,8 +161,13 @@ pub async fn send(
 }
 
 /// One question, one answer, no history: the dictation clean-up and the notes
-/// of a call. The text of the answer, or why there is none.
+/// of a call. The text of the answer, or why there is none. With the Claude
+/// subscription on it goes through Claude Code instead, and only there: never
+/// to the API behind the user's back.
 pub async fn complete(model: &str, system: &str, user: &str, max_tokens: u32, timeout: Duration) -> Result<String, String> {
+    if crate::claude_cli::enabled() {
+        return crate::claude_cli::complete(model, system, user, timeout).await;
+    }
     let key = secrets::get(KEY).ok_or_else(|| t("API key missing. Open settings."))?;
     let endpoint = endpoint()?;
     let body = json!({

@@ -4,7 +4,7 @@
 // island's settings are drawn here, one Notch page at a time.
 
 import "./settings.css";
-import { Bridge, onEvent, type HookPreview, type HookStatus, type ShortcutsReport } from "../core/bridge";
+import { Bridge, onEvent, type ClaudeCliStatus, type HookPreview, type HookStatus, type ShortcutsReport } from "../core/bridge";
 import { CUSTOM_SERVER_KEY, providerDef, urlExposure } from "../core/providers";
 import {
   ISLAND_SHORTCUTS, SHORTCUTS, SHORTCUT_TEXT, activeKeys, displayKeys, duplicates, effective,
@@ -397,6 +397,42 @@ function apiSection(hasKey: boolean): HTMLElement {
 
   clearBtn.style.display = hasKey ? "" : "none";
 
+  // How Claude is reached: the key above, or the user's own Claude Code signed in
+  // to their subscription (claude_cli.rs). The API stays the default.
+  const account = h("select", {}) as HTMLSelectElement;
+  account.append(
+    h("option", { value: "api", text: t("API key") }),
+    h("option", { value: "subscription", text: t("Claude subscription") }),
+  );
+  account.value = settings.claudeSubscription ? "subscription" : "api";
+  const cliState = h("span", { class: "hint" });
+  const checkBtn = h("button", { text: t("Check") });
+  const cliHint = h("div", {
+    class: "hint",
+    text: t("The chat, the dictation clean-up and the notes then go through Claude Code and count against your plan's limits."),
+  });
+  const cliRow = h("div", { class: "row" }, h("label", { text: "Claude Code" }), cliState, checkBtn);
+  const showCli = (on: boolean) => {
+    cliRow.style.display = on ? "" : "none";
+    cliHint.style.display = on ? "" : "none";
+  };
+  async function checkCli() {
+    cliState.textContent = t("Checking Claude Code…");
+    cliState.textContent = cliStatusText(await Bridge.claudeCliStatus());
+  }
+  account.addEventListener("change", () => {
+    const on = account.value === "subscription";
+    settings.claudeSubscription = on;
+    if (on && settings.chatProvider === "anthropic") settings.chatProvider = "anthropic-subscription";
+    if (!on && settings.chatProvider === "anthropic-subscription") settings.chatProvider = "anthropic";
+    void save();
+    showCli(on);
+    if (on) void checkCli();
+  });
+  checkBtn.addEventListener("click", () => void checkCli());
+  showCli(settings.claudeSubscription);
+  if (settings.claudeSubscription) void checkCli();
+
   return h(
     "section",
     {},
@@ -404,8 +440,28 @@ function apiSection(hasKey: boolean): HTMLElement {
     state,
     h("div", { class: "row" }, h("label", { text: t("API key") }), field, saveBtn, clearBtn),
     h("div", { class: "row" }, h("label", { text: t("Model") }), model),
+    h("div", { class: "row" }, h("label", { text: t("Account") }), account),
+    cliRow,
+    cliHint,
     feedback,
   );
+}
+
+/** One line on what Claude Code says, for Settings → Claude. */
+function cliStatusText(status: ClaudeCliStatus | null): string {
+  if (!status) return t("Could not ask Claude Code.");
+  switch (status.state) {
+    case "notInstalled":
+      return t("Claude Code is not installed.");
+    case "notLoggedIn":
+      return t("Not signed in. Run claude in a terminal and sign in with your Claude account.");
+    case "subscription":
+      return t("Signed in to your Claude subscription · {version}", { version: status.version });
+    case "apiKey":
+      return t("Claude Code uses an API key, not a subscription · {version}", { version: status.version });
+    case "other":
+      return t("Claude Code is signed in another way ({method}) · {version}", { method: status.method, version: status.version });
+  }
 }
 
 // ── Active pills section ──────────────────────────────────────────────────────

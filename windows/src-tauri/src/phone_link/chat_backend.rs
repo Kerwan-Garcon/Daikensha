@@ -19,7 +19,7 @@ use crate::{chat, claude, log, openai_compat, secrets, Shared};
 pub const MAX_ALLOWED: usize = 50;
 const MAX_MODEL_CHARS: usize = 200;
 
-const PROVIDERS: [&str; 7] = ["anthropic", "google", "openai", "openrouter", "ollama", "lmstudio", "custom"];
+const PROVIDERS: [&str; 8] = ["anthropic", "anthropic-subscription", "google", "openai", "openrouter", "ollama", "lmstudio", "custom"];
 
 pub struct AppChat {
     app: AppHandle,
@@ -53,6 +53,10 @@ impl ChatBackend for AppChat {
                     return Err(ChatFail::NoKey);
                 }
             }
+            // The subscription stands in for a key: off in Settings, none.
+            if provider == chat::ANTHROPIC_SUBSCRIPTION && !crate::claude_cli::enabled() {
+                return Err(ChatFail::NoKey);
+            }
             let result = chat::send_for_phone(&settings, &chat, provider, model, text, |so_far| {
                 let _ = deltas.send(so_far);
             })
@@ -71,6 +75,9 @@ impl ChatBackend for AppChat {
 
     fn reset(&self) {
         self.chat.reset();
+        if crate::claude_cli::enabled() {
+            crate::claude_cli::forget(crate::claude_cli::Mode::Phone);
+        }
     }
 }
 
@@ -91,6 +98,7 @@ fn key_name(provider: &str) -> Option<&'static str> {
 pub fn provider_name(provider: &str) -> String {
     match provider {
         "anthropic" => "Anthropic".into(),
+        "anthropic-subscription" => "Claude subscription".into(),
         "google" => "Google".into(),
         "openai" => "OpenAI".into(),
         "openrouter" => "OpenRouter".into(),
