@@ -20,7 +20,9 @@ tauri-plugin-autostart = "2"
 tauri-plugin-global-shortcut = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = { version = "1", features = ["preserve_order"] }
-tokio = { version = "1", features = ["net", "io-util", "sync", "time", "rt", "macros"] }
+# "process": the Claude subscription mode runs the user's own `claude` CLI as a
+# child process (claude_cli.rs). A feature of tokio, already here; no new crate.
+tokio = { version = "1", features = ["net", "io-util", "sync", "time", "rt", "macros", "process"] }
 reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
 # Phone link (phone_link/): a TLS server for the Android app, off unless the user
 # turns it on. Every crate here is justified in docs/ANDROID_LINK.md.
@@ -83,6 +85,9 @@ windows = { version = "0.61", features = [
   "Win32_UI_WindowsAndMessaging",
   # Flow dictation's keyboard hook.
   "Win32_System_LibraryLoader",
+  # The Claude subscription mode: the claude processes live in a Job Object
+  # (claude_cli/job.rs), killed with it and capped in memory.
+  "Win32_System_JobObjects",
 ] }
 # The clipboard for Flow dictation, kept out of the clipboard history. MIT/Apache-2.0.
 arboard = { version = "3.6", default-features = false }

@@ -21,7 +21,9 @@
 //! read from the JSON; `--agent` is absent for Claude Code), or
 //! `coucou-hook --statusline` as Claude Code's status line command (plan usage,
 //! see statusline.rs): it passes the plan limits on and runs the status line the
-//! user had before, so that keeps working.
+//! user had before, so that keeps working. `coucou-hook --tool-guard <mode>` is
+//! something else again: the fail-closed PreToolUse hook of the `claude`
+//! processes Coucou starts itself (tool_guard.rs).
 
 use std::io::{Read, Write};
 use std::sync::mpsc;
@@ -47,6 +49,8 @@ const DROPPED_FIELDS: &[&str] = &["tool_response", "tool_output", "transcript_pa
 const MAX_FIELD_LEN: usize = 2_000;
 
 mod statusline;
+mod tool_guard;
+mod tool_lists;
 
 /// The live diff needs the whole text of a file edit, once it has happened:
 /// PostToolUse of these tools keeps its edit strings far longer than the rest.
@@ -102,6 +106,10 @@ struct Event {
 fn main() {
     if std::env::args().skip(1).any(|a| a == "--statusline") {
         statusline::run();
+    }
+    let argv: Vec<String> = std::env::args().skip(1).collect();
+    if let Some(i) = argv.iter().position(|a| a == "--tool-guard") {
+        tool_guard::run(argv.get(i + 1).map(String::as_str));
     }
     let args = args();
     let mut raw = Vec::new();

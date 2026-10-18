@@ -4,6 +4,7 @@ mod agent_hooks;
 mod agents;
 mod chat;
 mod claude;
+mod claude_cli;
 mod codex_plan;
 mod config_file;
 mod desktop;
@@ -89,7 +90,7 @@ fn boot(app: AppHandle, shared: State<Shared>) -> BootInfo {
 
 #[tauri::command]
 fn save_settings(app: AppHandle, shared: State<Shared>, settings: Settings) {
-    let (screen_changed, autostart_changed, shortcuts_changed) = {
+    let (screen_changed, autostart_changed, shortcuts_changed, account_changed) = {
         let mut current = shared.settings.lock().unwrap();
         let screen_changed = current.screen != settings.screen;
         let autostart_changed = current.autostart != settings.autostart;
@@ -108,8 +109,10 @@ fn save_settings(app: AppHandle, shared: State<Shared>, settings: Settings) {
         settings.phone_relay = current.phone_relay;
         settings.phone_relay_url = current.phone_relay_url.clone();
         settings.phone_chat_models = current.phone_chat_models.clone();
+        claude_cli::set_enabled(settings.claude_subscription);
+        let account_changed = current.claude_subscription != settings.claude_subscription;
         *current = settings;
-        (screen_changed, autostart_changed, shortcuts_changed)
+        (screen_changed, autostart_changed, shortcuts_changed, account_changed)
     };
     let settings = shared.settings.lock().unwrap().clone();
     if let Err(err) = settings::save(&settings) {
@@ -130,6 +133,10 @@ fn save_settings(app: AppHandle, shared: State<Shared>, settings: Settings) {
     spotify::sync(&app, &settings.active_integrations);
     if shortcuts_changed {
         shortcuts::apply(&app, &settings.shortcuts);
+    }
+    // API key ⇄ subscription: « OK Coucou » may now be able to listen, or not any more.
+    if account_changed {
+        voice::sync(&app);
     }
     if i18n::set_picked(&settings.language) {
         language_changed(&app);
@@ -518,6 +525,16 @@ fn local_set_key(url: String, key: String) -> Result<(), String> {
 #[tauri::command]
 fn chat_reset(chat: State<Chat>) {
     chat.reset();
+    if claude_cli::enabled() {
+        claude_cli::forget(claude_cli::Mode::Chat);
+    }
+}
+
+/// Settings → Claude → Check: is Claude Code installed, and signed in to a
+/// subscription? Only what Settings shows comes back, nothing about the account.
+#[tauri::command]
+async fn claude_cli_status() -> claude_cli::CliStatus {
+    claude_cli::status().await
 }
 
 /// Copies a dropped file into the inbox and reports its name back.
@@ -702,6 +719,7 @@ pub fn run() {
     platform::prepare_environment();
     let loaded = settings::load();
     i18n::set_picked(&loaded.language);
+    claude_cli::set_enabled(loaded.claude_subscription);
     let gate = Arc::new(PollGate::new());
 
     let mut builder = tauri::Builder::default()
@@ -733,6 +751,7 @@ pub fn run() {
             boot,
             save_settings,
             set_system_languages,
+            claude_cli_status,
             set_collapsed,
             set_island_rect,
             focus_window,
@@ -873,6 +892,11 @@ pub fn run() {
             desktop::setup(&handle);
             flow::setup(&handle);
             notes::setup(&handle);
+            // What the subscription chats left on disk last time (claude_cli.rs).
+            if claude_cli::enabled() {
+                claude_cli::forget(claude_cli::Mode::Chat);
+                claude_cli::forget(claude_cli::Mode::Phone);
+            }
 
             if let Some(win) = island::window(&handle) {
                 // Where Tauri takes the drop itself (Linux), its paths are the

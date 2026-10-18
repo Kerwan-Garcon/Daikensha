@@ -1,6 +1,7 @@
 // The chat, whoever answers it: the conversation, the system prompt, and which
 // provider a turn goes to. Each provider's own wire format lives in its module:
-// claude.rs (Anthropic), openai_compat.rs (OpenAI, Google AI, OpenRouter) and
+// claude.rs (Anthropic), claude_cli.rs (Claude through the user's own Claude
+// Code and subscription), openai_compat.rs (OpenAI, Google AI, OpenRouter) and
 // local_chat.rs (Ollama, LM Studio, any OpenAI-compatible server).
 //
 // API keys never leave the credential store and file bytes never cross the IPC
@@ -13,9 +14,10 @@ use serde_json::{json, Value};
 use tauri::AppHandle;
 
 use crate::settings::Settings;
-use crate::{claude, local_chat, openai_compat, secrets};
+use crate::{claude, claude_cli, local_chat, openai_compat, secrets};
 
 pub const ANTHROPIC: &str = "anthropic";
+pub const ANTHROPIC_SUBSCRIPTION: &str = claude_cli::PROVIDER;
 
 #[derive(Debug, Clone, Deserialize)]
 #[serde(tag = "kind", rename_all = "camelCase")]
@@ -59,6 +61,9 @@ struct Conversation {
     native: Vec<Value>,
     /// `{"role", "content": text}` turns, the same whoever answered.
     plain: Vec<Value>,
+    /// The Claude Code session that holds this conversation, while the
+    /// subscription answered every turn since it began (claude_cli.rs).
+    cli_session: Option<String>,
 }
 
 /// What a provider needs to build one turn.
@@ -69,6 +74,8 @@ pub struct Turn {
     pub first: bool,
     /// The earlier turns, in this provider's format.
     pub history: Vec<Value>,
+    /// The Claude Code session to resume, for the subscription.
+    pub cli_session: Option<String>,
 }
 
 impl Chat {
@@ -85,12 +92,15 @@ impl Chat {
         if c.owner.as_deref() != Some(provider) {
             c.native = c.plain.clone();
             c.owner = Some(provider.to_string());
+            // Its session lacks what another provider answered meanwhile.
+            c.cli_session = None;
         }
         Turn {
             epoch: c.epoch,
             provider: provider.to_string(),
             first: c.plain.is_empty(),
             history: c.native.clone(),
+            cli_session: c.cli_session.clone(),
         }
     }
 
@@ -106,6 +116,15 @@ impl Chat {
         c.native.push(assistant);
         c.plain.push(json!({ "role": "user", "content": user_text }));
         c.plain.push(json!({ "role": "assistant", "content": answer }));
+    }
+
+    /// The Claude Code session a successful subscription turn ran in, for the
+    /// next one to resume. Dropped like `commit` after a reset or a switch.
+    pub fn set_cli_session(&self, turn: &Turn, id: String) {
+        let mut c = self.inner.lock().unwrap();
+        if c.epoch == turn.epoch && c.owner.as_deref() == Some(turn.provider.as_str()) {
+            c.cli_session = Some(id);
+        }
     }
 }
 
@@ -163,6 +182,10 @@ pub fn model_for(settings: &Settings, provider: &str) -> String {
         let m = settings.model.trim();
         return if m.is_empty() { claude::DEFAULT_MODEL.to_string() } else { m.to_string() };
     }
+    if provider == ANTHROPIC_SUBSCRIPTION {
+        let m = settings.chat_models.get(provider).map(String::as_str).unwrap_or(claude_cli::DEFAULT_MODEL);
+        return claude_cli::model_alias(m).to_string();
+    }
     settings
         .chat_models
         .get(provider)
@@ -210,6 +233,9 @@ pub async fn send(
     if provider == ANTHROPIC || provider.is_empty() {
         return claude::send(chat, &model, query, context).await;
     }
+    if provider == ANTHROPIC_SUBSCRIPTION {
+        return claude_cli::chat(chat, &model, query, context, claude_cli::Mode::Chat).await;
+    }
     if let Some(p) = openai_compat::provider(provider) {
         return openai_compat::send(chat, p, &model, query, context).await;
     }
@@ -222,6 +248,8 @@ pub async fn send(
 /// One turn of the phone's conversation (phone_link/chat_backend.rs): the same providers as
 /// [`send`], with no file or window context and no `AppHandle`. `on_delta` gets the streamed
 /// text so far, which only the model servers produce; the cloud providers answer all at once.
+/// The subscription answers the phone without any tool and without context, whatever the
+/// settings say (claude_cli::Mode::Phone).
 pub async fn send_for_phone(
     settings: &Settings,
     chat: &Chat,
@@ -232,6 +260,9 @@ pub async fn send_for_phone(
 ) -> Result<ChatReply, String> {
     if provider == ANTHROPIC {
         return claude::send(chat, model, query, None).await;
+    }
+    if provider == ANTHROPIC_SUBSCRIPTION {
+        return claude_cli::chat(chat, model, query, None, claude_cli::Mode::Phone).await;
     }
     if let Some(p) = openai_compat::provider(provider) {
         return openai_compat::send(chat, p, model, query, None).await;
@@ -250,6 +281,9 @@ pub async fn models(settings: &Settings, provider: &str) -> Result<Vec<ModelInfo
     if provider == ANTHROPIC {
         let key = secrets::get(claude::KEY).ok_or_else(no_key)?;
         return claude::models(&key).await;
+    }
+    if provider == ANTHROPIC_SUBSCRIPTION {
+        return Ok(claude_cli::models());
     }
     if let Some(p) = openai_compat::provider(provider) {
         let key = secrets::get(p.key).ok_or_else(no_key)?;

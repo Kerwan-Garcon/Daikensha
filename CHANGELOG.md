@@ -1,5 +1,9 @@
 # Changelog
 
+## Windows and Linux — unreleased (fork)
+
+- **Claude subscription mode** — Settings → Claude → Account: **Claude subscription**. The chat, the phone's chat, « OK Coucou », the dictation clean-up and the Notetaker's summary then go through your own Claude Code (the `claude` CLI, signed in to your Pro or Max plan) instead of an API key, and count against your plan's limits. Coucou runs `claude` as published and never sees a token. The API key stays the default, and nothing falls back to it silently: not installed, not signed in or out of quota is said in the island. The chat and the completions get no tool at all; the voice gets web search and its own five tools, through a local MCP server only it can reach. Four independent safeguards keep any tool that runs code, reads or writes files or fetches a page out of reach (docs/SUBSCRIPTION_MODE.md)
+
 ## 0.5.1 — October 18, 2026
 
 - **WhatsApp in one click** *(macOS, GitHub build)* — no more GitHub, zip or Terminal: Settings → Integrations → WhatsApp → **Install WhatsApp**. Coucou downloads GOWA, the open-source gateway, for your Mac (about 15 MB, once), checks it against the SHA-256 GOWA publishes, starts it, and shows the QR code to scan. It starts and stops with Coucou, and **Update** fetches GOWA's latest version. Your own gateway (GOWA by hand, OpenWA, another address) moves under **Advanced**

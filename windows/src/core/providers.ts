@@ -6,7 +6,7 @@ import type { Settings } from "./state";
 import { N_ } from "../i18n/i18n";
 
 export type ProviderId =
-  | "anthropic" | "openai" | "google" | "openrouter"
+  | "anthropic" | "anthropic-subscription" | "openai" | "google" | "openrouter"
   | "ollama" | "lmstudio" | "custom";
 
 export interface ProviderDef {
@@ -25,6 +25,8 @@ export interface ProviderDef {
 
 export const PROVIDERS: readonly ProviderDef[] = [
   { id: "anthropic", name: "Anthropic", accent: "#E07950", key: "anthropic-api-key", urlField: null, defaultModel: "claude-opus-5", prefer: "opus" },
+  // Claude through the user's own Claude Code and subscription (claude_cli.rs): no key, fixed models.
+  { id: "anthropic-subscription", name: N_("Claude subscription"), accent: "#E07950", key: null, urlField: null, defaultModel: "sonnet", prefer: "sonnet" },
   { id: "google", name: "Google", accent: "#4285F4", key: "google-api-key", urlField: null, defaultModel: "gemini-2.0-flash", prefer: "flash" },
   { id: "openai", name: "OpenAI", accent: "#10A37F", key: "openai-api-key", urlField: null, defaultModel: "gpt-4o", prefer: "mini" },
   { id: "openrouter", name: "OpenRouter", accent: "#6467F2", key: "openrouter-api-key", urlField: null, defaultModel: "openrouter/auto", prefer: null },
@@ -55,13 +57,16 @@ export function withModel(settings: Settings, provider: ProviderId, model: strin
 
 /**
  * The chips of the picker: every cloud provider (one without a key says so
- * when picked), and a model server once it is connected — or while it is the
- * active one, so the picker never hides where the chat goes.
+ * when picked), the Claude subscription once it is on in Settings, and a model
+ * server once it is connected — or while either is the active one, so the
+ * picker never hides where the chat goes.
  */
 export function visibleProviders(settings: Settings): ProviderDef[] {
-  return PROVIDERS.filter(
-    (p) => !p.urlField || settings[p.urlField] !== "" || settings.chatProvider === p.id,
-  );
+  return PROVIDERS.filter((p) => {
+    if (settings.chatProvider === p.id) return true;
+    if (p.id === "anthropic-subscription") return settings.claudeSubscription;
+    return !p.urlField || settings[p.urlField] !== "";
+  });
 }
 
 /** The model to keep once the list arrives: the saved one if offered, else a sensible one. */

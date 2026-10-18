@@ -34,6 +34,10 @@ test("only providers with a key, or a connected server, are offered", () => {
   assert.deepEqual(none, []);
   const some = usableProviders({ ...DEFAULT_SETTINGS, ollamaUrl: "http://127.0.0.1:11434" }, { anthropic: true, openai: false });
   assert.deepEqual(some.map((p) => p.id), ["anthropic", "ollama"]);
+  // The Claude subscription needs no key, only the setting.
+  const sub = usableProviders({ ...DEFAULT_SETTINGS, claudeSubscription: true }, {});
+  assert.deepEqual(sub.map((p) => p.id), ["anthropic-subscription"]);
+  assert.equal(providerOf("anthropic-subscription/sonnet"), "anthropic-subscription");
 });
 
 test("the models of one provider are told apart from the others'", () => {
