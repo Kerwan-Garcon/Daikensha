@@ -28,6 +28,7 @@ import { language, t, tl, type Msg } from "../i18n/i18n";
 import type { ViewCommand } from "../island/shortcuts";
 import { buildShell } from "./shell";
 import { buildConfirm } from "./confirm";
+import { buildCircle } from "./circle";
 
 export interface ViewActions {
   setView(v: IslandViewName): void;
@@ -44,6 +45,10 @@ export interface ViewActions {
   decide(d: "allow" | "deny"): void;
   /** A level 2 card's buttons (views/confirm.ts): run it, or drop it. */
   decideCard(ok: boolean): void;
+  /** The circled capture's preview: ask about it, or forget it. */
+  decideCapture(ask: boolean): void;
+  /** « Entoure et demande »'s overlay, the panel folded first. */
+  startCircle(): void;
   /** Answers the question Claude Code asked: question text → chosen label. */
   answer(answers: Record<string, string | string[]>): void;
   /** Hands the pending request back to the terminal. */
@@ -825,8 +830,9 @@ export function buildViews(
   map.set("choose", buildChoose(actions));
   map.set("recap", buildRecap(actions));
   map.set("wardrobe", buildWardrobe(actions));
-  map.set("shell", buildShell());
+  map.set("shell", buildShell(() => actions.startCircle()));
   map.set("confirm", buildConfirm((ok) => actions.decideCard(ok)));
+  map.set("circle", buildCircle((ask) => actions.decideCapture(ask)));
   // Not in the Windows v1: sending a file by email, window attach + web result.
   map.set("mail", buildPlaceholder(tl("Sending by email isn't in this version."), ""));
   map.set("searching", buildPlaceholder(tl("Claude is searching…"), ""));

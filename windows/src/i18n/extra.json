@@ -6308,6 +6308,105 @@
    "pt-BR": "A rotina “{name}” foi executada; {n} passo(s) não fizeram nada.",
    "ru": "Сценарий «{name}» выполнен; шагов без результата: {n}.",
    "id": "Rutinitas “{name}” berjalan; {n} langkah tidak berbuat apa-apa."
+  },
+  "Circle what you want to ask about · Esc to cancel": {
+   "zh-Hans": "圈出你想询问的内容 · 按 Esc 取消",
+   "hi": "जिसके बारे में पूछना है उसे घेरें · रद्द करने के लिए Esc",
+   "es": "Rodea lo que quieras preguntar · Esc para cancelar",
+   "ar": "ارسم دائرة حول ما تريد السؤال عنه · Esc للإلغاء",
+   "fr": "Entourez ce sur quoi vous voulez poser une question · Échap pour annuler",
+   "bn": "যা নিয়ে জিজ্ঞেস করতে চান তা ঘিরে দিন · বাতিল করতে Esc",
+   "pt-BR": "Circule o que quer perguntar · Esc para cancelar",
+   "ru": "Обведите то, о чём хотите спросить · Esc — отмена",
+   "id": "Lingkari yang ingin ditanyakan · Esc untuk batal"
+  },
+  "Screen capture": {
+   "zh-Hans": "屏幕截图",
+   "hi": "स्क्रीन कैप्चर",
+   "es": "Captura de pantalla",
+   "ar": "لقطة شاشة",
+   "fr": "Capture d’écran",
+   "bn": "স্ক্রিন ক্যাপচার",
+   "pt-BR": "Captura de tela",
+   "ru": "Снимок экрана",
+   "id": "Tangkapan layar"
+  },
+  "Ask about this?": {
+   "zh-Hans": "询问这个？",
+   "hi": "इसके बारे में पूछें?",
+   "es": "¿Preguntar sobre esto?",
+   "ar": "السؤال عن هذا؟",
+   "fr": "Poser une question là-dessus ?",
+   "bn": "এটি নিয়ে জিজ্ঞেস করবেন?",
+   "pt-BR": "Perguntar sobre isto?",
+   "ru": "Спросить об этом?",
+   "id": "Tanyakan tentang ini?"
+  },
+  "Only Claude sees it, with your question. Nothing is saved.": {
+   "zh-Hans": "只有 Claude 会看到它和你的问题。不会保存任何内容。",
+   "hi": "इसे सिर्फ़ Claude आपके सवाल के साथ देखता है। कुछ सहेजा नहीं जाता।",
+   "es": "Solo Claude lo ve, con tu pregunta. No se guarda nada.",
+   "ar": "لا يراها إلا Claude مع سؤالك. لا يُحفظ شيء.",
+   "fr": "Seul Claude la voit, avec votre question. Rien n’est enregistré.",
+   "bn": "শুধু Claude আপনার প্রশ্নসহ এটি দেখে। কিছুই সংরক্ষিত হয় না।",
+   "pt-BR": "Só o Claude vê, com sua pergunta. Nada é salvo.",
+   "ru": "Видит только Claude, вместе с вопросом. Ничего не сохраняется.",
+   "id": "Hanya Claude yang melihatnya, bersama pertanyaan Anda. Tidak ada yang disimpan."
+  },
+  "Circle something on the screen and ask about it": {
+   "zh-Hans": "圈出屏幕上的内容并提问",
+   "hi": "स्क्रीन पर कुछ घेरें और उसके बारे में पूछें",
+   "es": "Rodear algo en la pantalla y preguntar",
+   "ar": "ارسم دائرة حول شيء على الشاشة واسأل عنه",
+   "fr": "Entourer quelque chose à l’écran et poser une question",
+   "bn": "স্ক্রিনে কিছু ঘিরে তা নিয়ে জিজ্ঞেস করুন",
+   "pt-BR": "Circular algo na tela e perguntar",
+   "ru": "Обвести что-то на экране и спросить",
+   "id": "Lingkari sesuatu di layar dan tanyakan"
+  },
+  "Circle a larger area.": {
+   "zh-Hans": "请圈出更大的区域。",
+   "hi": "बड़ा क्षेत्र घेरें।",
+   "es": "Rodea una zona más grande.",
+   "ar": "ارسم دائرة حول منطقة أكبر.",
+   "fr": "Entourez une zone plus grande.",
+   "bn": "বড় এলাকা ঘিরে দিন।",
+   "pt-BR": "Circule uma área maior.",
+   "ru": "Обведите область побольше.",
+   "id": "Lingkari area yang lebih besar."
+  },
+  "That capture is gone: circle again.": {
+   "zh-Hans": "该截图已不在：请重新圈选。",
+   "hi": "वह कैप्चर नहीं रहा: फिर से घेरें।",
+   "es": "Esa captura ya no está: vuelve a rodear.",
+   "ar": "لم تعد تلك اللقطة موجودة: ارسم الدائرة مجددًا.",
+   "fr": "Cette capture n’existe plus : entourez à nouveau.",
+   "bn": "সেই ক্যাপচার আর নেই: আবার ঘিরে দিন।",
+   "pt-BR": "Essa captura não existe mais: circule de novo.",
+   "ru": "Этого снимка больше нет: обведите снова.",
+   "id": "Tangkapan itu sudah tidak ada: lingkari lagi."
+  },
+  "Circle to ask goes to Claude: pick Claude in the chat first.": {
+   "zh-Hans": "圈选提问仅发送给 Claude：请先在聊天中选择 Claude。",
+   "hi": "घेरकर पूछना Claude के लिए है: पहले चैट में Claude चुनें।",
+   "es": "Rodear y preguntar va a Claude: elige Claude en el chat primero.",
+   "ar": "الدائرة والسؤال يذهبان إلى Claude: اختر Claude في المحادثة أولًا.",
+   "fr": "Entoure et demande passe par Claude : choisissez d’abord Claude dans le chat.",
+   "bn": "ঘিরে জিজ্ঞাসা Claude-এ যায়: আগে চ্যাটে Claude বাছুন।",
+   "pt-BR": "Circular e perguntar vai para o Claude: escolha o Claude no chat primeiro.",
+   "ru": "«Обвести и спросить» работает с Claude: сначала выберите Claude в чате.",
+   "id": "Lingkari dan tanya dikirim ke Claude: pilih Claude di obrolan dulu."
+  },
+  "Circle and ask": {
+   "zh-Hans": "圈选并提问",
+   "hi": "घेरें और पूछें",
+   "es": "Rodear y preguntar",
+   "ar": "ارسم دائرة واسأل",
+   "fr": "Entoure et demande",
+   "bn": "ঘিরে জিজ্ঞেস করুন",
+   "pt-BR": "Circular e perguntar",
+   "ru": "Обвести и спросить",
+   "id": "Lingkari dan tanya"
   }
  }
 }

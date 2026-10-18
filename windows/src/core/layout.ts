@@ -25,7 +25,8 @@ export type IslandViewName =
   | "recap"
   | "wardrobe"
   | "shell"
-  | "confirm";
+  | "confirm"
+  | "circle";
 
 export type BotStateName =
   | "idle"
@@ -103,6 +104,8 @@ export const VIEW_LAYOUTS: Record<IslandViewName, ViewLayout> = {
   shell: { height: SHELL_MAX_H, botX: 40, botY: 34, botDiameter: 34, agentMode: "none" },
   // A level 2 card (views/confirm.ts): the approval card's place, a line taller.
   confirm: { height: 176, botX: 62, botY: null, botDiameter: 56, agentMode: "none" },
+  // « Entoure et demande »'s preview (views/circle.ts).
+  circle: { height: 176, botX: 62, botY: null, botDiameter: 56, agentMode: "none" },
 };
 
 /** The Shell panel's height: SHELL_MAX_H, or what the window has room for. */

@@ -99,7 +99,8 @@ fn user_message(first: bool, context: Option<&ChatContext>, query: &str) -> Valu
         Some(ChatContext::Window { app_name, title, url }) => {
             prefix = format!("{}\n\n", chat::window_line(app_name, title, url.as_deref()));
         }
-        None => {}
+        // chat::send keeps captures for Claude.
+        Some(ChatContext::Capture) | None => {}
     }
     let text = format!("{prefix}{query}");
     match image {

@@ -372,6 +372,12 @@ export const Bridge = {
   shellConfirm: (token: string) => callOrThrow<void>("shell_confirm", { token }),
   shellConfirmCancel: () => call<void>("shell_confirm_cancel"),
   shellRoutines: () => callOrThrow<ShellRoutine[]>("shell_routines"),
+  // « Entoure et demande » (shell/capture.rs): the pixels never come to a page, only the preview.
+  circleStart: () => call<void>("circle_start"),
+  circleCapture: (x: number, y: number, width: number, height: number) => callOrThrow<void>("circle_capture", { x, y, width, height }),
+  circleCancel: () => call<void>("circle_cancel"),
+  circlePreview: () => call<string | null>("circle_preview"),
+  circleDiscard: () => call<void>("circle_discard"),
   shellRoutineDelete: (id: number) => callOrThrow<ShellRoutine[]>("shell_routine_delete", { id }),
 
   /** Settings → Claude → Check: is Claude Code installed and signed in to a subscription? */
@@ -498,7 +504,8 @@ export interface IntegrationUpdate {
 
 export type ChatContext =
   | { kind: "file"; name: string; path: string }
-  | { kind: "window"; appName: string; title: string; url?: string };
+  | { kind: "window"; appName: string; title: string; url?: string }
+  | { kind: "capture" };
 
 export interface ModelInfo {
   id: string;

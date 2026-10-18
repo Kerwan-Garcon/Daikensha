@@ -2969,6 +2969,29 @@ html[data-dir="rtl"] #views :is(.bubble, .reply .md-p, .reply .md-h, .reply .md-
 .shell-confirm-card { width: min(440px, 100%); gap: 12px; }
 .shell-confirm-title { font-size: 16px; font-weight: 600; }
 
+/* « Entoure et demande »'s preview (views/circle.ts). */
+.circle-stack {
+  flex-direction: row;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 16px;
+}
+.circle-shot {
+  flex: none;
+  max-width: 200px;
+  max-height: 120px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  object-fit: contain;
+  background: rgba(0, 0, 0, 0.3);
+}
+.circle-text {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
 /* The level 2 card (views/confirm.ts). */
 .confirm-hint {
   white-space: nowrap;

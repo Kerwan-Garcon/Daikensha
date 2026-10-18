@@ -24,6 +24,9 @@ pub const ANTHROPIC_SUBSCRIPTION: &str = claude_cli::PROVIDER;
 pub enum ChatContext {
     File { name: String, path: String },
     Window { app_name: String, title: String, url: Option<String> },
+    /// The part of the screen the user circled (shell/capture.rs): the image
+    /// itself stays in Rust's memory, the page only names it. Claude only.
+    Capture,
 }
 
 #[derive(Serialize)]
@@ -170,6 +173,7 @@ pub fn plain_question(first: bool, context: Option<&ChatContext>, query: &str) -
         Some(ChatContext::Window { app_name, title, url }) => {
             format!("{}\n\n{query}", window_line(app_name, title, url.as_deref()))
         }
+        Some(ChatContext::Capture) => format!("{CAPTURE_LINE}\n\n{query}"),
         None => query.to_string(),
     }
 }
@@ -207,9 +211,13 @@ fn checked_context(context: ChatContext) -> Result<ChatContext, String> {
             }
             Ok(ChatContext::File { name, path })
         }
+        ChatContext::Capture if crate::shell::capture::peek().is_none() => Err(crate::i18n::t("That capture is gone: circle again.")),
         other => Ok(other),
     }
 }
+
+/// What the model is told of a circled capture.
+pub const CAPTURE_LINE: &str = "The image is the part of the screen the user just circled.";
 
 /// True when `path` is a regular file directly inside `dir`, both resolved
 /// (no `..`, no symlink pointing out of it).
@@ -230,6 +238,20 @@ pub async fn send(
     let context = context.map(checked_context).transpose()?;
     let provider = settings.chat_provider.as_str();
     let model = model_for(settings, provider);
+    let claude = provider == ANTHROPIC || provider.is_empty() || provider == ANTHROPIC_SUBSCRIPTION;
+    if matches!(context, Some(ChatContext::Capture)) {
+        if !claude {
+            return Err(crate::i18n::t("Circle to ask goes to Claude: pick Claude in the chat first."));
+        }
+        // The capture lives for its one turn, answered or not.
+        let reply = if provider == ANTHROPIC_SUBSCRIPTION {
+            claude_cli::chat(chat, &model, query, context, claude_cli::Mode::Chat).await
+        } else {
+            claude::send(chat, &model, query, context).await
+        };
+        crate::shell::capture::discard();
+        return reply;
+    }
     if provider == ANTHROPIC || provider.is_empty() {
         return claude::send(chat, &model, query, context).await;
     }

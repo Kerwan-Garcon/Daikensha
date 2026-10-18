@@ -412,3 +412,46 @@ pub fn type_text(window: isize, text: &str) -> Result<(), String> {
     }
     Ok(())
 }
+
+// ── Capture ───────────────────────────────────────────────────────────────────
+
+/// That part of the screen (physical pixels, desktop coordinates) as BGRA rows, top-down.
+pub fn capture_screen(x: i32, y: i32, w: i32, h: i32) -> Result<(u32, u32, Vec<u8>), String> {
+    use windows::Win32::Graphics::Gdi::{
+        BitBlt, CreateCompatibleBitmap, CreateCompatibleDC, DeleteDC, DeleteObject, GetDC, GetDIBits, ReleaseDC, SelectObject,
+        BITMAPINFO, BITMAPINFOHEADER, BI_RGB, CAPTUREBLT, DIB_RGB_COLORS, SRCCOPY,
+    };
+    if w <= 0 || h <= 0 || w > 16_384 || h > 16_384 {
+        return Err(crate::i18n::t("Circle a larger area."));
+    }
+    unsafe {
+        let screen = GetDC(None);
+        let dc = CreateCompatibleDC(Some(screen));
+        let bitmap = CreateCompatibleBitmap(screen, w, h);
+        let old = SelectObject(dc, bitmap.into());
+        let copied = BitBlt(dc, 0, 0, w, h, Some(screen), x, y, SRCCOPY | CAPTUREBLT).is_ok();
+        let mut info = BITMAPINFO {
+            bmiHeader: BITMAPINFOHEADER {
+                biSize: std::mem::size_of::<BITMAPINFOHEADER>() as u32,
+                biWidth: w,
+                biHeight: -h,
+                biPlanes: 1,
+                biBitCount: 32,
+                biCompression: BI_RGB.0,
+                ..Default::default()
+            },
+            ..Default::default()
+        };
+        let mut pixels = vec![0u8; (w as usize) * (h as usize) * 4];
+        SelectObject(dc, old);
+        let lines = if copied { GetDIBits(dc, bitmap, 0, h as u32, Some(pixels.as_mut_ptr() as *mut _), &mut info, DIB_RGB_COLORS) } else { 0 };
+        let _ = DeleteObject(bitmap.into());
+        let _ = DeleteDC(dc);
+        ReleaseDC(None, screen);
+        if lines == h {
+            Ok((w as u32, h as u32, pixels))
+        } else {
+            Err(crate::i18n::t("Windows did not allow it."))
+        }
+    }
+}

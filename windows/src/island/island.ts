@@ -216,6 +216,8 @@ export class Island {
         if (url) void Bridge.openUrl(url);
       },
       decideCard: (ok) => this.decideCard(ok),
+      decideCapture: (ask) => this.decideCapture(ask),
+      startCircle: () => this.startCircle(),
       decide: (d) => {
         const req = State.pendingApproval;
         void Bridge.log(`decide ${d} req=${req?.requestId ?? "none"}`);
@@ -517,6 +519,36 @@ export class Island {
       this.setView("note");
       window.setTimeout(() => this.setView(State.defaultView()), 3000);
     });
+  }
+
+  /** « Entoure et demande »: the overlay, over the screen under the cursor (the panel folds first). */
+  startCircle() {
+    if (!State.settings.shellPanel) return;
+    if (State.view === "shell") this.closeShell();
+    void Bridge.circleStart();
+  }
+
+  /** The capture landed: a fresh chat, with its preview first. */
+  private async onCaptured() {
+    const url = await Bridge.circlePreview();
+    if (!url) return;
+    State.capturePreview = url;
+    State.droppedFile = null;
+    State.promptContext = null;
+    State.chatHistory = [];
+    void Bridge.chatReset();
+    Sound.play("pop");
+    this.alert("circle");
+  }
+
+  decideCapture(ask: boolean) {
+    if (ask && State.capturePreview) {
+      this.setView("prompt");
+      return;
+    }
+    State.capturePreview = null;
+    void Bridge.circleDiscard();
+    this.setView(State.defaultView());
   }
 
   /** Back from the panel to the usual view. */
@@ -924,6 +956,7 @@ export class Island {
       if (e.key === "Escape" && State.mode === "expanded") {
         if (State.view === "shell") this.closeShell();
         else if (State.view === "confirm") this.decideCard(false);
+        else if (State.view === "circle") this.decideCapture(false);
         else if (State.pendingApproval) this.foldApproval();
         else if (!State.isPinned) this.collapse();
       }
@@ -932,6 +965,7 @@ export class Island {
 
     void onDragDrop((e) => this.onDragDrop(e));
     void onEvent<ShellCard>("shell-confirm", (card) => this.showCard(card));
+    void onEvent<null>("circle-captured", () => void this.onCaptured());
     // A routine ran (shell/routines.rs): say so for a moment, unless a card is waiting.
     void onEvent<string>("shell-routine-ran", (message) => {
       if (State.pendingApproval || State.shellCard) return;

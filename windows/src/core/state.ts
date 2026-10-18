@@ -241,6 +241,8 @@ class AppState {
   noteMessage: string | null = null;
   /** A level 2 card waiting for its click (views/confirm.ts). */
   shellCard: ShellCard | null = null;
+  /** The circled capture's preview (a data: URL) until its first question goes out. */
+  capturePreview: string | null = null;
   searchResult: SearchResult | null = null;
   chatHistory: ChatMessage[] = [];
   pendingApproval: ApprovalInfo | null = null;

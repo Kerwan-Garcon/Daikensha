@@ -4,6 +4,7 @@
 // background: each tab asks while it is on screen.
 
 pub mod apps;
+pub mod capture;
 pub mod clipboard;
 pub mod confirm;
 pub mod controls;

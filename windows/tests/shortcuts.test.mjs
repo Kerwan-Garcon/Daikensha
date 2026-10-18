@@ -21,8 +21,12 @@ const MAC_IDS = [
 
 // ── Defaults (testDefaultsExhaustive, testAllDefaultsHaveModifier, testNoDefaultDuplicates) ──
 
+/** Off by default: the Mac's island toggle, and the Coucou Shell actions. */
+const OFF_BY_DEFAULT = ["toggleIsland", "circleAsk"];
+
 test("every Mac action has a default, in the Mac's order, with its Mac id", () => {
-  assert.deepEqual(SHORTCUTS.map((d) => d.id), MAC_IDS);
+  // The Mac's, in its order; then the ones of this version only.
+  assert.deepEqual(SHORTCUTS.map((d) => d.id), [...MAC_IDS, "circleAsk"]);
   for (const d of SHORTCUTS) assert.ok(SHORTCUT_TEXT[d.id], `${d.id} has no label`);
 });
 
@@ -73,9 +77,9 @@ test("the descriptions the Wayland portal shows are the labels Settings shows", 
 });
 
 // testEnabledByDefault
-test("only the island toggle is off by default; the one not ported yet is reserved", () => {
+test("only the island toggle and circle to ask are off by default; the one not ported yet is reserved", () => {
   for (const d of SHORTCUTS) {
-    assert.equal(d.enabledByDefault, d.id !== "toggleIsland", d.id);
+    assert.equal(d.enabledByDefault, !OFF_BY_DEFAULT.includes(d.id), d.id);
     assert.equal(d.ported, d.id !== "attachFrontWindow", d.id);
   }
   assert.deepEqual(activeKeys({}).map(([id]) => id), [

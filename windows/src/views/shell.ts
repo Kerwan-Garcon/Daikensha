@@ -558,7 +558,8 @@ export interface ShellHost extends ViewHost {
   drop(paths: string[]): void;
 }
 
-export function buildShell(): ShellHost {
+/** `onCircle`: the header's lasso button (« Entoure et demande », Island.startCircle). */
+export function buildShell(onCircle: () => void): ShellHost {
   const tabs: Record<ShellTab, Tab> = {
     controls: buildControls(),
     today: buildToday(),
@@ -578,7 +579,18 @@ export function buildShell(): ShellHost {
   const el = h(
     "div",
     { class: "view shell-view" },
-    h("div", { class: "shell-head" }, nav, h("span", { class: "shell-grow" }), clock),
+    h(
+      "div",
+      { class: "shell-head" },
+      nav,
+      h("span", { class: "shell-grow" }),
+      h(
+        "button",
+        { class: "shell-icon-btn", "aria-label": tl("Circle and ask"), title: tl("Circle and ask"), onclick: () => onCircle() },
+        svg("M12 4c4.4 0 8 2.7 8 6s-3.6 6-8 6c-1 0-2-.1-2.9-.4L5 19l.9-4.1C4.7 13.7 4 12.4 4 11c0-3.9 3.6-7 8-7z", 16, { stroke: 2 }),
+      ),
+      clock,
+    ),
     body,
     h("div", { class: "shell-grip" }, h("i", {})),
   );
