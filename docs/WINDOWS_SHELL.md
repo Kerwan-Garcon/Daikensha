@@ -108,6 +108,10 @@ Jamais dans les logs. La capture d'« Entoure et demande » ne vit qu'en mémoir
 - Jamais `Shell_TrayWnd` directement, jamais le registre d'Explorer. Si `ABM_SETSTATE` sans fenêtre est ignoré par une version de Windows, la poignée de `Shell_TrayWnd` est seulement cherchée (`FindWindowW`) et passée au même appel documenté ; la fenêtre elle-même n'est jamais touchée.
 - La bande réservée est celle de l'écran principal (pas encore celui choisi pour l'island).
 
+## Dictée (E)
+
+Vérifié, sans nouveau moteur : le nettoyage de Flow (`flow/cleanup.rs`) appelle `claude::complete`, qui passe par `claude_cli::complete` quand le mode abonnement est activé (délai porté à 10 s). Sa consigne garde seulement la correction quand on se reprend à l'oral (« à 3 h, non, à 4 h » → « à 4 h »). Dans le panneau, la dictée sert aussi de saisie vocale pour la question de « Entoure et demande » : Flow colle le texte dans le champ du chat.
+
 ## Mémoire et CPU (budget)
 
 - **Panneau fermé** : 0 % de CPU, aucun timer, aucun listener actif (sauf le presse-papiers s'il est activé).
