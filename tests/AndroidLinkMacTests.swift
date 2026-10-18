@@ -120,12 +120,26 @@ func identityInThrowawayKeychain(_ id: LinkIdentity) -> SecIdentity? {
     guard SecKeychainCreate(path, UInt32(password.utf8.count), password, false, nil, &keychain) == errSecSuccess,
           let keychain else { return nil }
     guard let certificate = SecCertificateCreateWithData(nil, Data(id.certificate) as CFData),
-          let pem = id.signingKey?.pemRepresentation else { return nil }
-    // A file keychain takes a key as imported data (PKCS#8), not as a key reference.
-    var format = SecExternalFormat.formatUnknown
-    var type = SecExternalItemType.itemTypePrivateKey
-    var imported: CFArray?
-    let importKey = SecItemImport(Data(pem.utf8) as CFData, "key.pem" as CFString, &format, &type, [], nil, keychain, &imported)
+          let key = id.signingKey else { return nil }
+    // A file keychain takes a key as imported data, not as a key reference: SEC1 ("EC PRIVATE KEY",
+    // RFC 5915), which SecItemImport reads as the OpenSSL format.
+    let x963 = Array(key.x963Representation)   // 04 ‖ X ‖ Y ‖ D
+    let sec1 = DER.sequence(DER.integer([1]), DER.tlv(0x04, Array(x963.suffix(32))),
+                            DER.explicit(0, DER.oid([1, 2, 840, 10045, 3, 1, 7])),
+                            DER.explicit(1, DER.bitString(Array(x963.prefix(65)))))
+    let pem = "-----BEGIN EC PRIVATE KEY-----\n" + Data(sec1).base64EncodedString(options: [.lineLength64Characters, .endLineWithLineFeed])
+        + "\n-----END EC PRIVATE KEY-----\n"
+    var importKey: OSStatus = errSecParam
+    for (data, hint, start) in [(Data(sec1), "key.der", SecExternalFormat.formatOpenSSL),
+                                (Data(pem.utf8), "key.pem", SecExternalFormat.formatOpenSSL),
+                                (Data(pem.utf8), "key.pem", SecExternalFormat.formatUnknown)] {
+        var format = start
+        var type = SecExternalItemType.itemTypePrivateKey
+        var imported: CFArray?
+        importKey = SecItemImport(data as CFData, hint as CFString, &format, &type, [], nil, keychain, &imported)
+        print("import \(hint) \(start.rawValue): \(importKey)")
+        if importKey == errSecSuccess { break }
+    }
     let addCert = SecItemAdd([kSecClass as String: kSecClassCertificate, kSecValueRef as String: certificate,
                               kSecUseKeychain as String: keychain] as CFDictionary, nil)
     guard importKey == errSecSuccess, addCert == errSecSuccess else {
