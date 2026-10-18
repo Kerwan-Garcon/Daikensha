@@ -74,6 +74,30 @@ export function tileColor(name: string): string {
   return palette[h % palette.length];
 }
 
+/** The tile colours of the mockup's usual apps (keys are fold()ed names); other apps get tileColor(). */
+const APP_COLORS: Record<string, string> = {
+  edge: "#38bdf8",
+  "vs code": "#60a5fa",
+  spotify: "#22c55e",
+  discord: "#818cf8",
+  unity: "#e5e7eb",
+  "unity hub": "#e5e7eb",
+  explorateur: "#f59e0b",
+  "file explorer": "#f59e0b",
+  terminal: "#9ca3af",
+  notion: "#f5f5f5",
+  figma: "#f472b6",
+  obs: "#c4b5fd",
+  steam: "#93c5fd",
+  paramètres: "#cbd5e1",
+  settings: "#cbd5e1",
+};
+
+/** An app's tile colour: the mockup's for the usual apps, a stable one otherwise. */
+export function appColor(name: string): string {
+  return APP_COLORS[fold(name)] ?? tileColor(name);
+}
+
 /** A gauge circle's stroke-dasharray for `pct` on a circle of radius `r`. */
 export function gaugeDash(pct: number, r: number): string {
   const c = 2 * Math.PI * r;

@@ -11,7 +11,7 @@ import { Sound } from "../core/sound";
 import { State } from "../core/state";
 import { N_, language, t, tl, weekdayShort } from "../i18n/i18n";
 import { clear, h, svg } from "./dom";
-import { card, cardTitle, linkButton, message, note, type Tab } from "./shell-parts";
+import { card, cardTitle, foot, linkButton, message, note, ring, switchButton, type Tab } from "./shell-parts";
 
 const settingsLink = (text = tl("Open Settings")) => linkButton(text, () => void Bridge.openSettingsWindow());
 
@@ -29,6 +29,9 @@ const WEATHER: Record<WeatherKind, string> = {
   storm: N_("Thunderstorm"),
   cloudy: N_("Cloudy"),
 };
+
+const SUN = "M12 7a5 5 0 1 0 0 10 5 5 0 0 0 0-10zM12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4";
+const CLOUD = "M17.5 19a4.5 4.5 0 1 0-1.4-8.8A6 6 0 0 0 4.7 12 3.5 3.5 0 0 0 6.5 19z";
 
 const FOCUS_MIN = 25;
 const BREAK_MIN = 5;
@@ -51,14 +54,22 @@ function buildToday(): Tab {
   const clockCard = card("", time, date, week);
 
   const weatherBody = h("div", { class: "shell-stack" });
-  const weatherCard = card("shell-span2", cardTitle(tl("Weather")), weatherBody);
+  const weatherCard = card("", weatherBody);
 
-  const focusTime = h("span", { class: "shell-big-time shell-mono" });
-  const focusMode = h("span", { class: "shell-dim" });
-  const startBtn = h("button", { class: "shell-chip on", onclick: () => toggleFocus() });
-  const resetBtn = h("button", { class: "shell-chip", text: tl("Reset"), onclick: () => resetFocus(focus.mode) });
-  const modeBtn = h("button", { class: "shell-chip", onclick: () => resetFocus(focus.mode === "focus" ? "break" : "focus") });
-  const focusCard = card("", cardTitle(tl("Focus")), focusTime, focusMode, h("div", { class: "shell-row" }, startBtn, resetBtn, modeBtn));
+  const focusRing = ring("#60a5fa", true);
+  const focusTitle = h("span", { class: "shell-card-title", text: tl("Focus") });
+  const startBtn = h("button", { class: "shell-pill", onclick: () => toggleFocus() });
+  const resetBtn = h("button", { class: "shell-text-btn", text: tl("Reset"), onclick: () => resetFocus(focus.mode) });
+  const modeBtn = h("button", { class: "shell-text-btn", onclick: () => resetFocus(focus.mode === "focus" ? "break" : "focus") });
+  const focusCard = card(
+    "",
+    h(
+      "div",
+      { class: "shell-row" },
+      focusRing.el,
+      h("div", { class: "shell-grow" }, focusTitle, startBtn, h("div", { class: "shell-row shell-wrap" }, resetBtn, modeBtn)),
+    ),
+  );
 
   const todoInput = h("input", { type: "text", class: "shell-name-input", placeholder: t("Add a to-do"), "aria-label": t("Add a to-do"), maxlength: "200" }) as HTMLInputElement;
   const todoList = h("div", { class: "shell-todos" });
@@ -66,8 +77,8 @@ function buildToday(): Tab {
   const todoCard = card(
     "shell-span2",
     cardTitle(tl("To do"), clearDone),
-    h("div", { class: "shell-row" }, todoInput),
     todoList,
+    h("div", { class: "shell-row" }, todoInput),
     h("span", { class: "shell-dim", text: tl("Kept on this PC only") }),
   );
 
@@ -100,13 +111,13 @@ function buildToday(): Tab {
       const w = await Bridge.shellWeather();
       clear(weatherBody);
       if (!w) return;
+      const kind = weatherKey(w.code);
+      const icon = svg(kind === "clear" ? SUN : CLOUD, 36, { stroke: 2 });
+      icon.style.color = "#f5a524";
       weatherBody.append(
-        h(
-          "div",
-          { class: "shell-row" },
-          h("span", { class: "shell-big-time shell-mono", text: `${Math.round(w.temperature)}°` }),
-          h("div", { class: "shell-grow" }, h("span", { class: "shell-card-title", text: `${w.place} · ${t(WEATHER[weatherKey(w.code)])}` }), h("span", { class: "shell-dim", text: t("High {max}° · low {min}°", { max: String(Math.round(w.max)), min: String(Math.round(w.min)) }) })),
-        ),
+        h("div", { class: "shell-row" }, icon, h("span", { class: "shell-temp", text: `${Math.round(w.temperature)}°` })),
+        h("span", { class: "shell-card-title", text: `${w.place} · ${t(WEATHER[kind])}` }),
+        h("span", { class: "shell-dim", text: t("High {max}° · low {min}°", { max: String(Math.round(w.max)), min: String(Math.round(w.min)) }) }),
         h("span", { class: "shell-dim", text: tl("From Open-Meteo, at most every 30 minutes, only while this tab is open.") }),
       );
     } catch (e) {
@@ -120,8 +131,9 @@ function buildToday(): Tab {
   }
 
   function drawFocus() {
-    focusTime.textContent = timerText(left());
-    focusMode.textContent = focus.mode === "focus" ? t("Focus time") : t("Break");
+    const total = (focus.mode === "focus" ? FOCUS_MIN : BREAK_MIN) * 60_000;
+    focusRing.set((100 * left()) / total, timerText(left()));
+    focusTitle.textContent = focus.mode === "focus" ? t("Focus") : t("Break");
     startBtn.textContent = focus.endAt ? t("Pause") : t("Start");
     modeBtn.textContent = focus.mode === "focus" ? t("Take a break") : t("Back to focus");
   }
@@ -185,7 +197,12 @@ function buildToday(): Tab {
     for (const r of list.slice(0, 4)) {
       const next = r.next == null ? "" : fromLocalMinutes(r.next).toLocaleString(lang, { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
       routineList.append(
-        h("div", { class: "shell-grow" }, h("span", { class: "shell-ellipsis", text: r.name }), h("span", { class: "shell-dim shell-ellipsis", text: next || whenText(r.when, lang, weekdayShort, t("every day")) })),
+        h(
+          "div",
+          { class: "shell-routine" },
+          h("span", { class: "shell-routine-time shell-mono shell-ellipsis", text: next || whenText(r.when, lang, weekdayShort, t("every day")) }),
+          h("span", { class: "shell-ellipsis", text: r.name }),
+        ),
       );
     }
   }
@@ -240,26 +257,25 @@ function buildClipboard(): Tab {
   const info = note();
   const count = h("span", { class: "shell-dim shell-mono" });
   const list = h("div", { class: "shell-clips" });
-  const off = card(
-    "shell-span3",
-    cardTitle(tl("The clipboard history is off")),
-    h("span", { class: "shell-dim", text: tl("Turn it on in Settings to find what you copied here. It is held in memory only, never on disk, and text only.") }),
-    settingsLink(),
-  );
-  const recent = card("shell-span3 shell-list", h("div", { class: "shell-card-head shell-pad" }, h("span", { class: "shell-card-title", text: tl("Recent") }), count), list);
+  const recent = card("shell-list", h("div", { class: "shell-card-head shell-pad" }, h("span", { class: "shell-card-title", text: tl("Recent") }), count), list);
+  const toggle = switchButton(t("Clipboard history"), false, () => void setOn(!State.settings.shellClipboard));
   const side = h(
     "div",
-    { class: "shell-span2 shell-stack" },
+    { class: "shell-stack" },
     card(
       "",
-      cardTitle(tl("History")),
+      cardTitle(tl("History"), toggle),
       h("span", { class: "shell-dim", text: tl("In memory only, never on disk. Text only. Password managers are always skipped.") }),
-      h("div", { class: "shell-row" }, h("button", { class: "shell-chip", text: tl("Clear all"), onclick: () => void clearAll() })),
+      h("button", { class: "shell-chip-row center", text: tl("Clear all"), onclick: () => void clearAll() }),
     ),
-    card("", cardTitle(tl("Never kept from")), h("div", { class: "shell-wrap" }, ...NEVER_FROM.map((x) => h("span", { class: "shell-chip-static", text: x })))),
+    card(
+      "",
+      cardTitle(tl("Never kept from")),
+      h("div", { class: "shell-wrap" }, ...NEVER_FROM.map((x) => h("span", { class: "shell-chip-static", text: x }))),
+      h("span", { class: "shell-dim", text: tl("Only the last 5 copies, cut to 500 characters, and only when you ask. They are sent to Claude with your question.") }),
+    ),
   );
-  const onGrid = h("div", { class: "shell-grid5" }, recent, side);
-  const el = h("div", { class: "shell-tab" }, off, onGrid, info.el);
+  const el = h("div", { class: "shell-tab" }, h("div", { class: "shell-grid2 shell-split" }, recent, side), info.el);
   let unlisten: (() => void) | null = null;
   let live = false;
 
@@ -280,7 +296,7 @@ function buildClipboard(): Tab {
                 h("span", { class: "shell-ellipsis", text: clipPreview(c.text) }),
                 h("span", { class: "shell-dim", text: [c.app, agoText(c.at, now, lang)].filter(Boolean).join(" · ") }),
               ),
-              h("button", { class: "shell-chip", text: tl("Copy"), onclick: () => void copy(c.id) }),
+              h("button", { class: "shell-outline", text: tl("Copy"), onclick: () => void copy(c.id) }),
               h("button", { class: "shell-icon-btn", "aria-label": t("Delete"), title: t("Delete"), onclick: () => void remove(c.id) }, svg("M6 6l12 12M18 6 6 18", 14, { stroke: 2 })),
             ),
           )),
@@ -289,14 +305,25 @@ function buildClipboard(): Tab {
 
   async function refresh() {
     const on = State.settings.shellClipboard;
-    off.style.display = on ? "none" : "";
-    onGrid.style.display = on ? "" : "none";
-    if (!on) return;
+    toggle.classList.toggle("on", on);
+    toggle.setAttribute("aria-pressed", String(on));
+    count.style.display = on ? "" : "none";
+    if (!on) {
+      list.replaceChildren(h("span", { class: "shell-dim shell-pad", text: tl("Turn it on to find what you copied here. It is held in memory only, never on disk, and text only.") }));
+      return;
+    }
     try {
       draw(await Bridge.shellClipboard());
     } catch (e) {
       info.say(message(e));
     }
+  }
+
+  /** The switch saves the setting as Settings does: the same key, read again by Rust. */
+  async function setOn(on: boolean) {
+    State.settings.shellClipboard = on;
+    await Bridge.saveSettings(State.settings);
+    await refresh();
   }
 
   async function copy(id: number) {
@@ -350,20 +377,21 @@ function buildWallpapers(): Tab {
   const dropZone = h(
     "div",
     { class: "shell-drop" },
-    svg("M12 16V4M7 9l5-5 5 5M4 20h16", 22, { stroke: 2 }),
+    svg("M12 16V4M7 9l5-5 5 5M4 20h16", 24, { stroke: 2 }),
     h("span", { class: "shell-card-title", text: tl("Drop your images here") }),
     h("span", { class: "shell-dim", text: tl("JPG, PNG or WebP, one or several at a time · nothing goes to the Internet") }),
   );
   const targets = h("div", { class: "shell-row shell-wrap" });
-  const applyBtn = h("button", { class: "shell-chip on", text: tl("Apply"), onclick: () => void apply() });
+  const applyBtn = h("button", { class: "shell-pill", text: tl("Apply"), onclick: () => void apply() });
   const el = h(
     "div",
     { class: "shell-tab" },
     h(
       "div",
-      { class: "shell-grid5" },
-      card("shell-span3", cardTitle(tl("My selection"), subtitle), grid),
-      h("div", { class: "shell-span2 shell-stack" }, dropZone, card("", cardTitle(tl("Apply to")), targets, h("div", { class: "shell-row" }, applyBtn))),
+      { class: "shell-stack" },
+      card("", cardTitle(tl("My selection"), subtitle), grid),
+      dropZone,
+      h("div", { class: "shell-row shell-between" }, h("div", { class: "shell-row shell-wrap" }, h("span", { class: "shell-dim", text: tl("Apply to") }), targets), applyBtn),
     ),
     info.el,
   );
@@ -378,10 +406,11 @@ function buildWallpapers(): Tab {
     clear(grid);
     if (data.images.length === 0) grid.append(h("span", { class: "shell-dim", text: tl("Your images show up here once dropped.") }));
     for (const img of data.images) {
-      const thumb = h("button", { class: img.id === selected ? "shell-wall on" : "shell-wall", "aria-label": t("Pick this image"), "aria-pressed": String(img.id === selected), onclick: () => { selected = img.id; draw(); } });
+      const on = img.id === selected;
+      const thumb = h("button", { class: on ? "shell-wall on" : "shell-wall", "aria-label": t("Pick this image"), "aria-pressed": String(on), onclick: () => { selected = img.id; draw(); } });
       if (img.thumb) thumb.style.backgroundImage = `url("${img.thumb}")`;
       const del = h("button", { class: "shell-wall-del", "aria-label": t("Delete"), title: t("Delete"), onclick: () => Bridge.shellWallpaperDelete(img.id).then((d) => { data = d; draw(); }, (e) => info.say(message(e))) }, svg("M6 6l12 12M18 6 6 18", 12, { stroke: 2.5 }));
-      grid.append(h("div", { class: "shell-wall-cell" }, thumb, del));
+      grid.append(h("div", { class: "shell-wall-cell" }, thumb, del, on ? h("span", { class: "shell-wall-mark" }, svg("M5 12l5 5L20 7", 14, { stroke: 2.5 })) : null));
     }
     const chips: [number | null, string][] = [[null, t("All screens")]];
     for (let i = 0; i < data.screens && data.screens > 1; i++) chips.push([i, t("Screen {n}", { n: String(i + 1) })]);
@@ -424,10 +453,10 @@ function buildWallpapers(): Tab {
 
 // ── Power ─────────────────────────────────────────────────────────────────────
 
+/** The mockup's four tiles. Sign out is not one of them (see docs/WINDOWS_SHELL.md). */
 const POWER: [ShellPowerAction, string, string][] = [
   ["lock", N_("Lock"), "M6 11h12v10H6zM8 11V7a4 4 0 0 1 8 0v4"],
   ["sleep", N_("Sleep"), "M21 13A9 9 0 1 1 11 3a7 7 0 0 0 10 10z"],
-  ["signOut", N_("Sign out"), "M15 3h4v18h-4M10 17l-5-5 5-5M5 12h11"],
   ["restart", N_("Restart"), "M3 12a9 9 0 1 0 3-6.7M3 4v5h5"],
   ["shutDown", N_("Shut down"), "M12 2v10M5.6 6.6a8 8 0 1 0 12.8 0"],
 ];
@@ -446,7 +475,7 @@ function buildPower(): Tab {
     "div",
     { class: "shell-power-grid" },
     ...POWER.map(([action, label, icon]) =>
-      h("button", { class: "shell-power", onclick: () => void ask(action) }, h("span", { class: "shell-badge" }, svg(icon, 22, { stroke: 2 })), h("span", { class: "shell-card-title", text: t(label) })),
+      h("button", { class: action === "shutDown" ? "shell-power danger" : "shell-power", onclick: () => void ask(action) }, svg(icon, 24, { stroke: 2 }), h("span", { text: t(label) })),
     ),
   );
   const confirmBox = h("div", { class: "shell-confirm", style: "display:none" });
@@ -456,7 +485,7 @@ function buildPower(): Tab {
     { class: "shell-tab" },
     buttons,
     confirmBox,
-    h("div", { class: "shell-foot" }, battery, h("span", { class: "shell-dim", text: tl("Always confirmed by a click") })),
+    foot(battery, tl("Always confirmed by a click")),
     info.el,
   );
 
@@ -474,7 +503,8 @@ function buildPower(): Tab {
       info.say(message(e));
       return;
     }
-    const label = POWER.find(([a]) => a === action)?.[1] ?? "";
+    const [, label = "", icon = ""] = POWER.find(([a]) => a === action) ?? [];
+    const danger = action === "shutDown" || action === "restart";
     const apps = c.kind === "power" ? c.apps : [];
     const detail =
       action === "lock" || action === "sleep"
@@ -484,17 +514,17 @@ function buildPower(): Tab {
           : t("No app has a window open.");
     confirmBox.replaceChildren(
       card(
-        "shell-confirm-card",
-        h("span", { class: "shell-confirm-title", text: t(QUESTION[action]) }),
-        h("span", { class: "shell-dim", text: detail }),
+        danger ? "shell-confirm-card danger" : "shell-confirm-card",
+        h("span", { class: "shell-badge on" }, svg(icon, 22, { stroke: 2 })),
+        h("span", { class: "shell-grow" }, h("span", { class: "shell-confirm-title", text: t(QUESTION[action]) }), h("span", { class: "shell-dim", text: detail })),
         h(
           "div",
-          { class: "shell-row shell-end" },
-          h("button", { class: "btn secondary", onclick: () => { void Bridge.shellConfirmCancel(); close(); } }, h("span", { text: tl("Cancel") })),
+          { class: "shell-row" },
+          h("button", { class: "shell-chip", onclick: () => { void Bridge.shellConfirmCancel(); close(); } }, h("span", { text: tl("Cancel") })),
           h(
             "button",
             {
-              class: "btn primary",
+              class: danger ? "shell-pill danger" : "shell-pill",
               onclick: () => {
                 close();
                 Bridge.shellConfirm(c.token).catch((e) => info.say(message(e)));
@@ -505,7 +535,6 @@ function buildPower(): Tab {
         ),
       ),
     );
-    buttons.style.display = "none";
     confirmBox.style.display = "";
   }
 

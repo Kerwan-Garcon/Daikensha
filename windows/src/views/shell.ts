@@ -12,12 +12,11 @@ import {
   type ShellWindow,
 } from "../core/bridge";
 import {
-  availableTabs, clockText, formatBytes, formatPct, gaugeDash, initial, pushSample, searchApps, sparkline, tileColor,
-  type ShellTab,
+  appColor, availableTabs, clockText, formatBytes, formatPct, initial, pushSample, searchApps, sparkline, type ShellTab,
 } from "../core/shell";
 import { N_, language, t, tl, type Msg } from "../i18n/i18n";
 import { clear, h, svg } from "./dom";
-import { card, cardTitle, linkButton, message, note, switchButton, type Tab } from "./shell-parts";
+import { card, cardTitle, chipRow, foot, linkButton, message, note, ring, switchButton, type Tab } from "./shell-parts";
 import { buildClipboard, buildPower, buildToday, buildWallpapers } from "./shell-tabs";
 import type { ViewHost } from "./views";
 
@@ -48,40 +47,14 @@ const UNITS = (): string[] => [t("B"), t("KB"), t("MB"), t("GB"), t("TB")];
 // ── Stats ─────────────────────────────────────────────────────────────────────
 
 function gauge(name: Msg, color: string): { el: HTMLElement; set(pct: number | null, detail: string): void } {
-  const ns = "http://www.w3.org/2000/svg";
-  const s = document.createElementNS(ns, "svg");
-  s.setAttribute("viewBox", "0 0 88 88");
-  s.setAttribute("width", "80");
-  s.setAttribute("height", "80");
-  const ring = (stroke: string) => {
-    const c = document.createElementNS(ns, "circle");
-    c.setAttribute("cx", "44");
-    c.setAttribute("cy", "44");
-    c.setAttribute("r", "34");
-    c.setAttribute("fill", "none");
-    c.setAttribute("stroke", stroke);
-    c.setAttribute("stroke-width", "8");
-    return c;
-  };
-  const track = ring("rgba(255,255,255,0.10)");
-  const arc = ring(color);
-  arc.setAttribute("stroke-linecap", "round");
-  arc.setAttribute("transform", "rotate(-90 44 44)");
-  arc.setAttribute("stroke-dasharray", gaugeDash(0, 34));
-  const text = document.createElementNS(ns, "text");
-  text.setAttribute("x", "44");
-  text.setAttribute("y", "50");
-  text.setAttribute("text-anchor", "middle");
-  text.setAttribute("class", "shell-gauge-value");
-  s.append(track, arc, text);
+  const r = ring(color);
   const detail = h("span", { class: "shell-dim" });
-  const el = card("shell-gauge", s, h("div", { class: "shell-gauge-text" }, h("span", { class: "shell-card-title", text: name }), detail));
+  const el = card("shell-gauge", r.el, h("div", { class: "shell-gauge-text" }, h("span", { class: "shell-card-title", text: name }), detail));
   return {
     el,
     set(pct, d) {
-      arc.setAttribute("stroke-dasharray", gaugeDash(pct ?? 0, 34));
-      text.textContent = formatPct(pct);
-      s.setAttribute("aria-label", `${String(name)} ${formatPct(pct)}`);
+      r.set(pct ?? 0);
+      r.el.setAttribute("aria-label", `${String(name)} ${formatPct(pct)}`);
       detail.textContent = d;
     },
   };
@@ -90,7 +63,7 @@ function gauge(name: Msg, color: string): { el: HTMLElement; set(pct: number | n
 function buildStats(): Tab {
   const cpu = gauge(tl("CPU"), "var(--shell-accent)");
   const gpu = gauge(tl("GPU"), "#a78bfa");
-  const ram = gauge(tl("Memory"), "#34d399");
+  const ram = gauge(tl("RAM"), "#34d399");
   const ns = "http://www.w3.org/2000/svg";
   const chart = document.createElementNS(ns, "svg");
   chart.setAttribute("viewBox", "0 0 240 80");
@@ -108,7 +81,7 @@ function buildStats(): Tab {
   const upLine = line("up");
   const down = h("span", { class: "shell-mono shell-accent" });
   const up = h("span", { class: "shell-mono shell-dim" });
-  const net = card("shell-net", cardTitle(tl("Network"), h("span", { class: "shell-dim", text: tl("60 s") })), chart, h("div", { class: "shell-row" }, down, up));
+  const net = card("shell-net", cardTitle(tl("Network"), h("span", { class: "shell-dim", text: tl("60 s") })), chart, h("div", { class: "shell-row shell-row-foot" }, down, up));
   const topList = h("div", { class: "shell-top" });
   const top = card("shell-span2", cardTitle(tl("Using the most"), h("span", { class: "shell-dim", text: tl("CPU · memory") })), topList);
   const own = h("span", { class: "shell-dim" });
@@ -116,7 +89,7 @@ function buildStats(): Tab {
     "div",
     { class: "shell-tab" },
     h("div", { class: "shell-grid3" }, cpu.el, gpu.el, ram.el, net, top),
-    h("div", { class: "shell-foot" }, h("span", { class: "shell-dim", text: tl("Updated every second, only while this panel is open") }), own),
+    foot(tl("Updated every second, only while this panel is open"), own),
   );
 
   let timer: number | null = null;
@@ -199,7 +172,7 @@ function buildControls(): Tab {
 
   function draw(c: ShellControls) {
     const level = Math.round((c.volume ?? 0) * 100);
-    const value = h("span", { class: "shell-mono shell-dim", text: `${level} %` });
+    const value = h("span", { class: "shell-mono shell-dim shell-value", text: `${level} %` });
     const slider = h("input", { type: "range", min: "0", max: "100", value: String(level), "aria-label": t("Volume") }) as HTMLInputElement;
     slider.disabled = c.volume == null;
     slider.addEventListener("input", () => {
@@ -228,8 +201,8 @@ function buildControls(): Tab {
     const screen = card(
       "",
       cardTitle(tl("Screen and colours")),
-      linkButton(tl("Light or dark theme"), () => void act(Bridge.shellOpenSettings("colors"))),
-      linkButton(tl("Night light"), () => void act(Bridge.shellOpenSettings("nightLight"))),
+      chipRow(tl("Light or dark theme"), () => void act(Bridge.shellOpenSettings("colors"))),
+      chipRow(tl("Night light"), () => void act(Bridge.shellOpenSettings("nightLight"))),
     );
     const radios = c.radios
       .filter((r) => r.kind === "wifi" || r.kind === "bluetooth")
@@ -238,11 +211,19 @@ function buildControls(): Tab {
         const icon = r.kind === "wifi" ? "M5 12.5a10 10 0 0 1 14 0M8.5 16a5 5 0 0 1 7 0M2 9a15 15 0 0 1 20 0M12 20h.01" : "m7 7 10 10-5 5V2l5 5L7 17";
         return card(
           "shell-radio",
-          h("span", { class: "shell-badge" }, svg(icon, 20, { stroke: 2 })),
+          h("span", { class: r.on ? "shell-badge on" : "shell-badge" }, svg(icon, 20, { stroke: 2 })),
           h("div", { class: "shell-grow" }, h("span", { class: "shell-card-title", text: name }), h("span", { class: "shell-dim", text: r.on ? tl("On") : tl("Off") })),
           switchButton(name, r.on, () => void act(Bridge.shellSetRadio(r.kind, !r.on))),
         );
       });
+    // Windows has no API to switch airplane mode: the card opens its page in Settings.
+    const airplane = h(
+      "button",
+      { class: "shell-card shell-radio shell-card-link", onclick: () => void act(Bridge.shellOpenSettings("network")) },
+      h("span", { class: "shell-badge" }, svg("M17.8 19.2 16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.5 5.3c.3.4.8.5 1.3.3l.5-.2c.4-.3.6-.7.5-1.2z", 20, { stroke: 2 })),
+      h("span", { class: "shell-grow" }, h("span", { class: "shell-card-title", text: tl("Airplane mode") }), h("span", { class: "shell-dim", text: tl("In Settings") })),
+      svg("M7 17 17 7M8 7h9v9", 14, { stroke: 2 }),
+    );
     const adjustable = c.displays.filter((d) => d.brightness != null);
     const bright = card(
       "shell-span3",
@@ -272,7 +253,7 @@ function buildControls(): Tab {
             }),
           ),
     );
-    body.replaceChildren(sound, screen, ...radios, bright);
+    body.replaceChildren(sound, screen, ...radios, airplane, bright);
   }
 
   async function refresh() {
@@ -308,7 +289,7 @@ function writeRecent(ids: string[]) {
 }
 
 function tile(app: ShellApp, size: number): HTMLElement {
-  return h("span", { class: "shell-tile", style: `width:${size}px;height:${size}px;background:${tileColor(app.name)};font-size:${Math.round(size * 0.42)}px`, text: initial(app.name) });
+  return h("span", { class: "shell-tile", style: `width:${size}px;height:${size}px;background:${appColor(app.name)};font-size:${Math.round(size * 0.42)}px`, text: initial(app.name) });
 }
 
 function buildApps(): Tab {
@@ -327,7 +308,7 @@ function buildApps(): Tab {
       card("shell-span2 shell-list", h("span", { class: "shell-dim shell-pad", text: tl("Results") }), results),
       card("shell-span3", cardTitle(tl("Recent")), recentGrid),
     ),
-    h("div", { class: "shell-foot" }, h("span", { class: "shell-dim", text: tl("Start menu and Store apps. Never an arbitrary path.") }), h("span", { class: "shell-dim", text: tl("Enter to launch") })),
+    foot(tl("Start menu and Store apps. Never an arbitrary path."), tl("Enter to launch")),
     info.el,
   );
   let apps: ShellApp[] = [];
@@ -348,15 +329,15 @@ function buildApps(): Tab {
     shown = searchApps(apps, input.value, 6);
     results.replaceChildren(
       ...shown.map((a, i) =>
-        h("button", { class: i === 0 && input.value ? "shell-result on" : "shell-result", onclick: () => void launch(a) }, tile(a, 32), h("span", { class: "shell-ellipsis", text: a.name })),
+        h("button", { class: i === 0 && input.value ? "shell-result on" : "shell-result", onclick: () => void launch(a) }, tile(a, 36), h("span", { class: "shell-ellipsis", text: a.name })),
       ),
     );
     const byId = new Map(apps.map((a) => [a.id, a]));
     const recent = readRecent().map((id) => byId.get(id)).filter((a): a is ShellApp => !!a);
     clear(recentGrid);
-    if (recent.length === 0) recentGrid.append(h("span", { class: "shell-dim", text: tl("Apps you launch from here show up here.") }));
+    if (recent.length === 0) recentGrid.append(h("span", { class: "shell-dim shell-empty", text: tl("Apps you launch from here show up here.") }));
     for (const a of recent) {
-      recentGrid.append(h("button", { class: "shell-tile-btn", onclick: () => void launch(a) }, tile(a, 44), h("span", { class: "shell-ellipsis", text: a.name })));
+      recentGrid.append(h("button", { class: "shell-tile-btn", onclick: () => void launch(a) }, tile(a, 56), h("span", { class: "shell-ellipsis", text: a.name })));
     }
   }
 
@@ -408,10 +389,10 @@ function buildWindows(): Tab {
   const list = h("div", { class: "shell-wins" });
   const placeTitle = h("span", { class: "shell-card-title shell-ellipsis" });
   const snaps = h("div", { class: "shell-snaps" });
-  const screens = h("div", { class: "shell-row" });
+  const screens = h("div", { class: "shell-screens" });
   const layoutList = h("div", { class: "shell-layouts" });
   const nameInput = h("input", { type: "text", class: "shell-name-input", placeholder: t("Layout name"), "aria-label": t("Layout name"), maxlength: "40" }) as HTMLInputElement;
-  const saveRow = h("div", { class: "shell-row", style: "display:none" }, nameInput, h("button", { class: "shell-chip on", onclick: () => void saveLayout(), text: tl("Save") }));
+  const saveRow = h("div", { class: "shell-row", style: "display:none" }, nameInput, h("button", { class: "shell-pill", onclick: () => void saveLayout(), text: tl("Save") }));
   const el = h(
     "div",
     { class: "shell-tab" },
@@ -474,7 +455,7 @@ function buildWindows(): Tab {
         h(
           "div",
           { class: w.id === selected ? "shell-win on" : "shell-win" },
-          h("i", { class: "shell-win-dot", style: `background:${tileColor(w.app)}` }),
+          h("i", { class: "shell-win-dot", style: `background:${appColor(w.app)}` }),
           h(
             "button",
             { class: "shell-win-main", onclick: () => { selected = w.id; draw(); void act(w.id, { kind: "focus" }); } },
@@ -489,6 +470,16 @@ function buildWindows(): Tab {
     drawPlace();
   }
 
+  /** A layout's picture: one frame per screen, one bar per window on it. */
+  function layoutThumb(l: ShellLayout): HTMLElement {
+    const count = Math.max(1, ...l.windows.map((w) => w.screen + 1));
+    return h(
+      "span",
+      { class: "shell-layout-thumb", "aria-hidden": "true" },
+      ...Array.from({ length: count }, (_, s) => h("div", {}, ...l.windows.filter((w) => w.screen === s).map(() => h("i", {})))),
+    );
+  }
+
   function drawLayouts(layouts: ShellLayout[]) {
     clear(layoutList);
     if (layouts.length === 0) layoutList.append(h("span", { class: "shell-dim", text: tl("Save how your windows sit now, and put them back in one click.") }));
@@ -500,8 +491,13 @@ function buildWindows(): Tab {
           h(
             "button",
             { class: "shell-layout-main", onclick: () => Bridge.shellLayoutApply(l.name).then(() => refresh(), (e) => info.say(message(e))) },
-            h("span", { class: "shell-card-title", text: l.name }),
-            h("span", { class: "shell-dim shell-ellipsis", text: l.windows.map((w) => w.app).join(", ") }),
+            layoutThumb(l),
+            h(
+              "span",
+              { class: "shell-grow" },
+              h("span", { class: "shell-card-title shell-ellipsis", text: l.name }),
+              h("span", { class: "shell-dim shell-ellipsis", text: l.windows.map((w) => w.app).join(", ") }),
+            ),
           ),
           h("button", { class: "shell-icon-btn", "aria-label": t("Delete"), title: t("Delete"), onclick: () => Bridge.shellLayoutDelete(l.name).then(drawLayouts, (e) => info.say(message(e))) }, svg("M6 6l12 12M18 6 6 18", 14, { stroke: 2 })),
         ),

@@ -184,6 +184,19 @@ Mochi est dessiné en code : il dort sur l'onglet Alimentation et regarde l'ongl
 5. **Sortie audio et éclairage nocturne** : des liens vers les Paramètres.
 6. **Branche** : `feat/windows-shell`, une PR à part qui part de la PR 1 (mode abonnement).
 
+## Écarts avec les maquettes (PDF « Coucou Shell — maquettes »)
+
+Les onglets suivent les pages sombres du PDF (tailles, rayons, interrupteurs 48×28, cartes, pieds de page, carte de confirmation). Ce qui ne peut pas être identique :
+
+- **Mode avion** : Windows n'expose pas le mode avion dans l'API des radios. La carte ouvre la page Réseau des Paramètres au lieu d'un interrupteur.
+- **Alimentation** : quatre tuiles comme la maquette. « Se déconnecter » reste une action (sa carte de confirmation existe) mais n'a pas de tuile.
+- **Apps** : la maquette dit « Épinglées ». L'app n'a pas d'épingles ; la grille montre les apps lancées récemment. Pas de sous-titre « Application » ou « Store » : la liste de Windows ne le donne pas.
+- **Stats** : pas de nom de processeur ni de carte graphique (`ShellStats` ne les fournit pas), donc pas de sous-titre sous CPU et GPU.
+- **Presse-papiers** : texte en police normale, pas en police à chasse fixe pour le code.
+- **Clair** : les maquettes claires (`ControlesClair`, `StatsClair`) ne sont pas faites. L'island reste sombre, comme dans l'app.
+- **Carte de confirmation** (saisie, routine) : elle garde le style de la carte d'approbation de `main`, qui ne se retouche pas sans demande.
+- **« Entoure et demande »** : la maquette affiche Ctrl+Maj+Espace ; le raccourci de l'app est Ctrl+Alt+X.
+
 ## Mesures
 
 À remplir avec `shell-spike-report.md` et le test Mica.

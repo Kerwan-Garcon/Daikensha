@@ -35,9 +35,11 @@ function draw() {
   ctx.fill();
   ctx.shadowColor = "rgba(96, 165, 250, 0.9)";
   ctx.shadowBlur = 12;
-  ctx.strokeStyle = "#93c5fd";
-  ctx.lineWidth = 3;
+  ctx.strokeStyle = "#60a5fa";
+  ctx.lineWidth = 2.5;
+  ctx.setLineDash([10, 7]);
   ctx.stroke();
+  ctx.setLineDash([]);
   ctx.shadowBlur = 0;
 }
 
