@@ -53,9 +53,10 @@ fn pending() -> &'static Mutex<HashMap<u64, mpsc::Sender<String>>> {
 }
 static NEXT_ID: AtomicU64 = AtomicU64::new(1);
 
-/// Whether « OK Coucou » can run: the voice model and a Claude key.
+/// Whether « OK Coucou » can run: the voice model, and Claude through a key
+/// or the subscription (claude::reachable, the rule the rest of the app uses).
 pub fn requirements_met() -> bool {
-    speech::is_ready() && crate::secrets::present(crate::claude::KEY)
+    speech::is_ready() && crate::claude::reachable()
 }
 
 /// Starts or stops listening to follow the preference.
@@ -157,6 +158,7 @@ fn run(app: AppHandle, stop: Arc<AtomicBool>) {
     while !stop.load(Ordering::Relaxed) {
         let paused = pill::dictating(&app) || crate::notes::is_recording(&app);
         let now = Instant::now();
+        brain.idle();
         // The pill's last answer goes away after a while.
         if hide_at.is_some_and(|t| now > t) {
             hide_at = None;
@@ -245,6 +247,7 @@ fn run(app: AppHandle, stop: Arc<AtomicBool>) {
                     Some(rest) => {
                         crate::log::line("voice: « OK Coucou » heard");
                         hide_at = None;
+                        brain.warm(&app);
                         if crate::flow::text::word_count(&rest) >= 2 {
                             Some(rest)
                         } else {
@@ -275,7 +278,11 @@ fn run(app: AppHandle, stop: Arc<AtomicBool>) {
                 show(&app, Some(VoiceView {
                     phase: "speaking".into(),
                     heard: question,
-                    answer: if done { "✓".into() } else { crate::i18n::t("Coucou couldn't answer: check your Claude key in Notch → Chat.") },
+                    answer: if done {
+                        "✓".into()
+                    } else {
+                        brain.take_error().unwrap_or_else(|| crate::i18n::t("Coucou couldn't answer: check your Claude key in Notch → Chat."))
+                    },
                 }));
                 hide_at = Some(Instant::now() + Duration::from_secs(5));
                 continue;

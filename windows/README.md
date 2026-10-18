@@ -294,6 +294,16 @@ nodes, never parsed as HTML, and only `http`/`https` links open. Mochi greets
 you by your first name when your account has one (the Windows display name or
 the Linux GECOS full name; a bare login name is not used).
 
+**Claude subscription**: **Settings… → Claude → Account** can be **Claude
+subscription** instead of an API key. The chat (the "Claude subscription"
+provider), the phone's chat, « OK Coucou », the dictation clean-up and the
+Notetaker's summary then go through your own Claude Code, signed in to your
+Pro or Max plan, and use its limits instead of API credits. Coucou starts
+`claude` itself, with no tool that can run code, touch files or fetch pages
+(the voice gets web search and its own tools), and never reads Claude Code's
+credentials. **Check** says whether Claude Code is installed and signed in.
+How it works and what was measured: [docs/SUBSCRIPTION_MODE.md](../docs/SUBSCRIPTION_MODE.md).
+
 To send the Claude chat through an Anthropic-compatible gateway, set
 `COUCOU_ANTHROPIC_BASE_URL` (for example `https://gateway.example.com`;
 `/v1/messages` is added). It must be `https://`, or `http://` to this PC only.

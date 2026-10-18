@@ -126,6 +126,11 @@ export interface Settings {
   /** Show the Codex plan pill in the island's header. */
   showCodexPlanInNotch: boolean;
   replyFromIsland: boolean;
+  /**
+   * Claude through the user's own Claude Code and subscription instead of the
+   * API key (claude_cli.rs). Off by default; only Settings → Claude turns it on.
+   */
+  claudeSubscription: boolean;
   /** Who the chat talks to (see core/providers.ts); picked in the chat view. */
   chatProvider: ProviderId;
   /** The model picked for each provider other than Anthropic, by provider id. */
@@ -188,6 +193,7 @@ export const DEFAULT_SETTINGS: Settings = {
   planRelayInstalled: false,
   showCodexPlanInNotch: false,
   replyFromIsland: false,
+  claudeSubscription: false,
   chatProvider: "anthropic",
   chatModels: {},
   ollamaUrl: "",

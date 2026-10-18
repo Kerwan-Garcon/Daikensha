@@ -338,6 +338,8 @@ export const Bridge = {
    * the provider only when it has a key (or a server address).
    */
   chatModels: (provider: string) => callOrThrow<ModelInfo[]>("chat_models", { provider }),
+  /** Settings → Claude → Check: is Claude Code installed and signed in to a subscription? */
+  claudeCliStatus: () => call<ClaudeCliStatus>("claude_cli_status"),
   /** Settings → Local models → Connect: does the server answer, and with which models? */
   /** The custom server's key, bound to the address it is entered for. */
   localSetKey: (url: string, key: string) => call<void>("local_set_key", { url, key }),
@@ -466,6 +468,14 @@ export interface ModelInfo {
   id: string;
   label: string;
 }
+
+/** What claude_cli::status() says about the user's Claude Code (nothing about the account). */
+export type ClaudeCliStatus =
+  | { state: "notInstalled" }
+  | { state: "notLoggedIn"; version: string }
+  | { state: "subscription"; version: string; plan: string | null }
+  | { state: "apiKey"; version: string }
+  | { state: "other"; version: string; method: string };
 
 export interface LocalServer {
   /** The address as it is stored. */
