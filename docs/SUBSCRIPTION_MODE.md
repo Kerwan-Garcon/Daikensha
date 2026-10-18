@@ -28,7 +28,7 @@ Le mode API reste celui par défaut. L'abonnement est un choix explicite : **Ré
 
 | Usage | Mode | Outils | Conversation |
 | --- | --- | --- | --- |
-| Chat de l'island (fournisseur « Claude subscription ») | `Chat` | aucun | `--resume <session_id>` ; « Nouveau chat » et le lancement font `claude purge --yes` sur le dossier |
+| Chat de l'island (fournisseur « Claude subscription ») | `Chat` | aucun | `--resume <session_id>` ; « Nouveau chat » (Ctrl+K dans la vue de saisie, il n'y a pas de bouton) et le lancement font `claude purge --yes` sur le dossier |
 | Chat du téléphone | `Phone` | aucun, ni contexte, quoi que dise la config | idem, dans son propre dossier |
 | `claude::complete()` : nettoyage de dictée, résumé du Notetaker | `Complete` | aucun | `--no-session-persistence` |
 | « OK Coucou » | `Voice` | `WebSearch` + les 5 outils de Coucou en MCP | un processus gardé, oublié après 90 s ; `--no-session-persistence` |
@@ -77,7 +77,7 @@ Chacune suffit seule à bloquer un appel `Bash` ; le test `with_any_one_layer_do
 3. **Hook `PreToolUse`** dans ces mêmes réglages : `coucou-hook --tool-guard <text|voice>`, pour tous les outils (`matcher: "*"`).
    - Il refuse (code de sortie 2) tout outil hors liste, une entrée illisible, un autre événement, un mode inconnu, ou un stdin qui ne se termine pas en 2 s.
    - Pour un outil autorisé, il ne répond rien : il ne peut que retirer un outil, jamais en accorder un.
-   - **Attention** : Claude Code laisse l'outil s'exécuter si le hook est absent ou dépasse son timeout (mesuré). Coucou vérifie donc que le relais existe avant de lancer `claude`.
+   - **Attention** : Claude Code laisse l'outil s'exécuter si le hook est absent ou dépasse son timeout (mesuré), et un relais d'une version antérieure, qui ne connaît pas `--tool-guard`, transmettrait l'événement sans rien refuser (constaté à la QA Windows). Avant de lancer `claude`, Coucou fait donc juger un appel `Bash` au relais installé (`claude_cli::relay_ready`) : il doit le refuser (code 2, message du garde) en moins de 5 s. Le résultat est gardé tant que le fichier ne change pas (date et taille). Sinon, rien ne démarre et l'island dit de relancer Coucou pour mettre le relais à jour.
 4. **Coupe-circuit du flux** (`Stream`) : il tue le processus aussitôt que celui-ci signale l'un des cas suivants :
    - dans `system/init`, un outil hors liste, un serveur MCP autre que `coucou`, une `apiKeySource` qui n'est pas le login (une clé serait facturée) ou `bypassPermissions` ;
    - dans un message `assistant`, un bloc `tool_use` / `server_tool_use` / `mcp_tool_use` hors liste.
@@ -129,12 +129,14 @@ Le bouton **Réglages → Claude → Vérifier** appelle `claude auth status` et
 
 ## Limites et risques connus
 
-- **Latence** : un tour à froid prend environ 1 s de plus qu'avec l'API (le démarrage du CLI). La voix démarre son processus dès le mot-clé pour le masquer. Le délai du nettoyage de dictée passe de 4 à 10 s, par prudence ; au-delà, le texte est collé tel quel, comme avant.
+- **Latence** : un tour `-p` à froid prend environ 3 s sous Linux et **environ 6 s mesurées sous Windows** (QA du 18 octobre), contre une ou deux secondes avec l'API : c'est le démarrage du CLI. Le processus gardé de la voix répond ensuite en environ 1,3 s. La voix démarre son processus dès le mot-clé pour le masquer. Le délai du nettoyage de dictée passe de 4 à 10 s, par prudence ; au-delà, le texte est collé tel quel, comme avant.
 - **Le chat n'a pas de recherche web** en mode abonnement, contrairement au mode API (aucun outil, par choix). La voix l'a.
 - **Exfiltration par la recherche** : une page web lue par `WebSearch` peut contenir une injection. Sans outil dangereux, elle ne peut rien exécuter. En revanche, elle pourrait pousser le modèle à lire `service_info` (les données de l'utilisateur), puis à glisser une partie de ces données dans une requête de recherche suivante. Le risque est le même en mode API avec `web_search`. Il est accepté ici et documenté, car le filtrer par « détection d'injection » serait contournable.
 - **`open_app` et `prepare_email`** restent ce qu'ils sont en mode API : ouvrir un raccourci du menu Démarrer, ouvrir l'app de mail pré-remplie.
 - **Le hook de garde échoue ouvert côté Claude Code** si le relais disparaît pendant une session. Les couches 1, 2 et 4 tiennent quand même.
 - **`apiKeySource`** : la valeur « login » observée est `"none"`. `"oauth"` et `"claude.ai"` sont aussi acceptées. Si un login Pro sous Windows rapportait autre chose, le mode refuserait de répondre et le dirait : à vérifier avec le script.
+- **Nom d'utilisateur** : Claude Code donne au modèle son dossier de travail. Celui de Coucou est sous le profil (`C:\Users\<nom>\AppData\Local\Coucou\claude-cli\…`), donc le nom d'utilisateur Windows part avec chaque message, comme avec n'importe quelle session Claude Code.
+- **Clé API inutile** : en abonnement, la voix, le chat, la dictée et les notes n'en demandent pas (`claude::reachable`) ; Réglages → Claude le dit au lieu d'afficher le point rouge, et passer de la clé à l'abonnement relance l'écoute de « OK Coucou ».
 - **Transcriptions** : le chat garde la conversation sur disque dans `~/.claude/projects/<dossier claude-cli>` le temps de `--resume`, puis la supprime avec `claude purge` à « Nouveau chat » et au lancement suivant.
 - **Version de Claude Code** : `--restricted`, `--permission-prompts` et `--disable-slash-commands` existent dans la 2.1.302. Avec une version qui ne les connaît pas, le CLI refuse de démarrer, et l'island montre son message.
 
@@ -222,14 +224,18 @@ Ce conteneur est connecté par un token géré par l'hôte, pas par un login cla
 
 | Vérification | Résultat |
 | --- | --- |
-| 1. Exécutable, version | |
-| 2. `authMethod` / `subscriptionType` | |
-| 3. Latence `-p` à froid ; champs du JSON | |
-| 3. Flags phase 1 acceptés ; `--bare` refusé | |
-| 4. Variante qui coupe les hooks sans casser l'auth | |
-| 5. WebSearch sur abonnement | |
-| 6. Latence tour 2 persistant vs `-p` à froid ; format stdin/stdout | |
-| 7. Quota consommé par 10 tours (5 h / 7 j) | |
+Mesuré le 18 octobre 2026 sur Windows 11 x64, Claude Code 2.1.302, abonnement Pro (QA de la PR 1).
+
+| Vérification | Résultat |
+| --- | --- |
+| 1. Exécutable, version | `claude` 2.1.302 trouvé |
+| 2. `authMethod` / `subscriptionType` | `claude.ai` / `pro`, `apiKeySource: none` |
+| 3. Latence `-p` à froid ; champs du JSON | environ 6,2 s |
+| 3. Flags phase 1 acceptés ; `--bare` refusé | oui ; oui |
+| 4. Variante qui coupe les hooks sans casser l'auth | `--setting-sources ""` : 0 événement de hook |
+| 5. WebSearch sur abonnement | fonctionne |
+| 6. Latence tour 2 persistant vs `-p` à froid ; format stdin/stdout | 1,3 s au tour 2 contre 3,3 s au tour 1 |
+| 7. Quota consommé par 10 tours (5 h / 7 j) | pas encore mesuré (`-SkipQuota`) |
 
 ### Commandes retenues
 

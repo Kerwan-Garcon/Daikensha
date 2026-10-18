@@ -90,7 +90,7 @@ fn boot(app: AppHandle, shared: State<Shared>) -> BootInfo {
 
 #[tauri::command]
 fn save_settings(app: AppHandle, shared: State<Shared>, settings: Settings) {
-    let (screen_changed, autostart_changed, shortcuts_changed) = {
+    let (screen_changed, autostart_changed, shortcuts_changed, account_changed) = {
         let mut current = shared.settings.lock().unwrap();
         let screen_changed = current.screen != settings.screen;
         let autostart_changed = current.autostart != settings.autostart;
@@ -110,8 +110,9 @@ fn save_settings(app: AppHandle, shared: State<Shared>, settings: Settings) {
         settings.phone_relay_url = current.phone_relay_url.clone();
         settings.phone_chat_models = current.phone_chat_models.clone();
         claude_cli::set_enabled(settings.claude_subscription);
+        let account_changed = current.claude_subscription != settings.claude_subscription;
         *current = settings;
-        (screen_changed, autostart_changed, shortcuts_changed)
+        (screen_changed, autostart_changed, shortcuts_changed, account_changed)
     };
     let settings = shared.settings.lock().unwrap().clone();
     if let Err(err) = settings::save(&settings) {
@@ -132,6 +133,10 @@ fn save_settings(app: AppHandle, shared: State<Shared>, settings: Settings) {
     spotify::sync(&app, &settings.active_integrations);
     if shortcuts_changed {
         shortcuts::apply(&app, &settings.shortcuts);
+    }
+    // API key ⇄ subscription: « OK Coucou » may now be able to listen, or not any more.
+    if account_changed {
+        voice::sync(&app);
     }
     if i18n::set_picked(&settings.language) {
         language_changed(&app);

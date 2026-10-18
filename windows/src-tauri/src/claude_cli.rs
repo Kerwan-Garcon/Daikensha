@@ -619,15 +619,63 @@ fn excerpt(text: &str, max: usize) -> String {
     format!("{}…", one.chars().take(max).collect::<String>())
 }
 
+// ── The relay's guard ─────────────────────────────────────────────────────────
+
+/// What the relay must answer for a `Bash` call: denied, exit code 2.
+const GUARD_PROBE: &str = r#"{"hook_event_name":"PreToolUse","tool_name":"Bash","tool_input":{"command":"whoami"}}"#;
+
+/// The relay file (modified time, size) that last passed the probe.
+static RELAY_CHECKED: std::sync::Mutex<Option<(std::time::SystemTime, u64)>> = std::sync::Mutex::new(None);
+
+/// Claude Code lets a tool run when its hook is missing, times out, or is an
+/// older relay that does not know `--tool-guard` (it would forward the event
+/// and allow it). So before any `claude` starts, the installed relay is asked
+/// to judge a `Bash` call and must deny it; the answer is kept until the file
+/// changes. No relay, or a relay that does not deny: no start.
+pub(crate) async fn relay_ready() -> Result<(), Failure> {
+    let path = settings::hook_exe_path();
+    let meta = std::fs::metadata(&path).map_err(|_| Failure::Other(t("Coucou's relay is missing. Reinstall Coucou.")))?;
+    let stamp = (meta.modified().unwrap_or(std::time::UNIX_EPOCH), meta.len());
+    if *RELAY_CHECKED.lock().unwrap_or_else(|e| e.into_inner()) == Some(stamp) {
+        return Ok(());
+    }
+    if probe_relay(&path).await {
+        *RELAY_CHECKED.lock().unwrap_or_else(|e| e.into_inner()) = Some(stamp);
+        Ok(())
+    } else {
+        crate::log::line("subscription: the installed relay does not deny tools; not starting Claude Code");
+        Err(Failure::Other(t("Coucou's relay is out of date and could not guard Claude Code. Quit and restart Coucou to update it.")))
+    }
+}
+
+/// True when `relay --tool-guard voice` denies `Bash` (exit 2) within 5 s.
+async fn probe_relay(relay: &Path) -> bool {
+    let mut std_cmd = std::process::Command::new(relay);
+    std_cmd.args(["--tool-guard", "voice"]).stdin(Stdio::piped()).stdout(Stdio::null()).stderr(Stdio::piped());
+    platform::no_console(&mut std_cmd);
+    let mut cmd = tokio::process::Command::from(std_cmd);
+    cmd.kill_on_drop(true);
+    let Ok(mut child) = cmd.spawn() else { return false };
+    if let Some(mut stdin) = child.stdin.take() {
+        let _ = stdin.write_all(GUARD_PROBE.as_bytes()).await;
+    }
+    match tokio::time::timeout(Duration::from_secs(5), child.wait_with_output()).await {
+        Ok(Ok(out)) => guard_denied(out.status.code(), &out.stderr),
+        _ => false,
+    }
+}
+
+/// The probe's answer is a denial from Coucou's guard, and nothing else.
+fn guard_denied(code: Option<i32>, stderr: &[u8]) -> bool {
+    code == Some(2) && String::from_utf8_lossy(stderr).contains("Coucou tool guard")
+}
+
 // ── One turn ──────────────────────────────────────────────────────────────────
 
 /// One user message to a fresh `claude -p`, the answer back.
 pub async fn run(req: &Request<'_>, content: Vec<Value>, timeout: Duration) -> Result<Answer, Failure> {
     let launcher = locate().ok_or(Failure::NotInstalled)?;
-    // Claude Code lets a tool run when its hook is missing: no relay, no start.
-    if !settings::hook_exe_path().is_file() {
-        return Err(Failure::Other(t("Coucou's relay is missing. Reinstall Coucou.")));
-    }
+    relay_ready().await?;
     let args = build_args(req).map_err(Failure::Other)?;
     let cwd = work_dir(req.mode).map_err(Failure::Other)?;
     let mut child = command(&launcher, &args, &cwd).spawn().map_err(|e| match e.kind() {

@@ -349,12 +349,22 @@ function apiSection(hasKey: boolean): HTMLElement {
   const clearBtn = h("button", { class: "danger", text: t("Remove") });
   const feedback = h("div", {});
 
-  async function refresh() {
-    const present = (await Bridge.secretPresent("anthropic-api-key")) ?? false;
-    dot.style.background = present ? "#22c55e" : "#f4505e";
+  let present = hasKey;
+  /** With the subscription on, a missing key is not a problem: no red dot, no "the chat needs one". */
+  function drawKeyState() {
+    const subscription = settings.claudeSubscription;
+    dot.style.background = present ? "#22c55e" : subscription ? "#8e939c" : "#f4505e";
     state.textContent = present
       ? t("Key saved in the {store}.", { store: KEY_STORE })
-      : t("No key yet — the chat needs one.");
+      : subscription
+        ? t("No key needed: Coucou uses your Claude subscription.")
+        : t("No key yet — the chat needs one.");
+    modelHint.style.display = subscription ? "" : "none";
+  }
+
+  async function refresh() {
+    present = (await Bridge.secretPresent("anthropic-api-key")) ?? false;
+    drawKeyState();
     field.placeholder = present ? `••••••••••••  ${t("(stored)")}` : "sk-ant-...";
     clearBtn.style.display = present ? "" : "none";
   }
@@ -409,7 +419,11 @@ function apiSection(hasKey: boolean): HTMLElement {
   const checkBtn = h("button", { text: t("Check") });
   const cliHint = h("div", {
     class: "hint",
-    text: t("The chat, the dictation clean-up and the notes then go through Claude Code and count against your plan's limits."),
+    text: t("The chat, « OK Coucou », the dictation clean-up and the notes then go through Claude Code and count against your plan's limits."),
+  });
+  const modelHint = h("div", {
+    class: "hint",
+    text: t("This model is for the API key. With the subscription, the chat uses the model picked above its text field (Sonnet unless you change it), and « OK Coucou » uses Haiku, which answers fastest."),
   });
   const cliRow = h("div", { class: "row" }, h("label", { text: "Claude Code" }), cliState, checkBtn);
   const showCli = (on: boolean) => {
@@ -427,10 +441,12 @@ function apiSection(hasKey: boolean): HTMLElement {
     if (!on && settings.chatProvider === "anthropic-subscription") settings.chatProvider = "anthropic";
     void save();
     showCli(on);
+    drawKeyState();
     if (on) void checkCli();
   });
   checkBtn.addEventListener("click", () => void checkCli());
   showCli(settings.claudeSubscription);
+  drawKeyState();
   if (settings.claudeSubscription) void checkCli();
 
   return h(
@@ -440,6 +456,7 @@ function apiSection(hasKey: boolean): HTMLElement {
     state,
     h("div", { class: "row" }, h("label", { text: t("API key") }), field, saveBtn, clearBtn),
     h("div", { class: "row" }, h("label", { text: t("Model") }), model),
+    modelHint,
     h("div", { class: "row" }, h("label", { text: t("Account") }), account),
     cliRow,
     cliHint,

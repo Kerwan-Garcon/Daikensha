@@ -135,9 +135,7 @@ pub fn runner(app: &AppHandle) -> mcp::Runner {
 
 async fn start(tools: &mcp::Runner, system: &str) -> Result<Session, Failure> {
     let launcher = locate().ok_or(Failure::NotInstalled)?;
-    if !crate::settings::hook_exe_path().is_file() {
-        return Err(Failure::Other(crate::i18n::t("Coucou's relay is missing. Reinstall Coucou.")));
-    }
+    super::relay_ready().await?;
     let acted = Arc::new(AtomicBool::new(false));
     let runner: mcp::Runner = {
         let tools = tools.clone();

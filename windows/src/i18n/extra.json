@@ -4384,17 +4384,6 @@
    "ru": "Проверить",
    "id": "Periksa"
   },
-  "The chat, the dictation clean-up and the notes then go through Claude Code and count against your plan's limits.": {
-   "zh-Hans": "聊天、听写整理和笔记将通过 Claude Code 进行，并计入你的套餐限额。",
-   "hi": "चैट, डिक्टेशन की सफ़ाई और नोट्स तब Claude Code से होकर जाते हैं और आपके प्लान की सीमा में गिने जाते हैं।",
-   "es": "El chat, la limpieza del dictado y las notas pasan entonces por Claude Code y cuentan para los límites de tu plan.",
-   "ar": "تمر الدردشة وتنقيح الإملاء والملاحظات حينها عبر Claude Code وتُحتسب ضمن حدود خطتك.",
-   "fr": "Le chat, le nettoyage de la dictée et les notes passent alors par Claude Code et comptent dans les limites de ton forfait.",
-   "bn": "চ্যাট, ডিক্টেশন পরিষ্কার করা এবং নোট তখন Claude Code দিয়ে যায় এবং আপনার প্ল্যানের সীমায় গণ্য হয়।",
-   "pt-BR": "O chat, a limpeza do ditado e as notas passam então pelo Claude Code e contam nos limites do seu plano.",
-   "ru": "Чат, очистка диктовки и заметки тогда идут через Claude Code и учитываются в лимитах вашего тарифа.",
-   "id": "Chat, perapian dikte, dan catatan lalu melalui Claude Code dan dihitung dalam batas paket Anda."
-  },
   "Checking Claude Code…": {
    "zh-Hans": "正在检查 Claude Code…",
    "hi": "Claude Code की जाँच हो रही है…",
@@ -4625,6 +4614,50 @@
    "pt-BR": "O Claude Code parou inesperadamente.",
    "ru": "Claude Code неожиданно остановился.",
    "id": "Claude Code berhenti secara tak terduga."
+  },
+  "The chat, « OK Coucou », the dictation clean-up and the notes then go through Claude Code and count against your plan's limits.": {
+   "zh-Hans": "聊天、« OK Coucou »、听写清理和笔记都会通过 Claude Code，并计入你的套餐额度。",
+   "hi": "चैट, « OK Coucou », डिक्टेशन की सफ़ाई और नोट्स तब Claude Code से होकर जाते हैं और आपके प्लान की सीमा में गिने जाते हैं।",
+   "es": "El chat, « OK Coucou », la limpieza del dictado y las notas pasan entonces por Claude Code y cuentan en los límites de tu plan.",
+   "ar": "تمر المحادثة و« OK Coucou » وتنظيف الإملاء والملاحظات عندها عبر Claude Code وتُحتسب ضمن حدود خطتك.",
+   "fr": "Le chat, « OK Coucou », le nettoyage de la dictée et les notes passent alors par Claude Code et comptent dans les limites de ton forfait.",
+   "bn": "চ্যাট, « OK Coucou », ডিক্টেশন পরিষ্কার ও নোট তখন Claude Code দিয়ে যায় এবং আপনার প্ল্যানের সীমায় গোনা হয়।",
+   "pt-BR": "O chat, o « OK Coucou », a limpeza do ditado e as notas passam então pelo Claude Code e contam nos limites do seu plano.",
+   "ru": "Чат, « OK Coucou », очистка диктовки и заметки тогда идут через Claude Code и учитываются в лимитах вашего плана.",
+   "id": "Obrolan, « OK Coucou », pembersihan dikte, dan catatan lalu melewati Claude Code dan dihitung dalam batas paket Anda."
+  },
+  "No key needed: Coucou uses your Claude subscription.": {
+   "zh-Hans": "无需密钥：Coucou 使用你的 Claude 订阅。",
+   "hi": "कुंजी की ज़रूरत नहीं: Coucou आपकी Claude सदस्यता इस्तेमाल करता है।",
+   "es": "No hace falta clave: Coucou usa tu suscripción de Claude.",
+   "ar": "لا حاجة إلى مفتاح: يستخدم Coucou اشتراكك في Claude.",
+   "fr": "Pas besoin de clé : Coucou utilise ton abonnement Claude.",
+   "bn": "কী লাগবে না: Coucou আপনার Claude সাবস্ক্রিপশন ব্যবহার করে।",
+   "pt-BR": "Não precisa de chave: o Coucou usa sua assinatura do Claude.",
+   "ru": "Ключ не нужен: Coucou использует вашу подписку Claude.",
+   "id": "Tidak perlu kunci: Coucou memakai langganan Claude Anda."
+  },
+  "This model is for the API key. With the subscription, the chat uses the model picked above its text field (Sonnet unless you change it), and « OK Coucou » uses Haiku, which answers fastest.": {
+   "zh-Hans": "此模型用于 API 密钥。使用订阅时，聊天使用其输入框上方选择的模型（默认 Sonnet），« OK Coucou » 使用回答最快的 Haiku。",
+   "hi": "यह मॉडल API कुंजी के लिए है। सदस्यता में चैट अपने टेक्स्ट फ़ील्ड के ऊपर चुना मॉडल इस्तेमाल करती है (बदलें नहीं तो Sonnet), और « OK Coucou » Haiku, जो सबसे तेज़ जवाब देता है।",
+   "es": "Este modelo es para la clave API. Con la suscripción, el chat usa el modelo elegido sobre su campo de texto (Sonnet si no lo cambias) y « OK Coucou » usa Haiku, que responde más rápido.",
+   "ar": "هذا النموذج لمفتاح API. مع الاشتراك، تستخدم المحادثة النموذج المختار فوق حقل النص (Sonnet ما لم تغيّره)، ويستخدم « OK Coucou » نموذج Haiku الأسرع ردًا.",
+   "fr": "Ce modèle sert à la clé API. Avec l’abonnement, le chat utilise le modèle choisi au-dessus de son champ (Sonnet sauf si tu le changes), et « OK Coucou » utilise Haiku, le plus rapide à répondre.",
+   "bn": "এই মডেল API কী-এর জন্য। সাবস্ক্রিপশনে চ্যাট তার লেখার ঘরের উপরে বাছা মডেল ব্যবহার করে (না বদলালে Sonnet), আর « OK Coucou » ব্যবহার করে Haiku, যা সবচেয়ে দ্রুত উত্তর দেয়।",
+   "pt-BR": "Este modelo é para a chave de API. Com a assinatura, o chat usa o modelo escolhido acima do campo de texto (Sonnet, a menos que você mude) e o « OK Coucou » usa o Haiku, que responde mais rápido.",
+   "ru": "Эта модель — для ключа API. С подпиской чат использует модель, выбранную над полем ввода (Sonnet, если не меняли), а « OK Coucou » — Haiku, отвечающую быстрее всех.",
+   "id": "Model ini untuk kunci API. Dengan langganan, obrolan memakai model yang dipilih di atas kolom teksnya (Sonnet kecuali Anda ubah), dan « OK Coucou » memakai Haiku, yang paling cepat menjawab."
+  },
+  "Coucou's relay is out of date and could not guard Claude Code. Quit and restart Coucou to update it.": {
+   "zh-Hans": "Coucou 的中继已过期，无法保护 Claude Code。请退出并重新启动 Coucou 以更新。",
+   "hi": "Coucou का रिले पुराना है और Claude Code की रक्षा नहीं कर सका। अपडेट के लिए Coucou बंद करके फिर खोलें।",
+   "es": "El relé de Coucou está desactualizado y no pudo proteger Claude Code. Cierra y vuelve a abrir Coucou para actualizarlo.",
+   "ar": "مرحّل Coucou قديم ولم يستطع حماية Claude Code. أغلق Coucou وأعد تشغيله لتحديثه.",
+   "fr": "Le relais de Coucou n’est plus à jour et n’a pas pu protéger Claude Code. Quitte puis relance Coucou pour le mettre à jour.",
+   "bn": "Coucou-র রিলে পুরনো, Claude Code রক্ষা করতে পারেনি। হালনাগাদ করতে Coucou বন্ধ করে আবার চালু করুন।",
+   "pt-BR": "O relé do Coucou está desatualizado e não pôde proteger o Claude Code. Feche e abra o Coucou de novo para atualizá-lo.",
+   "ru": "Ретранслятор Coucou устарел и не смог защитить Claude Code. Закройте и снова запустите Coucou, чтобы обновить его.",
+   "id": "Relai Coucou sudah usang dan tidak bisa menjaga Claude Code. Tutup lalu buka lagi Coucou untuk memperbaruinya."
   }
  }
 }

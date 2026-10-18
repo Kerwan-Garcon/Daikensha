@@ -20,7 +20,7 @@ const SUBSCRIPTION_TIMEOUT: Duration = Duration::from_secs(10);
 
 /// Claude can clean up: a key, or the subscription (which then is the only way).
 pub fn has_key() -> bool {
-    crate::claude_cli::enabled() || crate::secrets::present(crate::claude::KEY)
+    crate::claude::reachable()
 }
 
 pub async fn clean(raw: &str, style: Style, app: Option<&str>, words: &[String]) -> String {
