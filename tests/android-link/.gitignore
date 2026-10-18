@@ -1,0 +1,4 @@
+.build/
+# Copied from NotchBuddy/Sources/App/AndroidLink/Core and Support/ by scripts/test-android-link.sh
+Sources/*/Core/
+Sources/*/Support/
