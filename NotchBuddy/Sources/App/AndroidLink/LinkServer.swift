@@ -51,10 +51,13 @@ final class LinkServer: @unchecked Sendable {
             stopped = true
             listener?.cancel()
             listener = nil
-            // Connections that never authenticated are not in the hub: cut them here.
-            for c in connections.values { c.cancel() }
-            connections = [:]
             portCell.withLock { $0 = nil }
+            // The phones in the hub are sending their last `error` and closing by themselves; a second later,
+            // whatever is left (connections that never authenticated) is cut.
+            queue.asyncAfter(deadline: .now() + 1) { [self] in
+                for c in connections.values { c.cancel() }
+                connections = [:]
+            }
         }
     }
 
