@@ -3,6 +3,7 @@
 // on; every command refuses while it is off. Nothing here runs in the
 // background: each tab asks while it is on screen.
 
+pub mod appbar;
 pub mod apps;
 pub mod capture;
 pub mod clipboard;
@@ -70,6 +71,26 @@ pub fn shell_capabilities() -> Capabilities {
 /// both the panel and its history are on.
 pub fn settings_saved(app: &tauri::AppHandle, settings: &crate::settings::Settings) {
     clipboard::sync(app, settings.shell_panel && settings.shell_clipboard);
+    appbar::sync(settings);
+}
+
+/// The emergency shortcut, or the island's "show the taskbar" button: the
+/// taskbar comes back at once, and the « top bar » mode goes off.
+#[tauri::command]
+pub fn shell_top_bar_off(app: tauri::AppHandle, shared: State<'_, Shared>) {
+    appbar::restore();
+    let settings = {
+        let mut s = shared.settings.lock().unwrap();
+        s.shell_top_bar = false;
+        s.clone()
+    };
+    if let Err(err) = crate::settings::save(&settings) {
+        crate::log::line(format!("could not save settings: {err}"));
+    }
+    settings_saved(&app, &settings);
+    crate::shortcuts::apply(&app, &appbar::bindings(&settings));
+    use tauri::Emitter;
+    let _ = app.emit("settings-changed", settings);
 }
 
 #[tauri::command]

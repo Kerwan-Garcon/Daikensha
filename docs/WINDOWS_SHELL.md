@@ -1,6 +1,6 @@
 # « Coucou Shell » : la couche Windows de Coucou
 
-État : **phases 1 à 4 faites** — le panneau et ses 8 onglets (Contrôles, Aujourd'hui, Stats, Presse-papiers, Apps, Fonds, Alimentation, Fenêtres), désactivé par défaut dans Réglages → Général, les outils vocaux de « OK Coucou » à niveaux de risque (`shell/voice_tools.rs`, cartes de niveau 2 dans `shell/confirm.rs` et `views/confirm.ts`), et les routines (`shell/routines.rs` : liste d'étapes de niveau 1 figée, validée sur une carte, rejouée sans LLM, listée et supprimable dans Réglages → Général), et « Entoure et demande » (`shell/capture.rs`, `circle.html`, `views/circle.ts` : raccourci Ctrl+Alt+X désactivé par défaut ou bouton lasso du panneau, capture GDI en mémoire, aperçu, puis le chat de Claude avec l'image au premier message). Les mesures sur ta machine (sonde et Mica) restent à faire.
+État : **phases 1 à 4 et mode « barre du haut » faits** — le panneau et ses 8 onglets (Contrôles, Aujourd'hui, Stats, Presse-papiers, Apps, Fonds, Alimentation, Fenêtres), désactivé par défaut dans Réglages → Général, les outils vocaux de « OK Coucou » à niveaux de risque (`shell/voice_tools.rs`, cartes de niveau 2 dans `shell/confirm.rs` et `views/confirm.ts`), et les routines (`shell/routines.rs` : liste d'étapes de niveau 1 figée, validée sur une carte, rejouée sans LLM, listée et supprimable dans Réglages → Général), et « Entoure et demande » (`shell/capture.rs`, `circle.html`, `views/circle.ts` : raccourci Ctrl+Alt+X désactivé par défaut ou bouton lasso du panneau, capture GDI en mémoire, aperçu, puis le chat de Claude avec l'image au premier message), et le mode « barre du haut » (`shell/appbar.rs` : masquage automatique par `ABM_SETSTATE`, état d'origine écrit avant le changement et remis à la désactivation, à la sortie et au démarrage suivant après un plantage, raccourci de secours Ctrl+Alt+B enregistré seulement dans ce mode, réserve du haut en AppBar sur l'écran principal, horloge dans l'island repliée). Les mesures sur ta machine (sonde et Mica) restent à faire.
 
 Ce document part de la spécification de ton prompt et des API Windows documentées par Microsoft, et seulement de là. Aucun produit tiers n'a été téléchargé, analysé ni cherché (clean room). Le design reste celui de Coucou et suit les règles de `CLAUDE.md`.
 
@@ -105,7 +105,8 @@ Jamais dans les logs. La capture d'« Entoure et demande » ne vit qu'en mémoir
 
 - L'état d'origine est écrit **avant** tout changement, puis restauré quand on désactive l'option, quand Coucou quitte, et au démarrage suivant après un plantage.
 - Un raccourci de secours réaffiche la barre.
-- Jamais `Shell_TrayWnd` directement, jamais le registre d'Explorer.
+- Jamais `Shell_TrayWnd` directement, jamais le registre d'Explorer. Si `ABM_SETSTATE` sans fenêtre est ignoré par une version de Windows, la poignée de `Shell_TrayWnd` est seulement cherchée (`FindWindowW`) et passée au même appel documenté ; la fenêtre elle-même n'est jamais touchée.
+- La bande réservée est celle de l'écran principal (pas encore celui choisi pour l'island).
 
 ## Mémoire et CPU (budget)
 

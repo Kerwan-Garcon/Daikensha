@@ -138,6 +138,11 @@ export function runGlobalShortcut(host: ShortcutHost, action: string, resume: ()
       host.startCircle();
       break;
 
+    // Rust already put the taskbar back; this turns the « top bar » mode off for good.
+    case "taskbarRescue":
+      void Bridge.shellTopBarOff();
+      break;
+
     // wardrobeToggle never comes this way (Rust sends `open-wardrobe`), and
     // attachFrontWindow isn't in this version.
     default:

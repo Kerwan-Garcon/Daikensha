@@ -55,6 +55,11 @@ pub struct Settings {
     /// The city for the panel's weather (shell/today.rs, Open-Meteo). Empty:
     /// no weather and no network call.
     pub shell_weather_city: String,
+    /// « Top bar » mode (shell/appbar.rs): Windows' taskbar set to hide itself
+    /// while Coucou runs, put back as it was otherwise. Off by default.
+    pub shell_top_bar: bool,
+    /// With it, the island's band is reserved at the top of the screen (an AppBar).
+    pub shell_reserve_top: bool,
     /// Who the chat talks to: "anthropic", a cloud provider of
     /// openai_compat.rs ("openai", "google", "openrouter"), or a model server
     /// of local_chat.rs ("ollama", "lmstudio", "custom"). Picked in the chat view.
@@ -164,6 +169,8 @@ impl Default for Settings {
             shell_clipboard: false,
             shell_clipboard_voice: false,
             shell_weather_city: String::new(),
+            shell_top_bar: false,
+            shell_reserve_top: false,
             chat_provider: crate::chat::ANTHROPIC.into(),
             chat_models: BTreeMap::new(),
             ollama_url: String::new(),
@@ -456,6 +463,8 @@ mod tests {
   "shellClipboard": true,
   "shellClipboardVoice": true,
   "shellWeatherCity": "Bordeaux",
+  "shellTopBar": true,
+  "shellReserveTop": true,
   "chatProvider": "ollama",
   "chatModels": { "ollama": "llama3.2", "openai": "gpt-x" },
   "ollamaUrl": "http://127.0.0.1:11434",
@@ -968,6 +977,8 @@ mod tests {
                 "shellClipboard",
                 "shellClipboardVoice",
                 "shellWeatherCity",
+                "shellTopBar",
+                "shellReserveTop",
                 "chatProvider",
                 "chatModels",
                 "ollamaUrl",

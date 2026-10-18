@@ -374,6 +374,8 @@ export const Bridge = {
   shellRoutines: () => callOrThrow<ShellRoutine[]>("shell_routines"),
   // « Entoure et demande » (shell/capture.rs): the pixels never come to a page, only the preview.
   circleStart: () => call<void>("circle_start"),
+  /** The taskbar back, and the « top bar » mode off (shell/appbar.rs). */
+  shellTopBarOff: () => call<void>("shell_top_bar_off"),
   circleCapture: (x: number, y: number, width: number, height: number) => callOrThrow<void>("circle_capture", { x, y, width, height }),
   circleCancel: () => call<void>("circle_cancel"),
   circlePreview: () => call<string | null>("circle_preview"),

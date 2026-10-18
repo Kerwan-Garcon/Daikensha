@@ -130,6 +130,8 @@ export interface Settings {
   shellPanel: boolean;
   shellClipboard: boolean;
   shellClipboardVoice: boolean;
+  shellTopBar: boolean;
+  shellReserveTop: boolean;
   shellWeatherCity: string;
   /** Who the chat talks to (see core/providers.ts); picked in the chat view. */
   chatProvider: ProviderId;
@@ -196,6 +198,8 @@ export const DEFAULT_SETTINGS: Settings = {
   shellPanel: false,
   shellClipboard: false,
   shellClipboardVoice: false,
+  shellTopBar: false,
+  shellReserveTop: false,
   shellWeatherCity: "",
   chatProvider: "anthropic",
   chatModels: {},

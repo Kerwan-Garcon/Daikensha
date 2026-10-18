@@ -22,11 +22,11 @@ const MAC_IDS = [
 // ── Defaults (testDefaultsExhaustive, testAllDefaultsHaveModifier, testNoDefaultDuplicates) ──
 
 /** Off by default: the Mac's island toggle, and the Coucou Shell actions. */
-const OFF_BY_DEFAULT = ["toggleIsland", "circleAsk"];
+const OFF_BY_DEFAULT = ["toggleIsland", "circleAsk", "taskbarRescue"];
 
 test("every Mac action has a default, in the Mac's order, with its Mac id", () => {
   // The Mac's, in its order; then the ones of this version only.
-  assert.deepEqual(SHORTCUTS.map((d) => d.id), [...MAC_IDS, "circleAsk"]);
+  assert.deepEqual(SHORTCUTS.map((d) => d.id), [...MAC_IDS, "circleAsk", "taskbarRescue"]);
   for (const d of SHORTCUTS) assert.ok(SHORTCUT_TEXT[d.id], `${d.id} has no label`);
 });
 

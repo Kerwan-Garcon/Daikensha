@@ -23,6 +23,10 @@ import { closePlanCard, openPlanColor, planCardOpen } from "../views/usage";
 import { buildHeader, buildViews, type ViewActions, type ViewHost } from "../views/views";
 import { h } from "../views/dom";
 import type { ShellHost } from "../views/shell";
+import { clockText } from "../core/shell";
+import { language } from "../i18n/i18n";
+
+const IS_WINDOWS = typeof navigator !== "undefined" && navigator.userAgent.includes("Windows");
 import { IslandStateMachine } from "./fsm";
 import { refreshHookPills } from "./integrations";
 import { DesktopLink } from "./desktop";
@@ -69,6 +73,10 @@ export class Island {
   private botGlow!: HTMLElement;
   private greetingCanvas!: HTMLCanvasElement;
   private miniGrid!: HTMLElement;
+  /** The time and short date in the folded island, in « top bar » mode only. */
+  private barClock!: HTMLElement;
+  private barClockTimer: number | null = null;
+  private barClockW = 0;
   private countdown!: HTMLElement;
   private wakeStrip!: HTMLElement;
 
@@ -279,6 +287,7 @@ export class Island {
     this.botCanvas = h("canvas", { id: "bot-canvas" });
     this.greetingCanvas = h("canvas", { id: "greeting-canvas" });
     this.miniGrid = h("div", { id: "mini-grid" });
+    this.barClock = h("div", { id: "bar-clock" }, h("span", { class: "t" }), h("span", { class: "d" }));
     this.countdown = h("div", { id: "countdown" });
 
     this.header = buildHeader(actions);
@@ -313,6 +322,7 @@ export class Island {
       this.botGlow,
       this.botCanvas,
       this.miniGrid,
+      this.barClock,
       this.countdown,
     );
 
@@ -549,6 +559,30 @@ export class Island {
     State.capturePreview = null;
     void Bridge.circleDiscard();
     this.setView(State.defaultView());
+  }
+
+  /** The folded island's clock: drawn every 15 s while it shows, nothing otherwise. */
+  private syncBarClock(on: boolean) {
+    this.barClock.classList.toggle("on", on);
+    if (on === (this.barClockTimer != null)) return;
+    if (!on) {
+      window.clearInterval(this.barClockTimer!);
+      this.barClockTimer = null;
+      return;
+    }
+    const draw = () => {
+      const c = clockText(new Date(), language());
+      (this.barClock.firstElementChild as HTMLElement).textContent = c.time;
+      (this.barClock.lastElementChild as HTMLElement).textContent = c.short;
+      this.barClock.title = c.long;
+      const w = Math.ceil(this.barClock.getBoundingClientRect().width) + 12;
+      if (w !== this.barClockW) {
+        this.barClockW = w;
+        this.animateGeometry(false);
+      }
+    };
+    draw();
+    this.barClockTimer = window.setInterval(draw, 15_000);
   }
 
   /** Back from the panel to the usual view. */
@@ -808,6 +842,8 @@ export class Island {
 
   private targetSize(): { w: number; h: number; r: number } {
     let { w, h } = islandSize(State.mode, State.view, State.chatHistory.length);
+    // « Top bar » mode: the folded island takes the width of its clock too.
+    if (State.mode === "compact" && this.fsm.stayCompact) w += this.barClockW;
     if (State.mode === "expanded" && State.view === "question" && State.pendingApproval?.questions) {
       h = QUESTION_PICKER_H;
     }
@@ -840,6 +876,7 @@ export class Island {
     // These follow the island as it resizes, so they belong here rather than in
     // the state-driven DOM sync.
     this.miniGrid.style.left = `${w - 40 - 14.5}px`;
+    this.barClock.style.top = `${hh / 2}px`;
     this.miniGrid.style.top = `${hh / 2 - 14.5}px`;
     this.greetingCanvas.style.left = `${(w - EXPANDED_W) / 2}px`;
     this.uploadCanvas.el.style.left = `${(w - EXPANDED_W) / 2}px`;
@@ -1354,6 +1391,8 @@ export class Island {
       }
     }
 
+    this.syncBarClock(State.mode === "compact" && this.fsm.stayCompact);
+
     // Compact mini grid
     const showGrid = State.mode === "compact";
     this.miniGrid.style.opacity = showGrid ? "1" : "0";
@@ -1381,6 +1420,12 @@ export class Island {
     this.fsm.homeToPetitDelay = State.settings.autoCloseInterval;
     this.fsm.openOnHover = State.settings.openOnHover;
     if (!State.settings.shellPanel) this.closeShell();
+    const topBar = IS_WINDOWS && State.settings.shellPanel && State.settings.shellTopBar;
+    if (topBar !== this.fsm.stayCompact) {
+      this.fsm.stayCompact = topBar;
+      if (topBar && State.mode === "hidden") this.fsm.reveal();
+      this.animateGeometry(!topBar);
+    }
     State.notify();
   }
 

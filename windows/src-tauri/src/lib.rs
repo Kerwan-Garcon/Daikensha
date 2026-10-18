@@ -91,8 +91,9 @@ fn boot(app: AppHandle, shared: State<Shared>) -> BootInfo {
 
 #[tauri::command]
 fn save_settings(app: AppHandle, shared: State<Shared>, settings: Settings) {
-    let (screen_changed, autostart_changed, shortcuts_changed) = {
+    let (screen_changed, autostart_changed, shortcuts_changed, top_bar_changed) = {
         let mut current = shared.settings.lock().unwrap();
+        let top_bar_changed = shell::appbar::wanted(&current) != shell::appbar::wanted(&settings);
         let screen_changed = current.screen != settings.screen;
         let autostart_changed = current.autostart != settings.autostart;
         let shortcuts_changed = current.shortcuts != settings.shortcuts;
@@ -112,7 +113,7 @@ fn save_settings(app: AppHandle, shared: State<Shared>, settings: Settings) {
         settings.phone_chat_models = current.phone_chat_models.clone();
         claude_cli::set_enabled(settings.claude_subscription);
         *current = settings;
-        (screen_changed, autostart_changed, shortcuts_changed)
+        (screen_changed, autostart_changed, shortcuts_changed, top_bar_changed)
     };
     let settings = shared.settings.lock().unwrap().clone();
     if let Err(err) = settings::save(&settings) {
@@ -132,8 +133,8 @@ fn save_settings(app: AppHandle, shared: State<Shared>, settings: Settings) {
     integrations::settings_saved(&app, &settings.active_integrations);
     spotify::sync(&app, &settings.active_integrations);
     shell::settings_saved(&app, &settings);
-    if shortcuts_changed {
-        shortcuts::apply(&app, &settings.shortcuts);
+    if shortcuts_changed || top_bar_changed {
+        shortcuts::apply(&app, &shell::appbar::bindings(&settings));
     }
     if i18n::set_picked(&settings.language) {
         language_changed(&app);
@@ -632,7 +633,7 @@ fn shortcuts_suspend(app: AppHandle, shared: State<Shared>, suspended: bool) {
     if suspended {
         shortcuts::suspend(&app);
     } else {
-        let stored = shared.settings.lock().unwrap().shortcuts.clone();
+        let stored = shell::appbar::bindings(&shared.settings.lock().unwrap());
         shortcuts::apply(&app, &stored);
     }
 }
@@ -795,6 +796,7 @@ pub fn run() {
             shell::shell_confirm_cancel,
             shell::shell_routines,
             shell::shell_routine_delete,
+            shell::shell_top_bar_off,
             shell::capture::circle_start,
             shell::capture::circle_capture,
             shell::capture::circle_cancel,
@@ -976,9 +978,11 @@ pub fn run() {
             phone_link::start_if_enabled(&handle);
             integrations::start(handle.clone());
             spotify::sync(&handle, &loaded.active_integrations);
+            // A taskbar left hidden by a crash comes back first; settings_saved hides it again if asked.
+            shell::appbar::recover();
             shell::settings_saved(&handle, &loaded);
             shell::routines::start(&handle);
-            shortcuts::apply(&handle, &loaded.shortcuts);
+            shortcuts::apply(&handle, &shell::appbar::bindings(&loaded));
             if loaded.autostart {
                 // Login items written before 0.5 start Coucou without --autostart:
                 // writing it again adds it, so the window stays hidden at login.
@@ -997,6 +1001,7 @@ pub fn run() {
             if let tauri::RunEvent::Exit = event {
                 phone_link::stop_on_exit(app);
                 notes::shutdown(app);
+                shell::appbar::on_exit();
             }
         });
 }

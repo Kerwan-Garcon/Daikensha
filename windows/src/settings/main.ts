@@ -1041,6 +1041,20 @@ function generalSection(): HTMLElement {
       toggle(settings.shellClipboardVoice, (v) => { settings.shellClipboardVoice = v; void save(); }),
     ),
     h("div", { class: "hint", text: t("Only the last 5 copies, cut to 500 characters, and only when you ask. They are sent to Claude with your question.") }),
+    ...(navigator.userAgent.includes("Windows")
+      ? [
+          h("div", { class: "row" },
+            h("label", { text: t("Use Coucou as the main bar") }),
+            toggle(settings.shellTopBar, (v) => { settings.shellTopBar = v; void save(); }),
+          ),
+          h("div", { class: "hint", text: t("Windows' taskbar hides itself (its own auto-hide setting) and the folded island keeps the time and date. It comes back as it was when you turn this off or quit Coucou; Ctrl+Alt+B shows it at once.") }),
+          h("div", { class: "row" },
+            h("label", { text: t("Reserve the top of the screen") }),
+            toggle(settings.shellReserveTop, (v) => { settings.shellReserveTop = v; void save(); }),
+          ),
+          h("div", { class: "hint", text: t("Maximised windows stop below the island instead of going under it.") }),
+        ]
+      : []),
     h("div", { class: "row" },
       h("label", { text: t("Weather city") }),
       weatherCity,

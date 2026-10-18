@@ -6407,6 +6407,61 @@
    "pt-BR": "Circular e perguntar",
    "ru": "Обвести и спросить",
    "id": "Lingkari dan tanya"
+  },
+  "Maximised windows stop below the island instead of going under it.": {
+   "zh-Hans": "最大化的窗口会停在岛的下方，而不是被它遮住。",
+   "hi": "बड़ी की गई विंडो आइलैंड के नीचे रुकती हैं, उसके नीचे नहीं जातीं।",
+   "es": "Las ventanas maximizadas se detienen bajo la isla en vez de pasar por debajo.",
+   "ar": "تتوقف النوافذ المكبّرة أسفل الجزيرة بدلًا من المرور تحتها.",
+   "fr": "Les fenêtres agrandies s’arrêtent sous l’île au lieu de passer dessous.",
+   "bn": "বড় করা উইন্ডো আইল্যান্ডের নিচে থামে, তার তলায় যায় না।",
+   "pt-BR": "Janelas maximizadas param abaixo da ilha em vez de passar por baixo dela.",
+   "ru": "Развёрнутые окна останавливаются под островом, а не уходят под него.",
+   "id": "Jendela yang diperbesar berhenti di bawah pulau, bukan tertutup olehnya."
+  },
+  "Reserve the top of the screen": {
+   "zh-Hans": "保留屏幕顶部",
+   "hi": "स्क्रीन का ऊपरी हिस्सा आरक्षित करें",
+   "es": "Reservar la parte superior de la pantalla",
+   "ar": "حجز أعلى الشاشة",
+   "fr": "Réserver le haut de l’écran",
+   "bn": "স্ক্রিনের উপরের অংশ সংরক্ষণ করুন",
+   "pt-BR": "Reservar o topo da tela",
+   "ru": "Резервировать верх экрана",
+   "id": "Cadangkan bagian atas layar"
+  },
+  "Use Coucou as the main bar": {
+   "zh-Hans": "将 Coucou 用作主栏",
+   "hi": "Coucou को मुख्य बार बनाएँ",
+   "es": "Usar Coucou como barra principal",
+   "ar": "استخدام Coucou كشريط رئيسي",
+   "fr": "Utiliser Coucou comme barre principale",
+   "bn": "Coucou-কে মূল বার হিসেবে ব্যবহার করুন",
+   "pt-BR": "Usar o Coucou como barra principal",
+   "ru": "Использовать Coucou как главную панель",
+   "id": "Gunakan Coucou sebagai bilah utama"
+  },
+  "Windows' taskbar hides itself (its own auto-hide setting) and the folded island keeps the time and date. It comes back as it was when you turn this off or quit Coucou; Ctrl+Alt+B shows it at once.": {
+   "zh-Hans": "Windows 任务栏会自动隐藏（其自身的自动隐藏设置），折叠的岛会显示时间和日期。关闭此项或退出 Coucou 时会恢复原样；Ctrl+Alt+B 可立即显示它。",
+   "hi": "Windows का टास्कबार खुद छिप जाता है (उसकी अपनी ऑटो-हाइड सेटिंग) और बंद आइलैंड समय व तारीख दिखाता है। इसे बंद करने या Coucou छोड़ने पर वह पहले जैसा लौट आता है; Ctrl+Alt+B उसे तुरंत दिखाता है।",
+   "es": "La barra de tareas de Windows se oculta sola (su propio ajuste de ocultación automática) y la isla plegada muestra la hora y la fecha. Vuelve como estaba al desactivarlo o salir de Coucou; Ctrl+Alt+B la muestra al instante.",
+   "ar": "يخفي شريط مهام Windows نفسه (إعداد الإخفاء التلقائي الخاص به) وتعرض الجزيرة المطوية الوقت والتاريخ. يعود كما كان عند إيقاف هذا أو الخروج من Coucou؛ ويُظهره Ctrl+Alt+B فورًا.",
+   "fr": "La barre des tâches de Windows se masque d’elle-même (son propre réglage de masquage automatique) et l’île repliée garde l’heure et la date. Elle revient comme avant quand vous désactivez ceci ou quittez Coucou ; Ctrl+Alt+B la réaffiche aussitôt.",
+   "bn": "Windows-এর টাস্কবার নিজে লুকায় (তার নিজস্ব অটো-হাইড সেটিং) এবং ভাঁজ করা আইল্যান্ড সময় ও তারিখ দেখায়। এটি বন্ধ করলে বা Coucou বন্ধ করলে আগের মতো ফিরে আসে; Ctrl+Alt+B সঙ্গে সঙ্গে দেখায়।",
+   "pt-BR": "A barra de tarefas do Windows se oculta sozinha (a própria opção de ocultar automaticamente) e a ilha recolhida mostra a hora e a data. Ela volta como estava quando você desliga isto ou sai do Coucou; Ctrl+Alt+B a mostra na hora.",
+   "ru": "Панель задач Windows скрывается сама (её собственная настройка автоскрытия), а свёрнутый остров показывает время и дату. Она вернётся как была, когда вы отключите это или выйдете из Coucou; Ctrl+Alt+B показывает её сразу.",
+   "id": "Bilah tugas Windows menyembunyikan diri (pengaturan sembunyi otomatisnya sendiri) dan pulau yang terlipat menampilkan jam dan tanggal. Ia kembali seperti semula saat Anda mematikan ini atau keluar dari Coucou; Ctrl+Alt+B langsung menampilkannya."
+  },
+  "Show the Windows taskbar again": {
+   "zh-Hans": "重新显示 Windows 任务栏",
+   "hi": "Windows टास्कबार फिर दिखाएँ",
+   "es": "Volver a mostrar la barra de tareas de Windows",
+   "ar": "إظهار شريط مهام Windows مجددًا",
+   "fr": "Réafficher la barre des tâches de Windows",
+   "bn": "Windows টাস্কবার আবার দেখান",
+   "pt-BR": "Mostrar de novo a barra de tarefas do Windows",
+   "ru": "Снова показать панель задач Windows",
+   "id": "Tampilkan lagi bilah tugas Windows"
   }
  }
 }

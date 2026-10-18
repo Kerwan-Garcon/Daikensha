@@ -72,6 +72,10 @@ pub const ACTIONS: &[ActionDef] = &[
     // Not the Mac's: « Entoure et demande » (shell/capture.rs). Off by default,
     // like the panel it belongs to; X is free on the AltGr layers listed above.
     action("circleAsk", "Ctrl+Alt+X", false, true),
+    // Brings the taskbar back from the « top bar » mode (shell/appbar.rs).
+    // Registered only while that mode is on (appbar::bindings); B is free on
+    // the AltGr layers listed above.
+    action("taskbarRescue", "Ctrl+Alt+B", false, true),
 ];
 
 pub fn find(id: &str) -> Option<&'static ActionDef> {
@@ -96,6 +100,7 @@ pub fn description(id: &str) -> &'static str {
         "desktopToggle" => n_("Send Mochi to the desktop"),
         "wardrobeToggle" => n_("Open the wardrobe"),
         "circleAsk" => n_("Circle something on the screen and ask about it"),
+        "taskbarRescue" => n_("Show the Windows taskbar again"),
         _ => "Coucou",
     }
 }
@@ -326,6 +331,10 @@ pub fn plugin<R: Runtime>() -> tauri::plugin::TauriPlugin<R> {
 /// Hands an action to the island.
 pub fn dispatch<R: Runtime>(app: &AppHandle<R>, action: &str) {
     crate::log::line(format!("shortcut {action}"));
+    if action == crate::shell::appbar::RESCUE {
+        // At once, from here: the page may be the thing that is stuck.
+        crate::shell::appbar::restore();
+    }
     if action == "wardrobeToggle" {
         let _ = app.emit_to(WINDOW_LABEL, "open-wardrobe", ());
     } else {
@@ -697,7 +706,7 @@ mod tests {
         "nextPill", "prevPill", "muteToggle", "desktopToggle", "wardrobeToggle",
     ];
     /// Off by default: the Mac's island toggle, and the Coucou Shell actions.
-    const OFF_BY_DEFAULT: [&str; 2] = ["toggleIsland", "circleAsk"];
+    const OFF_BY_DEFAULT: [&str; 3] = ["toggleIsland", "circleAsk", "taskbarRescue"];
 
     fn never(_: &Shortcut) -> Option<String> {
         None
@@ -709,7 +718,7 @@ mod tests {
         let ids: Vec<_> = ACTIONS.iter().map(|a| a.id).collect();
         // The Mac's, in its order; then the ones of this version only.
         assert_eq!(&ids[..MAC_IDS.len()], MAC_IDS);
-        assert_eq!(&ids[MAC_IDS.len()..], ["circleAsk"]);
+        assert_eq!(&ids[MAC_IDS.len()..], ["circleAsk", "taskbarRescue"]);
     }
 
     // testAllDefaultsHaveModifier
