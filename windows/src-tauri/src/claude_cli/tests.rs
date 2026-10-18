@@ -179,13 +179,19 @@ fn the_voice_gets_web_search_and_coucous_tools_only() {
     assert_eq!(value(&args, "--tools"), Some("WebSearch"));
     assert_eq!(
         value(&args, "--allowedTools"),
-        Some("WebSearch,mcp__coucou__pills,mcp__coucou__music,mcp__coucou__service_info,mcp__coucou__open_app,mcp__coucou__prepare_email")
+        Some(concat!(
+            "WebSearch,mcp__coucou__pills,mcp__coucou__music,mcp__coucou__service_info,mcp__coucou__open_app,mcp__coucou__prepare_email,",
+            "mcp__coucou__system_stats,mcp__coucou__list_windows,mcp__coucou__list_apps,mcp__coucou__clipboard_recent,",
+            "mcp__coucou__set_volume,mcp__coucou__toggle_wifi,mcp__coucou__toggle_bluetooth,mcp__coucou__focus_window,",
+            "mcp__coucou__snap_window,mcp__coucou__apply_layout,mcp__coucou__set_wallpaper,mcp__coucou__web_open,",
+            "mcp__coucou__power_action,mcp__coucou__type_text"
+        ))
     );
     for tool in ["Bash", "Edit", "Write", "Read", "WebFetch", "Agent", "Task"] {
         assert!(value(&args, "--disallowedTools").unwrap().split(',').any(|t| t == tool), "{tool}");
     }
     assert_eq!(value(&args, "--mcp-config"), Some(MCP));
-    assert_eq!(settings_of(&args)["permissions"]["allow"].as_array().unwrap().len(), 6);
+    assert_eq!(settings_of(&args)["permissions"]["allow"].as_array().unwrap().len(), 20);
     assert_eq!(settings_of(&args)["hooks"]["PreToolUse"][0]["hooks"][0]["command"], VOICE_GUARD);
     // No token anywhere in the command line.
     assert!(!args.iter().any(|a| a.contains("Bearer ") && !a.contains("${COUCOU_MCP_TOKEN}")));

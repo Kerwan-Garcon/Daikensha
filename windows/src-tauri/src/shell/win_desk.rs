@@ -360,3 +360,55 @@ pub fn battery() -> Battery {
     let has_battery = s.BatteryFlag != 128 && s.BatteryFlag != 255 && s.BatteryLifePercent <= 100;
     Battery { percent: has_battery.then_some(s.BatteryLifePercent), plugged_in: s.ACLineStatus == 1 }
 }
+
+// ── Typing ────────────────────────────────────────────────────────────────────
+
+/// The window in front and its app's name, unless it is one of Coucou's own.
+pub fn foreground() -> Option<(isize, String)> {
+    use windows::Win32::UI::WindowsAndMessaging::GetForegroundWindow;
+    unsafe {
+        let hwnd = GetForegroundWindow();
+        if hwnd.is_invalid() {
+            return None;
+        }
+        let mut pid = 0u32;
+        GetWindowThreadProcessId(hwnd, Some(&mut pid));
+        if pid == 0 || pid == std::process::id() {
+            return None;
+        }
+        Some((hwnd.0 as isize, owner_app(pid).1))
+    }
+}
+
+/// Types `text` into `window` if it is still the one in front. Unicode
+/// keystrokes only: no virtual keys, so never Enter, Tab or a shortcut.
+pub fn type_text(window: isize, text: &str) -> Result<(), String> {
+    use windows::Win32::UI::Input::KeyboardAndMouse::{
+        SendInput, INPUT, INPUT_0, INPUT_KEYBOARD, KEYBDINPUT, KEYEVENTF_KEYUP, KEYEVENTF_UNICODE, VIRTUAL_KEY,
+    };
+    use windows::Win32::UI::WindowsAndMessaging::GetForegroundWindow;
+    if unsafe { GetForegroundWindow() }.0 as isize != window {
+        return Err(crate::i18n::t("The window in front changed: ask again."));
+    }
+    let key = |unit: u16, up: bool| INPUT {
+        r#type: INPUT_KEYBOARD,
+        Anonymous: INPUT_0 {
+            ki: KEYBDINPUT {
+                wVk: VIRTUAL_KEY(0),
+                wScan: unit,
+                dwFlags: if up { KEYEVENTF_UNICODE | KEYEVENTF_KEYUP } else { KEYEVENTF_UNICODE },
+                time: 0,
+                dwExtraInfo: 0,
+            },
+        },
+    };
+    let inputs: Vec<INPUT> = text.encode_utf16().flat_map(|u| [key(u, false), key(u, true)]).collect();
+    for chunk in inputs.chunks(200) {
+        let sent = unsafe { SendInput(chunk, std::mem::size_of::<INPUT>() as i32) };
+        if sent as usize != chunk.len() {
+            // UIPI: an app running as administrator refuses keystrokes from Coucou.
+            return Err(crate::i18n::t("Windows refused the keystrokes (is the app running as administrator?)."));
+        }
+    }
+    Ok(())
+}

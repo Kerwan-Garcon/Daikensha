@@ -27,6 +27,7 @@ import type { Outfit, OutfitSelection } from "../mochi/wardrobe";
 import { language, t, tl, type Msg } from "../i18n/i18n";
 import type { ViewCommand } from "../island/shortcuts";
 import { buildShell } from "./shell";
+import { buildConfirm } from "./confirm";
 
 export interface ViewActions {
   setView(v: IslandViewName): void;
@@ -41,6 +42,8 @@ export interface ViewActions {
   openTarget(): void;
   openUrl(url: string): void;
   decide(d: "allow" | "deny"): void;
+  /** A level 2 card's buttons (views/confirm.ts): run it, or drop it. */
+  decideCard(ok: boolean): void;
   /** Answers the question Claude Code asked: question text → chosen label. */
   answer(answers: Record<string, string | string[]>): void;
   /** Hands the pending request back to the terminal. */
@@ -823,6 +826,7 @@ export function buildViews(
   map.set("recap", buildRecap(actions));
   map.set("wardrobe", buildWardrobe(actions));
   map.set("shell", buildShell());
+  map.set("confirm", buildConfirm((ok) => actions.decideCard(ok)));
   // Not in the Windows v1: sending a file by email, window attach + web result.
   map.set("mail", buildPlaceholder(tl("Sending by email isn't in this version."), ""));
   map.set("searching", buildPlaceholder(tl("Claude is searching…"), ""));

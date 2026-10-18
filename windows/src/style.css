@@ -2969,6 +2969,15 @@ html[data-dir="rtl"] #views :is(.bubble, .reply .md-p, .reply .md-h, .reply .md-
 .shell-confirm-card { width: min(440px, 100%); gap: 12px; }
 .shell-confirm-title { font-size: 16px; font-weight: 600; }
 
+/* The level 2 card (views/confirm.ts). */
+.confirm-hint {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 12px;
+  color: var(--dim);
+}
+
 .shell-view button:focus-visible { outline: 2px solid var(--shell-accent); outline-offset: 2px; }
 
 @media (prefers-reduced-motion: reduce) {

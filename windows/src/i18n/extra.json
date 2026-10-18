@@ -6077,6 +6077,116 @@
    "pt-BR": "Este cartão expirou. Peça de novo.",
    "ru": "Срок карточки истёк. Попросите снова.",
    "id": "Kartu ini kedaluwarsa. Minta lagi."
+  },
+  "Only the last 5 copies, cut to 500 characters, and only when you ask. They are sent to Claude with your question.": {
+   "zh-Hans": "仅限最近 5 条，截断为 500 个字符，且仅在你询问时。它们会随你的问题发送给 Claude。",
+   "hi": "सिर्फ़ आख़िरी 5 कॉपी, 500 अक्षरों तक, और सिर्फ़ आपके पूछने पर। ये आपके सवाल के साथ Claude को भेजी जाती हैं।",
+   "es": "Solo las 5 últimas copias, cortadas a 500 caracteres, y solo cuando lo pides. Se envían a Claude con tu pregunta.",
+   "ar": "آخر 5 نسخ فقط، مقصوصة إلى 500 حرف، وفقط عندما تطلب. تُرسل إلى Claude مع سؤالك.",
+   "fr": "Seulement les 5 dernières copies, coupées à 500 caractères, et seulement quand vous le demandez. Elles sont envoyées à Claude avec votre question.",
+   "bn": "শুধু শেষ ৫টি কপি, ৫০০ অক্ষরে কাটা, এবং শুধু আপনি চাইলে। এগুলো আপনার প্রশ্নের সাথে Claude-এ পাঠানো হয়।",
+   "pt-BR": "Só as 5 últimas cópias, cortadas em 500 caracteres, e só quando você pede. Elas vão para o Claude com sua pergunta.",
+   "ru": "Только 5 последних копий, обрезанных до 500 символов, и только по вашей просьбе. Они отправляются Claude вместе с вопросом.",
+   "id": "Hanya 5 salinan terakhir, dipotong 500 karakter, dan hanya saat Anda meminta. Dikirim ke Claude bersama pertanyaan Anda."
+  },
+  "« OK Coucou » may read it": {
+   "zh-Hans": "允许 « OK Coucou » 读取",
+   "hi": "« OK Coucou » इसे पढ़ सकता है",
+   "es": "« OK Coucou » puede leerlo",
+   "ar": "يمكن لـ « OK Coucou » قراءته",
+   "fr": "« OK Coucou » peut le lire",
+   "bn": "« OK Coucou » এটি পড়তে পারে",
+   "pt-BR": "« OK Coucou » pode ler",
+   "ru": "« OK Coucou » может читать",
+   "id": "« OK Coucou » boleh membacanya"
+  },
+  "These apps may have unsaved work; they can still ask to save it.": {
+   "zh-Hans": "这些应用可能有未保存的工作；它们仍可提示你保存。",
+   "hi": "इन ऐप में बिना सहेजा काम हो सकता है; वे फिर भी सहेजने को पूछ सकते हैं।",
+   "es": "Estas apps pueden tener trabajo sin guardar; aún pueden pedirte guardarlo.",
+   "ar": "قد تحتوي هذه التطبيقات على عمل غير محفوظ؛ ويمكنها أن تطلب حفظه.",
+   "fr": "Ces apps peuvent avoir du travail non enregistré ; elles pourront encore demander à l’enregistrer.",
+   "bn": "এই অ্যাপগুলোতে অসংরক্ষিত কাজ থাকতে পারে; তারা এখনও সংরক্ষণ করতে বলতে পারে।",
+   "pt-BR": "Esses apps podem ter trabalho não salvo; eles ainda podem pedir para salvar.",
+   "ru": "В этих приложениях может быть несохранённая работа; они ещё смогут предложить сохранить её.",
+   "id": "Aplikasi ini mungkin punya pekerjaan belum disimpan; mereka masih bisa meminta menyimpannya."
+  },
+  "Type the text": {
+   "zh-Hans": "输入文字",
+   "hi": "टेक्स्ट टाइप करें",
+   "es": "Escribir el texto",
+   "ar": "اكتب النص",
+   "fr": "Taper le texte",
+   "bn": "লেখাটি টাইপ করুন",
+   "pt-BR": "Digitar o texto",
+   "ru": "Напечатать текст",
+   "id": "Ketik teksnya"
+  },
+  "Type this text in {app}?": {
+   "zh-Hans": "在 {app} 中输入这段文字？",
+   "hi": "{app} में यह टेक्स्ट टाइप करें?",
+   "es": "¿Escribir este texto en {app}?",
+   "ar": "كتابة هذا النص في {app}؟",
+   "fr": "Taper ce texte dans {app} ?",
+   "bn": "{app}-এ এই লেখা টাইপ করবেন?",
+   "pt-BR": "Digitar este texto em {app}?",
+   "ru": "Напечатать этот текст в {app}?",
+   "id": "Ketik teks ini di {app}?"
+  },
+  "Type this text?": {
+   "zh-Hans": "输入这段文字？",
+   "hi": "यह टेक्स्ट टाइप करें?",
+   "es": "¿Escribir este texto?",
+   "ar": "كتابة هذا النص؟",
+   "fr": "Taper ce texte ?",
+   "bn": "এই লেখা টাইপ করবেন?",
+   "pt-BR": "Digitar este texto?",
+   "ru": "Напечатать этот текст?",
+   "id": "Ketik teks ini?"
+  },
+  "Typed in the window in front. Enter is never pressed: you send it.": {
+   "zh-Hans": "输入到最前面的窗口。不会按 Enter：由你发送。",
+   "hi": "सामने वाली विंडो में टाइप होगा। Enter कभी नहीं दबता: भेजते आप हैं।",
+   "es": "Se escribe en la ventana de delante. Nunca se pulsa Intro: lo envías tú.",
+   "ar": "يُكتب في النافذة الأمامية. لا يُضغط Enter أبدًا: أنت من يرسل.",
+   "fr": "Tapé dans la fenêtre au premier plan. Entrée n’est jamais appuyée : c’est vous qui envoyez.",
+   "bn": "সামনের উইন্ডোতে টাইপ হবে। Enter কখনো চাপা হয় না: আপনি পাঠান।",
+   "pt-BR": "Digitado na janela em primeiro plano. Enter nunca é pressionado: quem envia é você.",
+   "ru": "Печатается в активное окно. Enter никогда не нажимается: отправляете вы.",
+   "id": "Diketik di jendela depan. Enter tidak pernah ditekan: Anda yang mengirim."
+  },
+  "asks before acting": {
+   "zh-Hans": "行动前先询问",
+   "hi": "करने से पहले पूछता है",
+   "es": "pregunta antes de actuar",
+   "ar": "يسأل قبل التنفيذ",
+   "fr": "demande avant d’agir",
+   "bn": "কাজের আগে জিজ্ঞেস করে",
+   "pt-BR": "pergunta antes de agir",
+   "ru": "спрашивает перед действием",
+   "id": "bertanya sebelum bertindak"
+  },
+  "The window in front changed: ask again.": {
+   "zh-Hans": "最前面的窗口已改变：请重新请求。",
+   "hi": "सामने की विंडो बदल गई: फिर से कहें।",
+   "es": "La ventana de delante cambió: vuelve a pedirlo.",
+   "ar": "تغيّرت النافذة الأمامية: اطلب مجددًا.",
+   "fr": "La fenêtre au premier plan a changé : redemandez.",
+   "bn": "সামনের উইন্ডো বদলে গেছে: আবার বলুন।",
+   "pt-BR": "A janela em primeiro plano mudou: peça de novo.",
+   "ru": "Активное окно сменилось: попросите снова.",
+   "id": "Jendela depan berubah: minta lagi."
+  },
+  "Windows refused the keystrokes (is the app running as administrator?).": {
+   "zh-Hans": "Windows 拒绝了按键（该应用是否以管理员身份运行？）。",
+   "hi": "Windows ने कीस्ट्रोक मना कर दिए (क्या ऐप एडमिन के रूप में चल रहा है?)।",
+   "es": "Windows rechazó las pulsaciones (¿la app se ejecuta como administrador?).",
+   "ar": "رفض Windows ضغطات المفاتيح (هل يعمل التطبيق كمسؤول؟).",
+   "fr": "Windows a refusé les frappes (l’app tourne-t-elle en administrateur ?).",
+   "bn": "Windows কীস্ট্রোক প্রত্যাখ্যান করেছে (অ্যাপটি কি অ্যাডমিন হিসেবে চলছে?)।",
+   "pt-BR": "O Windows recusou as teclas (o app está rodando como administrador?).",
+   "ru": "Windows отклонил нажатия (приложение запущено от администратора?).",
+   "id": "Windows menolak ketukan tombol (apakah aplikasi berjalan sebagai administrator?)."
   }
  }
 }

@@ -368,9 +368,9 @@ export const Bridge = {
   shellWallpaperDelete: (id: string) => callOrThrow<ShellWallpapers>("shell_wallpaper_delete", { id }),
   shellWallpaperApply: (id: string, screen: number | null) => callOrThrow<void>("shell_wallpaper_apply", { id, screen }),
   shellBattery: () => callOrThrow<ShellBattery>("shell_battery"),
-  shellPowerPrepare: (action: ShellPowerAction) => callOrThrow<ShellPowerCard>("shell_power_prepare", { action }),
-  shellPowerConfirm: (token: string) => callOrThrow<void>("shell_power_confirm", { token }),
-  shellPowerCancel: () => call<void>("shell_power_cancel"),
+  shellPowerPrepare: (action: ShellPowerAction) => callOrThrow<ShellCard>("shell_power_prepare", { action }),
+  shellConfirm: (token: string) => callOrThrow<void>("shell_confirm", { token }),
+  shellConfirmCancel: () => call<void>("shell_confirm_cancel"),
 
   /** Settings → Claude → Check: is Claude Code installed and signed in to a subscription? */
   claudeCliStatus: () => call<ClaudeCliStatus>("claude_cli_status"),
@@ -536,7 +536,10 @@ export interface ShellClip { id: number; text: string; app: string; at: number }
 export interface ShellWallpapers { images: { id: string; thumb: string }[]; screens: number; refused: number }
 export interface ShellBattery { percent: number | null; pluggedIn: boolean }
 export type ShellPowerAction = "lock" | "sleep" | "signOut" | "restart" | "shutDown";
-export interface ShellPowerCard { token: string; action: ShellPowerAction; apps: string[] }
+/** A level 2 card (shell/confirm.rs): it runs only on its button's click. */
+export type ShellCard =
+  | { token: string; kind: "power"; action: ShellPowerAction; apps: string[] }
+  | { token: string; kind: "type"; text: string; app: string };
 
 /** What claude_cli::status() says about the user's Claude Code (nothing about the account). */
 export type ClaudeCliStatus =

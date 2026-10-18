@@ -2,7 +2,7 @@
 // Mirrors IslandRootView.swift + IslandWindowController.swift.
 
 import { Tracked, Spring, clamp } from "../core/anim";
-import { Bridge, IS_TAURI, onDragDrop } from "../core/bridge";
+import { Bridge, IS_TAURI, onDragDrop, onEvent, type ShellCard } from "../core/bridge";
 import {
   EXPANDED_CORNER, EXPANDED_W, NOTCH_W, PANEL_H, PANEL_W,
   ROUNDED_CORNER, VIEW_LAYOUTS, botGlowColor, botGlowOpacity, botPosition, chatPromptHeight,
@@ -215,6 +215,7 @@ export class Island {
       openUrl: (url) => {
         if (url) void Bridge.openUrl(url);
       },
+      decideCard: (ok) => this.decideCard(ok),
       decide: (d) => {
         const req = State.pendingApproval;
         void Bridge.log(`decide ${d} req=${req?.requestId ?? "none"}`);
@@ -489,6 +490,33 @@ export class Island {
       this.fsm.forceHome();
       this.expand("shell");
     }
+  }
+
+  /** « OK Coucou » asked for a level 2 action: its card, held open until it is decided. */
+  showCard(card: ShellCard) {
+    State.shellCard = card;
+    this.fsm.pinned = true;
+    this.alert("confirm");
+  }
+
+  /** The card's buttons. Only "yes" runs the action, through its one-time token. */
+  decideCard(ok: boolean) {
+    const card = State.shellCard;
+    State.shellCard = null;
+    this.fsm.pinned = State.isPinned;
+    if (!card) return;
+    if (!ok) {
+      void Bridge.shellConfirmCancel();
+      this.setView(State.defaultView());
+      return;
+    }
+    Sound.play("approve");
+    this.setView(State.defaultView());
+    Bridge.shellConfirm(card.token).catch((err) => {
+      State.noteMessage = String(err).replace(/^Error:\s*/, "");
+      this.setView("note");
+      window.setTimeout(() => this.setView(State.defaultView()), 3000);
+    });
   }
 
   /** Back from the panel to the usual view. */
@@ -895,6 +923,7 @@ export class Island {
     window.addEventListener("keydown", (e) => {
       if (e.key === "Escape" && State.mode === "expanded") {
         if (State.view === "shell") this.closeShell();
+        else if (State.view === "confirm") this.decideCard(false);
         else if (State.pendingApproval) this.foldApproval();
         else if (!State.isPinned) this.collapse();
       }
@@ -902,6 +931,7 @@ export class Island {
     });
 
     void onDragDrop((e) => this.onDragDrop(e));
+    void onEvent<ShellCard>("shell-confirm", (card) => this.showCard(card));
 
     // Outside Tauri (plain browser) drive the cursor from DOM events so the
     // island can be inspected with `npm run dev`.

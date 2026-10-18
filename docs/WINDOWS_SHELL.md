@@ -1,6 +1,6 @@
 # « Coucou Shell » : la couche Windows de Coucou
 
-État : **phase 1 faite** — le panneau et ses 8 onglets (Contrôles, Aujourd'hui, Stats, Presse-papiers, Apps, Fonds, Alimentation, Fenêtres), désactivé par défaut dans Réglages → Général. Les phases 2 (outils vocaux), 3 (routines), 4 (Entoure et demande) et la « barre du haut » suivent. Les mesures sur ta machine (sonde et Mica) restent à faire.
+État : **phases 1 et 2 faites** — le panneau et ses 8 onglets (Contrôles, Aujourd'hui, Stats, Presse-papiers, Apps, Fonds, Alimentation, Fenêtres), désactivé par défaut dans Réglages → Général, et les outils vocaux de « OK Coucou » à niveaux de risque (`shell/voice_tools.rs`, cartes de niveau 2 dans `shell/confirm.rs` et `views/confirm.ts`). `create_routine` et `schedule_action` arrivent avec les routines (phase 3). Les mesures sur ta machine (sonde et Mica) restent à faire.
 
 Ce document part de la spécification de ton prompt et des API Windows documentées par Microsoft, et seulement de là. Aucun produit tiers n'a été téléchargé, analysé ni cherché (clean room). Le design reste celui de Coucou et suit les règles de `CLAUDE.md`.
 
@@ -72,7 +72,7 @@ Ce document part de la spécification de ton prompt et des API Windows document�
 
 | Niveau | Outils | Ce que fait Coucou |
 | --- | --- | --- |
-| 0 Lecture | `system_stats`, `list_windows`, `list_apps`, `clipboard_recent` (5 derniers, 500 caractères, désactivable) | exécute |
+| 0 Lecture | `system_stats`, `list_windows`, `list_apps`, `clipboard_recent` (5 derniers, 500 caractères ; seulement si l'historique **et** « OK Coucou peut le lire » sont activés, désactivé par défaut) | exécute |
 | 1 Réversible | `set_volume`, `toggle_wifi`, `toggle_bluetooth`, `open_app`, `focus_window`, `snap_window`, `apply_layout`, `set_wallpaper`, `web_open` | exécute, puis l'annonce à voix haute |
 | 2 Confirmation | `power_action`, `type_text`, `create_routine`, `schedule_action` | **n'exécute pas** : renvoie au modèle « une carte de confirmation est affichée » et pose une carte dans l'island. Seul le clic exécute |
 

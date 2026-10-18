@@ -24,7 +24,8 @@ export type IslandViewName =
   | "greeting"
   | "recap"
   | "wardrobe"
-  | "shell";
+  | "shell"
+  | "confirm";
 
 export type BotStateName =
   | "idle"
@@ -100,6 +101,8 @@ export const VIEW_LAYOUTS: Record<IslandViewName, ViewLayout> = {
   wardrobe: { height: 160, botX: 68, botY: null, botDiameter: 58, agentMode: "none" },
   // Mochi lives in the panel's header, left of the tabs.
   shell: { height: SHELL_MAX_H, botX: 40, botY: 34, botDiameter: 34, agentMode: "none" },
+  // A level 2 card (views/confirm.ts): the approval card's place, a line taller.
+  confirm: { height: 176, botX: 62, botY: null, botDiameter: 56, agentMode: "none" },
 };
 
 /** The Shell panel's height: SHELL_MAX_H, or what the window has room for. */

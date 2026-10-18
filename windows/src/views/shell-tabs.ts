@@ -4,7 +4,7 @@
 // end-of-timer timeout.
 
 import {
-  Bridge, onEvent, type ShellClip, type ShellPowerAction, type ShellPowerCard, type ShellTodo, type ShellWallpapers,
+  Bridge, onEvent, type ShellClip, type ShellPowerAction, type ShellCard, type ShellTodo, type ShellWallpapers,
 } from "../core/bridge";
 import { agoText, clipPreview, clockText, isoWeek, timerText, weatherKey, type WeatherKind } from "../core/shell";
 import { Sound } from "../core/sound";
@@ -448,7 +448,7 @@ function buildPower(): Tab {
   }
 
   async function ask(action: ShellPowerAction) {
-    let c: ShellPowerCard;
+    let c: ShellCard;
     try {
       c = await Bridge.shellPowerPrepare(action);
     } catch (e) {
@@ -456,11 +456,12 @@ function buildPower(): Tab {
       return;
     }
     const label = POWER.find(([a]) => a === action)?.[1] ?? "";
+    const apps = c.kind === "power" ? c.apps : [];
     const detail =
       action === "lock" || action === "sleep"
         ? t("Your apps stay open.")
-        : c.apps.length > 0
-          ? t("Open apps may have unsaved work: {apps}.", { apps: c.apps.join(", ") })
+        : apps.length > 0
+          ? t("Open apps may have unsaved work: {apps}.", { apps: apps.join(", ") })
           : t("No app has a window open.");
     confirmBox.replaceChildren(
       card(
@@ -470,14 +471,14 @@ function buildPower(): Tab {
         h(
           "div",
           { class: "shell-row shell-end" },
-          h("button", { class: "btn secondary", onclick: () => { void Bridge.shellPowerCancel(); close(); } }, h("span", { text: tl("Cancel") })),
+          h("button", { class: "btn secondary", onclick: () => { void Bridge.shellConfirmCancel(); close(); } }, h("span", { text: tl("Cancel") })),
           h(
             "button",
             {
               class: "btn primary",
               onclick: () => {
                 close();
-                Bridge.shellPowerConfirm(c.token).catch((e) => info.say(message(e)));
+                Bridge.shellConfirm(c.token).catch((e) => info.say(message(e)));
               },
             },
             h("span", { text: t(label) }),
@@ -505,7 +506,7 @@ function buildPower(): Tab {
       );
     },
     hide() {
-      if (confirmBox.style.display !== "none") void Bridge.shellPowerCancel();
+      if (confirmBox.style.display !== "none") void Bridge.shellConfirmCancel();
       close();
     },
   };

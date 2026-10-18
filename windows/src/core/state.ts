@@ -10,6 +10,7 @@ import type { CodexPlanUsage, PlanUsage } from "./plan";
 import type { ProviderId } from "./providers";
 import type { FileDiff } from "./diff";
 import type { Bindings } from "./shortcuts";
+import type { ShellCard } from "./bridge";
 import { DEFAULT_OUTFIT, type Outfit } from "../mochi/wardrobe";
 import { pillColor } from "./pill-colors";
 import { Spotify, musicPlaying } from "./spotify";
@@ -128,6 +129,7 @@ export interface Settings {
   /** « Coucou Shell »: the island folds down into a panel of tabs (views/shell.ts). Off by default. */
   shellPanel: boolean;
   shellClipboard: boolean;
+  shellClipboardVoice: boolean;
   shellWeatherCity: string;
   /** Who the chat talks to (see core/providers.ts); picked in the chat view. */
   chatProvider: ProviderId;
@@ -193,6 +195,7 @@ export const DEFAULT_SETTINGS: Settings = {
   claudeSubscription: false,
   shellPanel: false,
   shellClipboard: false,
+  shellClipboardVoice: false,
   shellWeatherCity: "",
   chatProvider: "anthropic",
   chatModels: {},
@@ -236,6 +239,8 @@ class AppState {
   promptContext: PromptContext | null = null;
   droppedFile: { name: string; path: string } | null = null;
   noteMessage: string | null = null;
+  /** A level 2 card waiting for its click (views/confirm.ts). */
+  shellCard: ShellCard | null = null;
   searchResult: SearchResult | null = null;
   chatHistory: ChatMessage[] = [];
   pendingApproval: ApprovalInfo | null = null;

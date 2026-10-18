@@ -5,10 +5,12 @@
 
 pub mod apps;
 pub mod clipboard;
+pub mod confirm;
 pub mod controls;
 pub mod power;
 pub mod stats;
 pub mod today;
+pub mod voice_tools;
 pub mod wallpaper;
 pub mod windows_mgr;
 #[cfg(windows)]
@@ -271,19 +273,19 @@ pub fn shell_battery(shared: State<'_, Shared>) -> Result<power::Battery, String
 
 /// Puts a confirmation card up; nothing runs until its button is clicked.
 #[tauri::command]
-pub async fn shell_power_prepare(shared: State<'_, Shared>, action: power::PowerAction) -> Result<power::Card, String> {
+pub async fn shell_power_prepare(shared: State<'_, Shared>, action: power::PowerAction) -> Result<confirm::Card, String> {
     enabled(&shared)?;
-    blocking(move || power::prepare(action)).await
+    blocking(move || confirm::prepare(confirm::Action::Power(action))).await
 }
 
-/// The card's button.
+/// A level 2 card's button (the Power tab's, or the one « OK Coucou » put up).
 #[tauri::command]
-pub async fn shell_power_confirm(shared: State<'_, Shared>, token: String) -> Result<(), String> {
+pub async fn shell_confirm(shared: State<'_, Shared>, token: String) -> Result<(), String> {
     enabled(&shared)?;
-    blocking(move || power::confirm(&token)).await
+    blocking(move || confirm::confirm(&token)).await
 }
 
 #[tauri::command]
-pub fn shell_power_cancel() {
-    power::cancel();
+pub fn shell_confirm_cancel() {
+    confirm::cancel();
 }

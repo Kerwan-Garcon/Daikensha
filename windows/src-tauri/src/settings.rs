@@ -49,6 +49,9 @@ pub struct Settings {
     /// The panel's clipboard history (shell/clipboard.rs): off by default,
     /// held in memory only, never written anywhere.
     pub shell_clipboard: bool,
+    /// « OK Coucou » may read the clipboard history's last five entries, cut
+    /// to 500 characters (shell/voice_tools.rs). Off by default.
+    pub shell_clipboard_voice: bool,
     /// The city for the panel's weather (shell/today.rs, Open-Meteo). Empty:
     /// no weather and no network call.
     pub shell_weather_city: String,
@@ -159,6 +162,7 @@ impl Default for Settings {
             claude_subscription: false,
             shell_panel: false,
             shell_clipboard: false,
+            shell_clipboard_voice: false,
             shell_weather_city: String::new(),
             chat_provider: crate::chat::ANTHROPIC.into(),
             chat_models: BTreeMap::new(),
@@ -450,6 +454,7 @@ mod tests {
   "claudeSubscription": true,
   "shellPanel": true,
   "shellClipboard": true,
+  "shellClipboardVoice": true,
   "shellWeatherCity": "Bordeaux",
   "chatProvider": "ollama",
   "chatModels": { "ollama": "llama3.2", "openai": "gpt-x" },
@@ -961,6 +966,7 @@ mod tests {
                 "claudeSubscription",
                 "shellPanel",
                 "shellClipboard",
+                "shellClipboardVoice",
                 "shellWeatherCity",
                 "chatProvider",
                 "chatModels",
