@@ -625,6 +625,12 @@ export class Island {
   private onDragDrop(e: { type: string; paths?: string[] }) {
     if (e.type !== "over") void Bridge.log(`drag ${e.type} ${e.paths?.length ?? 0} file(s)`);
     if (State.paused) return;
+    // The Wallpapers tab takes the drop itself: Mochi doesn't eat it.
+    const shell = this.views.get("shell") as ShellHost | undefined;
+    if (State.mode === "expanded" && State.view === "shell" && shell?.takesDrops()) {
+      if (e.type === "drop") shell.drop(e.paths ?? []);
+      return;
+    }
     switch (e.type) {
       case "enter":
       case "over": {

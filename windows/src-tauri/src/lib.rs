@@ -131,6 +131,7 @@ fn save_settings(app: AppHandle, shared: State<Shared>, settings: Settings) {
     }
     integrations::settings_saved(&app, &settings.active_integrations);
     spotify::sync(&app, &settings.active_integrations);
+    shell::settings_saved(&app, &settings);
     if shortcuts_changed {
         shortcuts::apply(&app, &settings.shortcuts);
     }
@@ -777,6 +778,21 @@ pub fn run() {
             shell::shell_layout_delete,
             shell::shell_apps,
             shell::shell_app_launch,
+            shell::shell_todos,
+            shell::shell_todo_change,
+            shell::shell_weather,
+            shell::shell_clipboard,
+            shell::shell_clipboard_copy,
+            shell::shell_clipboard_remove,
+            shell::shell_clipboard_clear,
+            shell::shell_wallpapers,
+            shell::shell_wallpaper_add,
+            shell::shell_wallpaper_delete,
+            shell::shell_wallpaper_apply,
+            shell::shell_battery,
+            shell::shell_power_prepare,
+            shell::shell_power_confirm,
+            shell::shell_power_cancel,
             set_collapsed,
             set_shell_open,
             set_island_rect,
@@ -953,6 +969,7 @@ pub fn run() {
             phone_link::start_if_enabled(&handle);
             integrations::start(handle.clone());
             spotify::sync(&handle, &loaded.active_integrations);
+            shell::settings_saved(&handle, &loaded);
             shortcuts::apply(&handle, &loaded.shortcuts);
             if loaded.autostart {
                 // Login items written before 0.5 start Coucou without --autostart:

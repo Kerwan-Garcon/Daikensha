@@ -4,11 +4,17 @@
 // background: each tab asks while it is on screen.
 
 pub mod apps;
+pub mod clipboard;
 pub mod controls;
+pub mod power;
 pub mod stats;
+pub mod today;
+pub mod wallpaper;
 pub mod windows_mgr;
 #[cfg(windows)]
 mod win;
+#[cfg(windows)]
+mod win_desk;
 
 use std::sync::OnceLock;
 
@@ -40,16 +46,26 @@ async fn blocking<T: Send + 'static>(f: impl FnOnce() -> Result<T, String> + Sen
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Capabilities {
+    today: bool,
     stats: bool,
     controls: bool,
     apps: bool,
     windows: bool,
+    clipboard: bool,
+    wallpapers: bool,
+    power: bool,
 }
 
 #[tauri::command]
 pub fn shell_capabilities() -> Capabilities {
     let win = cfg!(windows);
-    Capabilities { stats: true, controls: win, apps: win, windows: win }
+    Capabilities { today: true, stats: true, controls: win, apps: win, windows: win, clipboard: win, wallpapers: win, power: win }
+}
+
+/// Settings were saved, or the app started: the clipboard listens only while
+/// both the panel and its history are on.
+pub fn settings_saved(app: &tauri::AppHandle, settings: &crate::settings::Settings) {
+    clipboard::sync(app, settings.shell_panel && settings.shell_clipboard);
 }
 
 #[tauri::command]
@@ -146,4 +162,128 @@ pub async fn shell_apps(shared: State<'_, Shared>) -> Result<Vec<apps::App>, Str
 pub async fn shell_app_launch(shared: State<'_, Shared>, id: String) -> Result<(), String> {
     enabled(&shared)?;
     blocking(move || apps::launch(&id)).await
+}
+
+// ── Today ─────────────────────────────────────────────────────────────────────
+
+#[tauri::command]
+pub fn shell_todos(shared: State<'_, Shared>) -> Result<Vec<today::Todo>, String> {
+    enabled(&shared)?;
+    Ok(today::load_todos())
+}
+
+#[tauri::command]
+pub fn shell_todo_change(shared: State<'_, Shared>, change: today::TodoChange) -> Result<Vec<today::Todo>, String> {
+    enabled(&shared)?;
+    today::change_todos(change)
+}
+
+/// The weather for the city in Settings; None when there is none (and then no call is made).
+#[tauri::command]
+pub async fn shell_weather(shared: State<'_, Shared>) -> Result<Option<today::Weather>, String> {
+    enabled(&shared)?;
+    let city = shared.settings.lock().unwrap().shell_weather_city.clone();
+    today::weather(&city).await
+}
+
+// ── Clipboard ─────────────────────────────────────────────────────────────────
+
+fn clipboard_on(shared: &State<'_, Shared>) -> Result<(), String> {
+    enabled(shared)?;
+    if shared.settings.lock().unwrap().shell_clipboard {
+        Ok(())
+    } else {
+        Err(crate::i18n::t("Turn on the clipboard history in Settings first."))
+    }
+}
+
+#[tauri::command]
+pub fn shell_clipboard(shared: State<'_, Shared>) -> Result<Vec<clipboard::Entry>, String> {
+    clipboard_on(&shared)?;
+    Ok(clipboard::history().list())
+}
+
+#[tauri::command]
+pub async fn shell_clipboard_copy(shared: State<'_, Shared>, id: u64) -> Result<(), String> {
+    clipboard_on(&shared)?;
+    blocking(move || clipboard::copy(id)).await
+}
+
+#[tauri::command]
+pub fn shell_clipboard_remove(shared: State<'_, Shared>, id: u64) -> Result<Vec<clipboard::Entry>, String> {
+    clipboard_on(&shared)?;
+    let mut h = clipboard::history();
+    h.remove(id);
+    Ok(h.list())
+}
+
+#[tauri::command]
+pub fn shell_clipboard_clear() {
+    clipboard::history().clear();
+}
+
+// ── Wallpapers ────────────────────────────────────────────────────────────────
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Wallpapers {
+    images: Vec<wallpaper::Wallpaper>,
+    screens: usize,
+    /// Dropped files that were not taken (not an image, too large, the selection full).
+    refused: usize,
+}
+
+#[tauri::command]
+pub async fn shell_wallpapers(shared: State<'_, Shared>) -> Result<Wallpapers, String> {
+    enabled(&shared)?;
+    blocking(|| Ok(Wallpapers { images: wallpaper::list(), screens: wallpaper::screens(), refused: 0 })).await
+}
+
+#[tauri::command]
+pub async fn shell_wallpaper_add(shared: State<'_, Shared>, paths: Vec<String>) -> Result<Wallpapers, String> {
+    enabled(&shared)?;
+    blocking(move || {
+        let (images, refused) = wallpaper::add(&paths)?;
+        Ok(Wallpapers { images, screens: wallpaper::screens(), refused })
+    })
+    .await
+}
+
+#[tauri::command]
+pub async fn shell_wallpaper_delete(shared: State<'_, Shared>, id: String) -> Result<Wallpapers, String> {
+    enabled(&shared)?;
+    blocking(move || Ok(Wallpapers { images: wallpaper::delete(&id)?, screens: wallpaper::screens(), refused: 0 })).await
+}
+
+#[tauri::command]
+pub async fn shell_wallpaper_apply(shared: State<'_, Shared>, id: String, screen: Option<usize>) -> Result<(), String> {
+    enabled(&shared)?;
+    blocking(move || wallpaper::apply(&id, screen)).await
+}
+
+// ── Power ─────────────────────────────────────────────────────────────────────
+
+#[tauri::command]
+pub fn shell_battery(shared: State<'_, Shared>) -> Result<power::Battery, String> {
+    enabled(&shared)?;
+    Ok(power::battery())
+}
+
+/// Puts a confirmation card up; nothing runs until its button is clicked.
+#[tauri::command]
+pub async fn shell_power_prepare(shared: State<'_, Shared>, action: power::PowerAction) -> Result<power::Card, String> {
+    enabled(&shared)?;
+    blocking(move || power::prepare(action)).await
+}
+
+/// The card's button.
+#[tauri::command]
+pub async fn shell_power_confirm(shared: State<'_, Shared>, token: String) -> Result<(), String> {
+    enabled(&shared)?;
+    blocking(move || power::confirm(&token)).await
+}
+
+#[tauri::command]
+pub fn shell_power_cancel() {
+    power::cancel();
 }

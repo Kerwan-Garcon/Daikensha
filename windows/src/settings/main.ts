@@ -972,6 +972,17 @@ function generalSection(): HTMLElement {
     void save();
   });
 
+  const weatherCity = h("input", {
+    type: "text",
+    placeholder: t("e.g. Bordeaux"),
+    maxlength: "80",
+    spellcheck: "false",
+    value: settings.shellWeatherCity,
+  }) as HTMLInputElement;
+  weatherCity.addEventListener("change", () => {
+    settings.shellWeatherCity = weatherCity.value.trim();
+    void save();
+  });
   const screen = h("select", {}) as HTMLSelectElement;
   screen.append(
     h("option", { value: "primary", text: t("Main display") }),
@@ -1018,7 +1029,17 @@ function generalSection(): HTMLElement {
       h("label", { text: t("Coucou Shell panel") }),
       toggle(settings.shellPanel, (v) => { settings.shellPanel = v; void save(); }),
     ),
-    h("div", { class: "hint", text: t("Scroll down on the island to fold out controls, system stats, apps and windows. Scroll up or press Esc to fold it back.") }),
+    h("div", { class: "hint", text: t("Scroll down on the island to fold out controls, today, stats, the clipboard, apps, wallpapers, power and windows. Scroll up or press Esc to fold it back.") }),
+    h("div", { class: "row" },
+      h("label", { text: t("Clipboard history") }),
+      toggle(settings.shellClipboard, (v) => { settings.shellClipboard = v; void save(); }),
+    ),
+    h("div", { class: "hint", text: t("The panel keeps the last 25 texts you copy, in memory only: nothing is written to disk, and turning it off forgets them. Password managers are always skipped.") }),
+    h("div", { class: "row" },
+      h("label", { text: t("Weather city") }),
+      weatherCity,
+    ),
+    h("div", { class: "hint", text: t("Empty: no weather and no network call. With a city, the Today tab asks Open-Meteo at most every 30 minutes, only while it is open.") }),
     h("div", { class: "row" },
       h("label", { text: t("Auto-close") }),
       autoClose,

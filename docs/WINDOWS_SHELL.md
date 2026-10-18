@@ -1,6 +1,6 @@
 # « Coucou Shell » : la couche Windows de Coucou
 
-État : **phase 0** (plan, spikes, maquettes). Aucun code dans l'app. Les décisions de la phase 0 sont prises (en fin de document) ; les mesures sur ta machine (sonde et Mica) restent à faire.
+État : **phase 1 faite** — le panneau et ses 8 onglets (Contrôles, Aujourd'hui, Stats, Presse-papiers, Apps, Fonds, Alimentation, Fenêtres), désactivé par défaut dans Réglages → Général. Les phases 2 (outils vocaux), 3 (routines), 4 (Entoure et demande) et la « barre du haut » suivent. Les mesures sur ta machine (sonde et Mica) restent à faire.
 
 Ce document part de la spécification de ton prompt et des API Windows documentées par Microsoft, et seulement de là. Aucun produit tiers n'a été téléchargé, analysé ni cherché (clean room). Le design reste celui de Coucou et suit les règles de `CLAUDE.md`.
 

@@ -356,6 +356,21 @@ export const Bridge = {
   shellLayoutDelete: (name: string) => callOrThrow<ShellLayout[]>("shell_layout_delete", { name }),
   shellApps: () => callOrThrow<ShellApp[]>("shell_apps"),
   shellAppLaunch: (id: string) => callOrThrow<void>("shell_app_launch", { id }),
+  shellTodos: () => callOrThrow<ShellTodo[]>("shell_todos"),
+  shellTodoChange: (change: ShellTodoChange) => callOrThrow<ShellTodo[]>("shell_todo_change", { change }),
+  shellWeather: () => callOrThrow<ShellWeather | null>("shell_weather"),
+  shellClipboard: () => callOrThrow<ShellClip[]>("shell_clipboard"),
+  shellClipboardCopy: (id: number) => callOrThrow<void>("shell_clipboard_copy", { id }),
+  shellClipboardRemove: (id: number) => callOrThrow<ShellClip[]>("shell_clipboard_remove", { id }),
+  shellClipboardClear: () => call<void>("shell_clipboard_clear"),
+  shellWallpapers: () => callOrThrow<ShellWallpapers>("shell_wallpapers"),
+  shellWallpaperAdd: (paths: string[]) => callOrThrow<ShellWallpapers>("shell_wallpaper_add", { paths }),
+  shellWallpaperDelete: (id: string) => callOrThrow<ShellWallpapers>("shell_wallpaper_delete", { id }),
+  shellWallpaperApply: (id: string, screen: number | null) => callOrThrow<void>("shell_wallpaper_apply", { id, screen }),
+  shellBattery: () => callOrThrow<ShellBattery>("shell_battery"),
+  shellPowerPrepare: (action: ShellPowerAction) => callOrThrow<ShellPowerCard>("shell_power_prepare", { action }),
+  shellPowerConfirm: (token: string) => callOrThrow<void>("shell_power_confirm", { token }),
+  shellPowerCancel: () => call<void>("shell_power_cancel"),
 
   /** Settings → Claude → Check: is Claude Code installed and signed in to a subscription? */
   claudeCliStatus: () => call<ClaudeCliStatus>("claude_cli_status"),
@@ -490,7 +505,10 @@ export interface ModelInfo {
 
 // ── Coucou Shell (shell/ in Rust) ─────────────────────────────────────────────
 
-export interface ShellCapabilities { stats: boolean; controls: boolean; apps: boolean; windows: boolean }
+export interface ShellCapabilities {
+  today: boolean; stats: boolean; controls: boolean; apps: boolean; windows: boolean;
+  clipboard: boolean; wallpapers: boolean; power: boolean;
+}
 export interface ShellProc { name: string; cpu: number; mem: number }
 export interface ShellStats {
   cpu: number; memUsed: number; memTotal: number; netRx: number; netTx: number;
@@ -510,6 +528,15 @@ export type ShellWindowAction =
   | { kind: "snap"; to: ShellSnap } | { kind: "screen"; index: number };
 export interface ShellLayout { name: string; windows: { app: string; screen: number }[] }
 export interface ShellApp { id: string; name: string }
+export interface ShellTodo { id: number; text: string; done: boolean }
+export type ShellTodoChange =
+  | { kind: "add"; text: string } | { kind: "toggle"; id: number } | { kind: "remove"; id: number } | { kind: "clearDone" };
+export interface ShellWeather { place: string; temperature: number; max: number; min: number; code: number }
+export interface ShellClip { id: number; text: string; app: string; at: number }
+export interface ShellWallpapers { images: { id: string; thumb: string }[]; screens: number; refused: number }
+export interface ShellBattery { percent: number | null; pluggedIn: boolean }
+export type ShellPowerAction = "lock" | "sleep" | "signOut" | "restart" | "shutDown";
+export interface ShellPowerCard { token: string; action: ShellPowerAction; apps: string[] }
 
 /** What claude_cli::status() says about the user's Claude Code (nothing about the account). */
 export type ClaudeCliStatus =

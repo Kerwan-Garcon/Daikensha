@@ -1,5 +1,6 @@
 // « Coucou Shell »'s panel (docs/WINDOWS_SHELL.md): the island folds down into
-// tabs — Controls, Stats, Apps, Windows. Off unless Settings turns it on.
+// tabs — Controls, Today, Stats, Clipboard, Apps, Wallpapers, Power, Windows
+// (the second four in views/shell-tabs.ts). Off unless Settings turns it on.
 // Mochi stays the character: the island draws him in the panel's header.
 //
 // Nothing runs while the panel is not on screen: Stats samples once a second
@@ -16,6 +17,8 @@ import {
 } from "../core/shell";
 import { N_, language, t, tl, type Msg } from "../i18n/i18n";
 import { clear, h, svg } from "./dom";
+import { card, cardTitle, linkButton, message, note, switchButton, type Tab } from "./shell-parts";
+import { buildClipboard, buildPower, buildToday, buildWallpapers } from "./shell-tabs";
 import type { ViewHost } from "./views";
 
 const ICON: Record<ShellTab, string> = {
@@ -23,6 +26,10 @@ const ICON: Record<ShellTab, string> = {
   stats: "M22 12h-4l-3 9L9 3l-3 9H2",
   apps: "M3 3h7v7H3zM14 3h7v7h-7zM14 14h7v7h-7zM3 14h7v7H3z",
   windows: "M3 3h18v18H3zM12 3v18M12 12h9",
+  today: "M3 5h18v16H3zM3 10h18M8 3v4M16 3v4",
+  clipboard: "M9 3h6v4H9zM7 5H5v16h14V5h-2",
+  wallpapers: "M3 4h18v16H3zM3 16l5-5 4 4 3-3 6 6M15.5 8.5h.01",
+  power: "M12 2v10M5.6 6.6a8 8 0 1 0 12.8 0",
 };
 
 const LABEL: Record<ShellTab, () => Msg> = {
@@ -30,47 +37,13 @@ const LABEL: Record<ShellTab, () => Msg> = {
   stats: () => tl("Stats"),
   apps: () => tl("Apps"),
   windows: () => tl("Open windows"),
+  today: () => tl("Today"),
+  clipboard: () => tl("Clipboard"),
+  wallpapers: () => tl("Wallpapers"),
+  power: () => tl("Power"),
 };
 
 const UNITS = (): string[] => [t("B"), t("KB"), t("MB"), t("GB"), t("TB")];
-
-interface Tab {
-  el: HTMLElement;
-  show(): void;
-  hide(): void;
-}
-
-/** A small note under a card when Windows says no. */
-function note(): { el: HTMLElement; say(text: string): void } {
-  const el = h("div", { class: "shell-note" });
-  let timer: number | null = null;
-  return {
-    el,
-    say(text: string) {
-      el.textContent = text;
-      if (timer != null) window.clearTimeout(timer);
-      timer = window.setTimeout(() => (el.textContent = ""), 5000);
-    },
-  };
-}
-
-const message = (err: unknown) => String(err).replace(/^Error:\s*/, "");
-
-function card(cls: string, ...children: (Node | string | Msg | null)[]): HTMLElement {
-  return h("div", { class: `shell-card ${cls}` }, ...children);
-}
-
-function cardTitle(text: Msg, aside?: Node): HTMLElement {
-  return h("div", { class: "shell-card-head" }, h("span", { class: "shell-card-title", text }), aside ?? null);
-}
-
-function linkButton(text: Msg, onclick: () => void): HTMLElement {
-  return h("button", { class: "shell-link", onclick }, h("span", { text }), svg("M7 17 17 7M8 7h9v9", 13, { stroke: 2 }));
-}
-
-function switchButton(label: string, on: boolean, onclick: () => void): HTMLElement {
-  return h("button", { class: on ? "shell-switch on" : "shell-switch", "aria-label": label, "aria-pressed": String(on), onclick }, h("i", {}));
-}
 
 // ── Stats ─────────────────────────────────────────────────────────────────────
 
@@ -579,10 +552,23 @@ function buildWindows(): Tab {
 export interface ShellHost extends ViewHost {
   /** The panel came on screen (true) or left it (false): tabs start or stop. */
   shown(on: boolean): void;
+  /** True when the tab on screen takes dropped files (Wallpapers). */
+  takesDrops(): boolean;
+  /** Files dropped on the panel. */
+  drop(paths: string[]): void;
 }
 
 export function buildShell(): ShellHost {
-  const tabs: Record<ShellTab, Tab> = { controls: buildControls(), stats: buildStats(), apps: buildApps(), windows: buildWindows() };
+  const tabs: Record<ShellTab, Tab> = {
+    controls: buildControls(),
+    today: buildToday(),
+    stats: buildStats(),
+    clipboard: buildClipboard(),
+    apps: buildApps(),
+    wallpapers: buildWallpapers(),
+    power: buildPower(),
+    windows: buildWindows(),
+  };
   const nav = h("nav", { class: "shell-tabs", "aria-label": t("Tabs") });
   const time = h("span", { class: "shell-mono shell-time" });
   const date = h("span", { class: "shell-dim" });
@@ -636,6 +622,10 @@ export function buildShell(): ShellHost {
   return {
     el,
     sync() {},
+    takesDrops: () => live && !!tabs[current].drop,
+    drop(paths: string[]) {
+      tabs[current].drop?.(paths);
+    },
     shown(on: boolean) {
       if (on === live) return;
       live = on;

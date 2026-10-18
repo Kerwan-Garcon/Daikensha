@@ -46,6 +46,12 @@ pub struct Settings {
     /// « Coucou Shell »: the island folds down into a panel of tabs (shell/).
     /// Off by default, so the island stays as it shipped.
     pub shell_panel: bool,
+    /// The panel's clipboard history (shell/clipboard.rs): off by default,
+    /// held in memory only, never written anywhere.
+    pub shell_clipboard: bool,
+    /// The city for the panel's weather (shell/today.rs, Open-Meteo). Empty:
+    /// no weather and no network call.
+    pub shell_weather_city: String,
     /// Who the chat talks to: "anthropic", a cloud provider of
     /// openai_compat.rs ("openai", "google", "openrouter"), or a model server
     /// of local_chat.rs ("ollama", "lmstudio", "custom"). Picked in the chat view.
@@ -152,6 +158,8 @@ impl Default for Settings {
             show_codex_plan_in_notch: false,
             claude_subscription: false,
             shell_panel: false,
+            shell_clipboard: false,
+            shell_weather_city: String::new(),
             chat_provider: crate::chat::ANTHROPIC.into(),
             chat_models: BTreeMap::new(),
             ollama_url: String::new(),
@@ -441,6 +449,8 @@ mod tests {
   "showCodexPlanInNotch": true,
   "claudeSubscription": true,
   "shellPanel": true,
+  "shellClipboard": true,
+  "shellWeatherCity": "Bordeaux",
   "chatProvider": "ollama",
   "chatModels": { "ollama": "llama3.2", "openai": "gpt-x" },
   "ollamaUrl": "http://127.0.0.1:11434",
@@ -950,6 +960,8 @@ mod tests {
                 "showCodexPlanInNotch",
                 "claudeSubscription",
                 "shellPanel",
+                "shellClipboard",
+                "shellWeatherCity",
                 "chatProvider",
                 "chatModels",
                 "ollamaUrl",

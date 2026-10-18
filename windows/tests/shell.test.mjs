@@ -4,13 +4,16 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
-  availableTabs, clockText, fold, formatBytes, formatPct, gaugeDash, initial, pushSample, searchApps, sparkline, tileColor,
+  agoText, availableTabs, clipPreview, clockText, fold, isoWeek, timerText, weatherKey, formatBytes, formatPct, gaugeDash, initial, pushSample, searchApps, sparkline, tileColor,
 } from "../src/core/shell.ts";
 
 test("only the tabs this system can fill show, Stats everywhere", () => {
   assert.deepEqual(availableTabs(null), ["stats"]);
-  assert.deepEqual(availableTabs({ stats: true, controls: false, apps: false, windows: false }), ["stats"]);
-  assert.deepEqual(availableTabs({ stats: true, controls: true, apps: true, windows: true }), ["controls", "stats", "apps", "windows"]);
+  const none = { today: false, stats: true, controls: false, apps: false, windows: false, clipboard: false, wallpapers: false, power: false };
+  assert.deepEqual(availableTabs(none), ["stats"]);
+  assert.deepEqual(availableTabs({ ...none, today: true }), ["today", "stats"]);
+  const all = { today: true, stats: true, controls: true, apps: true, windows: true, clipboard: true, wallpapers: true, power: true };
+  assert.deepEqual(availableTabs(all), ["controls", "today", "stats", "clipboard", "apps", "wallpapers", "power", "windows"]);
 });
 
 test("numbers read the way the panel shows them", () => {
@@ -63,4 +66,21 @@ test("the clock gives a short date and a long one", () => {
   assert.equal(c.time, "14:32");
   assert.match(c.short, /18/);
   assert.match(c.long, /octobre/);
+});
+
+test("week numbers, weather families, the focus timer, ages and previews", () => {
+  assert.equal(isoWeek(new Date(2026, 9, 18)), 42);
+  assert.equal(isoWeek(new Date(2027, 0, 1)), 53);
+  assert.equal(isoWeek(new Date(2026, 0, 1)), 1);
+  assert.equal(weatherKey(0), "clear");
+  assert.equal(weatherKey(63), "rain");
+  assert.equal(weatherKey(81), "rain");
+  assert.equal(weatherKey(73), "snow");
+  assert.equal(weatherKey(96), "storm");
+  assert.equal(timerText(25 * 60_000), "25:00");
+  assert.equal(timerText(61_001), "01:02");
+  assert.equal(timerText(-5), "00:00");
+  assert.match(agoText(1_000, 1_000 + 120_000, "en"), /2 min/);
+  assert.equal(clipPreview("  a\n\n b  "), "a b");
+  assert.equal(clipPreview("x".repeat(200), 10).length, 10);
 });

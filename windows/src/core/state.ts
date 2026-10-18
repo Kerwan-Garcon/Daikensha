@@ -127,6 +127,8 @@ export interface Settings {
   claudeSubscription: boolean;
   /** « Coucou Shell »: the island folds down into a panel of tabs (views/shell.ts). Off by default. */
   shellPanel: boolean;
+  shellClipboard: boolean;
+  shellWeatherCity: string;
   /** Who the chat talks to (see core/providers.ts); picked in the chat view. */
   chatProvider: ProviderId;
   /** The model picked for each provider other than Anthropic, by provider id. */
@@ -190,6 +192,8 @@ export const DEFAULT_SETTINGS: Settings = {
   showCodexPlanInNotch: false,
   claudeSubscription: false,
   shellPanel: false,
+  shellClipboard: false,
+  shellWeatherCity: "",
   chatProvider: "anthropic",
   chatModels: {},
   ollamaUrl: "",

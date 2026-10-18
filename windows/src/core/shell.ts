@@ -4,10 +4,10 @@
 
 import type { ShellApp, ShellCapabilities } from "./bridge";
 
-export type ShellTab = "controls" | "stats" | "apps" | "windows";
+export type ShellTab = "controls" | "today" | "stats" | "clipboard" | "apps" | "wallpapers" | "power" | "windows";
 
-/** The tabs, in the panel's order. Phase 1: the four the backend can fill. */
-export const SHELL_TABS: readonly ShellTab[] = ["controls", "stats", "apps", "windows"];
+/** The tabs, in the panel's order. */
+export const SHELL_TABS: readonly ShellTab[] = ["controls", "today", "stats", "clipboard", "apps", "wallpapers", "power", "windows"];
 
 /** The tabs this system can fill (only Stats outside Windows). */
 export function availableTabs(caps: ShellCapabilities | null): ShellTab[] {
@@ -104,4 +104,52 @@ export function clockText(now: Date, lang: string): { time: string; short: strin
   const short = now.toLocaleDateString(lang, { weekday: "short", day: "numeric" });
   const long = now.toLocaleDateString(lang, { weekday: "long", day: "numeric", month: "long" });
   return { time, short, long };
+}
+
+/** The ISO 8601 week number of `d` (weeks start on Monday; week 1 holds the first Thursday). */
+export function isoWeek(d: Date): number {
+  const t = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+  const day = t.getUTCDay() || 7;
+  t.setUTCDate(t.getUTCDate() + 4 - day);
+  const yearStart = new Date(Date.UTC(t.getUTCFullYear(), 0, 1));
+  return Math.ceil(((t.getTime() - yearStart.getTime()) / 86_400_000 + 1) / 7);
+}
+
+export type WeatherKind = "clear" | "partly" | "overcast" | "fog" | "drizzle" | "rain" | "snow" | "storm" | "cloudy";
+
+/** The family of a WMO weather code, as Open-Meteo reports it. */
+export function weatherKey(code: number): WeatherKind {
+  if (code === 0) return "clear";
+  if (code <= 2) return "partly";
+  if (code === 3) return "overcast";
+  if (code === 45 || code === 48) return "fog";
+  if (code >= 51 && code <= 57) return "drizzle";
+  if ((code >= 61 && code <= 67) || (code >= 80 && code <= 82)) return "rain";
+  if ((code >= 71 && code <= 77) || code === 85 || code === 86) return "snow";
+  if (code >= 95) return "storm";
+  return "cloudy";
+}
+
+/** "25:00" for a focus timer's remaining milliseconds. */
+export function timerText(ms: number): string {
+  const s = Math.max(0, Math.ceil(ms / 1000));
+  return `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
+}
+
+/** "2 min ago"-style, in `lang`, for something that happened at `at` (ms). */
+export function agoText(at: number, now: number, lang: string): string {
+  const fmt = new Intl.RelativeTimeFormat(lang, { numeric: "auto", style: "short" });
+  const s = Math.round((at - now) / 1000);
+  if (Math.abs(s) < 60) return fmt.format(Math.min(0, s), "second");
+  const m = Math.round(s / 60);
+  if (Math.abs(m) < 60) return fmt.format(m, "minute");
+  const h = Math.round(m / 60);
+  if (Math.abs(h) < 24) return fmt.format(h, "hour");
+  return fmt.format(Math.round(h / 24), "day");
+}
+
+/** A copied text as one short line for the list. */
+export function clipPreview(text: string, max = 140): string {
+  const flat = text.replace(/\s+/g, " ").trim();
+  return flat.length > max ? `${flat.slice(0, max - 1)}…` : flat;
 }
