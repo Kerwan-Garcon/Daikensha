@@ -488,3 +488,33 @@ fn the_child_runs_without_keys_and_without_claude_codes_background_traffic() {
     assert!(plain.contains(&(mcp::TOKEN_VAR.to_string(), None)), "the token is only for the voice");
     assert!(envs(Some("t0k")).contains(&(mcp::TOKEN_VAR.to_string(), Some("t0k".into()))));
 }
+
+// ── The relay's self-test ─────────────────────────────────────────────────────
+
+#[test]
+fn only_a_denial_from_coucous_guard_counts() {
+    assert!(guard_denied(Some(2), b"Coucou tool guard: Bash is not allowed here"));
+    // An older relay forwards the event and lets it through.
+    assert!(!guard_denied(Some(0), b""));
+    assert!(!guard_denied(Some(2), b"something else"));
+    assert!(!guard_denied(None, b"Coucou tool guard"));
+}
+
+#[cfg(unix)]
+#[tokio::test]
+async fn an_old_relay_fails_the_probe_and_the_real_guard_passes_it() {
+    use std::os::unix::fs::PermissionsExt;
+    let dir = std::env::temp_dir().join(format!("coucou-relay-probe-{}", std::process::id()));
+    std::fs::create_dir_all(&dir).unwrap();
+    let script = |name: &str, body: &str| {
+        let p = dir.join(name);
+        std::fs::write(&p, format!("#!/bin/sh\ncat >/dev/null\n{body}\n")).unwrap();
+        std::fs::set_permissions(&p, std::fs::Permissions::from_mode(0o755)).unwrap();
+        p
+    };
+    let old = script("old", "exit 0");
+    assert!(!probe_relay(&old).await);
+    let guard = script("guard", "echo 'Coucou tool guard: Bash is not allowed here' >&2; exit 2");
+    assert!(probe_relay(&guard).await);
+    let _ = std::fs::remove_dir_all(&dir);
+}

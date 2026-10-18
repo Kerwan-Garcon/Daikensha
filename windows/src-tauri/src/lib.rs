@@ -91,7 +91,7 @@ fn boot(app: AppHandle, shared: State<Shared>) -> BootInfo {
 
 #[tauri::command]
 fn save_settings(app: AppHandle, shared: State<Shared>, settings: Settings) {
-    let (screen_changed, autostart_changed, shortcuts_changed, top_bar_changed) = {
+    let (screen_changed, autostart_changed, shortcuts_changed, top_bar_changed, account_changed) = {
         let mut current = shared.settings.lock().unwrap();
         let top_bar_changed = shell::appbar::wanted(&current) != shell::appbar::wanted(&settings);
         let screen_changed = current.screen != settings.screen;
@@ -112,8 +112,9 @@ fn save_settings(app: AppHandle, shared: State<Shared>, settings: Settings) {
         settings.phone_relay_url = current.phone_relay_url.clone();
         settings.phone_chat_models = current.phone_chat_models.clone();
         claude_cli::set_enabled(settings.claude_subscription);
+        let account_changed = current.claude_subscription != settings.claude_subscription;
         *current = settings;
-        (screen_changed, autostart_changed, shortcuts_changed, top_bar_changed)
+        (screen_changed, autostart_changed, shortcuts_changed, top_bar_changed, account_changed)
     };
     let settings = shared.settings.lock().unwrap().clone();
     if let Err(err) = settings::save(&settings) {
@@ -135,6 +136,10 @@ fn save_settings(app: AppHandle, shared: State<Shared>, settings: Settings) {
     shell::settings_saved(&app, &settings);
     if shortcuts_changed || top_bar_changed {
         shortcuts::apply(&app, &shell::appbar::bindings(&settings));
+    }
+    // API key ⇄ subscription: « OK Coucou » may now be able to listen, or not any more.
+    if account_changed {
+        voice::sync(&app);
     }
     if i18n::set_picked(&settings.language) {
         language_changed(&app);
