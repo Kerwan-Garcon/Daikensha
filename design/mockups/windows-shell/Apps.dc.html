@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Panneau Apps</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0}
+a{color:#93c5fd}a:hover{color:#bfdbfe}
+</style>
+</helmet>
+<div style="position: relative; width: 1200px; height: 760px; overflow: hidden; background: {{p.desk}}; font-family: 'Segoe UI Variable Text', 'Segoe UI', system-ui, sans-serif;">
+  <div style="position: absolute; left: 160px; top: 0; width: 880px; box-sizing: border-box; padding: 14px 20px 14px; display: flex; flex-direction: column; gap: 16px; background: {{p.glass}}; backdrop-filter: blur(28px) saturate(1.4); border: 1px solid {{p.line}}; border-top: none; border-radius: 0 0 30px 30px; box-shadow: 0 30px 70px rgba(0,0,0,0.38); color: {{p.ink}};">
+
+    <div style="display: flex; align-items: center; gap: 12px; height: 40px;">
+      <svg width="40" height="31" viewBox="0 0 44 34" aria-hidden="true"><defs><linearGradient id="m4" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fbf7f2"></stop><stop offset="1" stop-color="{{accent}}"></stop></linearGradient></defs><rect x="2" y="3" width="40" height="29" rx="13" fill="url(#m4)"></rect><circle cx="17" cy="18" r="2.6" fill="#111"></circle><circle cx="29" cy="18" r="2.6" fill="#111"></circle><ellipse cx="10" cy="22" rx="3" ry="1.6" fill="#f9a8b8" opacity="0.7"></ellipse><ellipse cx="34" cy="22" rx="3" ry="1.6" fill="#f9a8b8" opacity="0.7"></ellipse></svg>
+      <nav aria-label="Onglets" style="display: flex; gap: 4px;">
+        <sc-for list="{{tabs}}" as="t" hint-placeholder-count="8">
+          <button aria-label="{{t.label}}" style="{{t.style}}">
+            <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path d="{{t.d}}" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+            <sc-if value="{{t.on}}" hint-placeholder-val="{{false}}"><span style="font-size: 13px; font-weight: 600;">{{t.label}}</span></sc-if>
+          </button>
+        </sc-for>
+      </nav>
+      <div style="flex-grow: 1;"></div>
+      <span style="font-family: 'Cascadia Mono', Consolas, ui-monospace, monospace; font-variant-numeric: tabular-nums; font-size: 15px;">14:32</span>
+      <span style="font-size: 13px; color: {{p.dim}};">sam. 18 oct.</span>
+    </div>
+
+    <label style="display: flex; align-items: center; gap: 12px; height: 52px; padding: 0 16px; border-radius: 18px; background: {{p.card}}; border: 1px solid {{accentLine}};">
+      <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" style="color: {{p.dim}};"><path d="M11 19a8 8 0 1 0 0-16 8 8 0 0 0 0 16zM21 21l-4.3-4.3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+      <span style="position: absolute; left: -9999px;">Rechercher une app</span>
+      <input type="text" value="uni" style="flex-grow: 1; border: none; outline: none; background: transparent; color: {{p.ink}}; font-size: 16px; font-family: inherit;">
+      <span style="font-size: 12px; color: {{p.dim}}; padding: 4px 8px; border-radius: 8px; border: 1px solid {{p.line}};">Alt + Espace</span>
+    </label>
+
+    <div style="display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px;">
+      <div style="grid-column: span 2; padding: 8px; border-radius: 20px; background: {{p.card}}; border: 1px solid {{p.line}}; display: flex; flex-direction: column; gap: 2px;">
+        <span style="padding: 8px 8px 4px; font-size: 13px; color: {{p.dim}};">Résultats</span>
+        <sc-for list="{{results}}" as="r" hint-placeholder-count="4">
+          <button style="{{r.row}}">
+            <span style="{{r.tile}}">{{r.initial}}</span>
+            <span style="display: flex; flex-direction: column; gap: 2px; text-align: left;">
+              <span style="font-size: 14px; color: {{p.ink}};">{{r.name}}</span>
+              <span style="font-size: 12px; color: {{p.dim}};">{{r.kind}}</span>
+            </span>
+          </button>
+        </sc-for>
+      </div>
+
+      <div style="grid-column: span 3; padding: 16px; border-radius: 20px; background: {{p.card}}; border: 1px solid {{p.line}}; display: flex; flex-direction: column; gap: 12px;">
+        <span style="font-size: 15px; font-weight: 600;">Épinglées</span>
+        <div style="display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 8px;">
+          <sc-for list="{{pinned}}" as="a" hint-placeholder-count="12">
+            <button style="display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 8px 0; border-radius: 14px; border: none; background: transparent; color: {{p.ink}};">
+              <span style="{{a.tile}}">{{a.initial}}</span>
+              <span style="font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 72px;">{{a.name}}</span>
+            </button>
+          </sc-for>
+        </div>
+      </div>
+    </div>
+
+    <div style="display: flex; justify-content: space-between; align-items: center; font-size: 13px; color: {{p.dim}};">
+      <span>Menu Démarrer et apps du Store (shell:AppsFolder). Jamais un chemin arbitraire.</span>
+      <span style="width: 44px; height: 4px; border-radius: 2px; background: {{p.track}};"></span>
+      <span>Entrée pour lancer</span>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"theme":{"editor":"enum","options":["sombre","clair"],"default":"sombre"},"accent":{"editor":"color","default":"#60a5fa","options":["#60a5fa","#f472b6","#34d399","#f5a524"]},"$preview":{"width":1200,"height":760}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const light = (this.props.theme ?? 'sombre') === 'clair';
+    const accent = this.props.accent ?? '#60a5fa';
+    const n = parseInt(accent.slice(1), 16);
+    const rgb = ((n >> 16) & 255) + ',' + ((n >> 8) & 255) + ',' + (n & 255);
+    const p = light
+      ? { desk: 'radial-gradient(120% 90% at 20% 10%, #e8eef6 0%, #d6dde8 50%, #cfd3dc 100%)', glass: 'rgba(250,250,252,0.80)', card: 'rgba(255,255,255,0.70)', ink: '#15171b', dim: '#555b65', line: 'rgba(0,0,0,0.08)', track: 'rgba(0,0,0,0.10)', chip: 'rgba(0,0,0,0.05)' }
+      : { desk: 'radial-gradient(120% 90% at 20% 10%, #2b3550 0%, #1a1f2e 45%, #141418 100%)', glass: 'rgba(10,11,13,0.74)', card: 'rgba(255,255,255,0.045)', ink: '#f5f6f8', dim: '#9398a1', line: 'rgba(255,255,255,0.08)', track: 'rgba(255,255,255,0.10)', chip: 'rgba(255,255,255,0.06)' };
+    const icons = [
+      ['Contrôles', 'M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6'],
+      ["Aujourd'hui", 'M8 2v4M16 2v4M3 10h18M5 4h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z'],
+      ['Stats', 'M22 12h-4l-3 9L9 3l-3 9H2'],
+      ['Presse-papiers', 'M9 2h6a1 1 0 0 1 1 1v2a1 1 0 0 1-1 1H9a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1zM16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2'],
+      ['Apps', 'M3 3h7v7H3zM14 3h7v7h-7zM14 14h7v7h-7zM3 14h7v7H3z'],
+      ['Fonds', 'M5 3h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2zM21 15l-5-5L5 21M8.5 10a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3z'],
+      ['Alimentation', 'M12 2v10M18.4 6.6a9 9 0 1 1-12.8 0'],
+      ['Fenêtres', 'M3 3h18v18H3zM12 3v18M12 12h9']
+    ];
+    const active = 4;
+    const tabs = icons.map((ic, i) => ({
+      label: ic[0],
+      d: ic[1],
+      on: i === active,
+      style: 'height: 32px; padding: 0 ' + (i === active ? '12px 0 10px' : '8px') + '; border-radius: 16px; border: none; display: flex; align-items: center; gap: 6px; '
+        + (i === active ? 'background: rgba(' + rgb + ',0.22); color: ' + accent + ';' : 'background: transparent; color: ' + p.dim + ';')
+    }));
+    const tile = (c, size) => 'width: ' + size + 'px; height: ' + size + 'px; border-radius: ' + Math.round(size * 0.3) + 'px; background: ' + c + '; color: #0b0c0e; font-weight: 700; font-size: ' + Math.round(size * 0.42) + 'px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;';
+    const res = [['Unity Hub', 'Application', '#e5e7eb', true], ['Unity 6', 'Application', '#d1d5db', false], ['Universal Media Player', 'Store', '#fbbf24', false], ['Unicode Picker', 'Store', '#a78bfa', false]];
+    const pin = [['Edge', '#38bdf8'], ['VS Code', '#60a5fa'], ['Spotify', '#22c55e'], ['Discord', '#818cf8'], ['Unity Hub', '#e5e7eb'], ['Explorateur', '#f5a524'], ['Terminal', '#9ca3af'], ['Notion', '#f3f4f6'], ['Figma', '#f472b6'], ['OBS', '#c4b5fd'], ['Steam', '#93c5fd'], ['Paramètres', '#cbd5e1']];
+    return {
+      p: p,
+      accent: accent,
+      accentLine: 'rgba(' + rgb + ',0.55)',
+      tabs: tabs,
+      results: res.map((r) => ({
+        name: r[0], kind: r[1], initial: r[0].charAt(0), tile: tile(r[2], 36),
+        row: 'display: flex; align-items: center; gap: 12px; padding: 8px; border-radius: 14px; border: none; color: inherit; ' + (r[3] ? 'background: rgba(' + rgb + ',0.16);' : 'background: transparent;')
+      })),
+      pinned: pin.map((a) => ({ name: a[0], initial: a[0].charAt(0), tile: tile(a[1], 44) }))
+    };
+  }
+}
+</script>
+</body>
+</html>

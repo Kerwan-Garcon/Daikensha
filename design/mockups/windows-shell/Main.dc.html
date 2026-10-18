@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>L'island : ses trois états</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0}
+a{color:#93c5fd}a:hover{color:#bfdbfe}
+</style>
+</helmet>
+<div style="width: 1440px; height: 560px; box-sizing: border-box; padding: 40px 48px; display: flex; gap: 32px; background: #0b0c0e; font-family: 'Segoe UI Variable Text', 'Segoe UI', system-ui, sans-serif; color: #f5f6f8;">
+
+  <div style="flex: 1 1 0; display: flex; flex-direction: column; gap: 16px;">
+    <div style="position: relative; height: 400px; border-radius: 20px; overflow: hidden; background: {{desk}}; border: 1px solid rgba(255,255,255,0.06);">
+      <div style="position: absolute; top: 0; left: 50%; transform: translateX(-50%); height: 36px; padding: 0 16px 0 10px; display: flex; align-items: center; gap: 10px; background: #000; border-radius: 0 0 16px 16px; box-shadow: 0 8px 24px rgba(0,0,0,0.35);">
+        <svg width="26" height="20" viewBox="0 0 44 34" aria-hidden="true"><defs><linearGradient id="ma" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fbf7f2"></stop><stop offset="1" stop-color="{{accent}}"></stop></linearGradient></defs><rect x="2" y="3" width="40" height="29" rx="13" fill="url(#ma)"></rect><circle cx="16" cy="20" r="2.6" fill="#111"></circle><circle cx="28" cy="20" r="2.6" fill="#111"></circle></svg>
+        <span style="font-size: 13px; color: #9398a1;">2 agents</span>
+      </div>
+    </div>
+    <div style="display: flex; flex-direction: column; gap: 4px;">
+      <div style="font-size: 18px; font-weight: 600;">Fermée</div>
+      <div style="font-size: 14px; color: #9398a1; line-height: 1.45;">Comme aujourd'hui : rien ne change pour qui n'active pas le panneau. Aucun échantillonnage, 0 % de CPU.</div>
+    </div>
+  </div>
+
+  <div style="flex: 1 1 0; display: flex; flex-direction: column; gap: 16px;">
+    <div style="position: relative; height: 400px; border-radius: 20px; overflow: hidden; background: {{desk}}; border: 1px solid rgba(255,255,255,0.06);">
+      <div style="position: absolute; top: 0; left: 50%; transform: translateX(-50%); width: 360px; height: 196px; box-sizing: border-box; padding: 12px 14px; display: flex; flex-direction: column; gap: 12px; background: rgba(10,11,13,0.74); backdrop-filter: blur(28px) saturate(1.4); border: 1px solid rgba(255,255,255,0.08); border-top: none; border-radius: 0 0 26px 26px; box-shadow: 0 24px 60px rgba(0,0,0,0.4);">
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <svg width="26" height="20" viewBox="0 0 44 34" aria-hidden="true"><defs><linearGradient id="mb" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fbf7f2"></stop><stop offset="1" stop-color="{{accent}}"></stop></linearGradient></defs><rect x="2" y="3" width="40" height="29" rx="13" fill="url(#mb)"></rect><circle cx="16" cy="19" r="2.6" fill="#111"></circle><circle cx="28" cy="19" r="2.6" fill="#111"></circle></svg>
+          <div style="display: flex; gap: 4px; opacity: 0.85;">
+            <span style="width: 28px; height: 22px; border-radius: 11px; background: {{accentSoft}};"></span>
+            <span style="width: 22px; height: 22px; border-radius: 11px; background: rgba(255,255,255,0.06);"></span>
+            <span style="width: 22px; height: 22px; border-radius: 11px; background: rgba(255,255,255,0.06);"></span>
+            <span style="width: 22px; height: 22px; border-radius: 11px; background: rgba(255,255,255,0.04);"></span>
+          </div>
+        </div>
+        <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; opacity: 0.6;">
+          <div style="height: 64px; border-radius: 16px; background: rgba(255,255,255,0.05);"></div>
+          <div style="height: 64px; border-radius: 16px; background: rgba(255,255,255,0.05);"></div>
+          <div style="height: 64px; border-radius: 16px; background: rgba(255,255,255,0.05);"></div>
+        </div>
+        <div style="height: 40px; border-radius: 16px; background: rgba(255,255,255,0.03);"></div>
+      </div>
+      <svg width="40" height="64" viewBox="0 0 40 64" style="position: absolute; left: 50%; top: 220px; transform: translateX(-50%);" aria-hidden="true"><path d="M20 6v44M8 38l12 12 12-12" fill="none" stroke="{{accent}}" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+      <div style="position: absolute; left: 0; right: 0; top: 300px; text-align: center; font-size: 13px; color: rgba(245,246,248,0.7);">molette ou glisser vers le bas</div>
+    </div>
+    <div style="display: flex; flex-direction: column; gap: 4px;">
+      <div style="font-size: 18px; font-weight: 600;">Se déplie</div>
+      <div style="font-size: 14px; color: #9398a1; line-height: 1.45;">Ressort comme Mochi (environ 380 ms), les cartes arrivent en fondu après le cadre. Fondu simple si Windows demande moins d'animations.</div>
+    </div>
+  </div>
+
+  <div style="flex: 1 1 0; display: flex; flex-direction: column; gap: 16px;">
+    <div style="position: relative; height: 400px; border-radius: 20px; overflow: hidden; background: {{desk}}; border: 1px solid rgba(255,255,255,0.06);">
+      <div style="position: absolute; top: 0; left: 0; right: 0; height: 36px; background: rgba(0,0,0,0.18); border-bottom: 1px dashed rgba(255,255,255,0.18);"></div>
+      <div style="position: absolute; top: 0; left: 50%; transform: translateX(-50%); height: 36px; padding: 0 14px 0 10px; display: flex; align-items: center; gap: 10px; background: #000; border-radius: 0 0 16px 16px;">
+        <svg width="26" height="20" viewBox="0 0 44 34" aria-hidden="true"><defs><linearGradient id="mc" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fbf7f2"></stop><stop offset="1" stop-color="{{accent}}"></stop></linearGradient></defs><rect x="2" y="3" width="40" height="29" rx="13" fill="url(#mc)"></rect><circle cx="16" cy="20" r="2.6" fill="#111"></circle><circle cx="28" cy="20" r="2.6" fill="#111"></circle></svg>
+        <span style="font-family: 'Cascadia Mono', Consolas, ui-monospace, monospace; font-variant-numeric: tabular-nums; font-size: 14px;">14:32</span>
+        <span style="font-size: 13px; color: #9398a1;">sam. 18 oct.</span>
+        <span style="width: 1px; height: 14px; background: rgba(255,255,255,0.14);"></span>
+        <span style="display: flex; gap: 5px;" aria-label="Apps ouvertes">
+          <span style="width: 8px; height: 8px; border-radius: 4px; background: #60a5fa;"></span>
+          <span style="width: 8px; height: 8px; border-radius: 4px; background: #f97316;"></span>
+          <span style="width: 8px; height: 8px; border-radius: 4px; background: #22c55e;"></span>
+        </span>
+      </div>
+      <div style="position: absolute; left: 16px; right: 16px; bottom: 12px; height: 40px; border: 1.5px dashed rgba(255,255,255,0.22); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 13px; color: rgba(245,246,248,0.7);">barre des tâches en masquage automatique</div>
+    </div>
+    <div style="display: flex; flex-direction: column; gap: 4px;">
+      <div style="font-size: 18px; font-weight: 600;">Barre du haut</div>
+      <div style="font-size: 14px; color: #9398a1; line-height: 1.45;">Option désactivée par défaut. L'heure, la date et les apps ouvertes restent visibles ; le haut de l'écran peut être réservé (AppBar). Un raccourci de secours réaffiche la barre des tâches.</div>
+    </div>
+  </div>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"accent":{"editor":"color","default":"#60a5fa","options":["#60a5fa","#f472b6","#34d399","#f5a524"]},"$preview":{"width":1440,"height":560}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const accent = this.props.accent ?? '#60a5fa';
+    const n = parseInt(accent.slice(1), 16);
+    const soft = 'rgba(' + ((n >> 16) & 255) + ',' + ((n >> 8) & 255) + ',' + (n & 255) + ',0.28)';
+    return {
+      accent: accent,
+      accentSoft: soft,
+      desk: 'radial-gradient(120% 90% at 20% 10%, #2b3550 0%, #1a1f2e 45%, #141418 100%)'
+    };
+  }
+}
+</script>
+</body>
+</html>

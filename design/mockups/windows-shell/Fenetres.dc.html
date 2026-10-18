@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Panneau Fenêtres</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0}
+a{color:#93c5fd}a:hover{color:#bfdbfe}
+</style>
+</helmet>
+<div style="position: relative; width: 1200px; height: 760px; overflow: hidden; background: {{p.desk}}; font-family: 'Segoe UI Variable Text', 'Segoe UI', system-ui, sans-serif;">
+  <div style="position: absolute; left: 160px; top: 0; width: 880px; box-sizing: border-box; padding: 14px 20px 14px; display: flex; flex-direction: column; gap: 16px; background: {{p.glass}}; backdrop-filter: blur(28px) saturate(1.4); border: 1px solid {{p.line}}; border-top: none; border-radius: 0 0 30px 30px; box-shadow: 0 30px 70px rgba(0,0,0,0.38); color: {{p.ink}};">
+
+    <div style="display: flex; align-items: center; gap: 12px; height: 40px;">
+      <svg width="40" height="31" viewBox="0 0 44 34" aria-hidden="true"><defs><linearGradient id="m3" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fbf7f2"></stop><stop offset="1" stop-color="{{accent}}"></stop></linearGradient></defs><rect x="2" y="3" width="40" height="29" rx="13" fill="url(#m3)"></rect><circle cx="19" cy="19" r="2.6" fill="#111"></circle><circle cx="31" cy="19" r="2.6" fill="#111"></circle><ellipse cx="10" cy="22" rx="3" ry="1.6" fill="#f9a8b8" opacity="0.7"></ellipse><ellipse cx="34" cy="22" rx="3" ry="1.6" fill="#f9a8b8" opacity="0.7"></ellipse></svg>
+      <nav aria-label="Onglets" style="display: flex; gap: 4px;">
+        <sc-for list="{{tabs}}" as="t" hint-placeholder-count="8">
+          <button aria-label="{{t.label}}" style="{{t.style}}">
+            <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path d="{{t.d}}" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+            <sc-if value="{{t.on}}" hint-placeholder-val="{{false}}"><span style="font-size: 13px; font-weight: 600;">{{t.label}}</span></sc-if>
+          </button>
+        </sc-for>
+      </nav>
+      <div style="flex-grow: 1;"></div>
+      <span style="font-family: 'Cascadia Mono', Consolas, ui-monospace, monospace; font-variant-numeric: tabular-nums; font-size: 15px;">14:32</span>
+      <span style="font-size: 13px; color: {{p.dim}};">sam. 18 oct.</span>
+    </div>
+
+    <div style="display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px;">
+      <div style="grid-column: span 3; padding: 8px; border-radius: 20px; background: {{p.card}}; border: 1px solid {{p.line}}; display: flex; flex-direction: column; gap: 2px;">
+        <sc-for list="{{wins}}" as="w" hint-placeholder-count="6">
+          <div style="{{w.row}}">
+            <span style="{{w.dot}}"></span>
+            <div style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px;">
+              <span style="font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{w.title}}</span>
+              <span style="font-size: 12px; color: {{p.dim}};">{{w.app}} · {{w.screen}}</span>
+            </div>
+            <button aria-label="Réduire" style="width: 32px; height: 32px; border-radius: 10px; border: none; background: transparent; color: {{p.dim}}; display: flex; align-items: center; justify-content: center;"><svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path></svg></button>
+            <button aria-label="Agrandir" style="width: 32px; height: 32px; border-radius: 10px; border: none; background: transparent; color: {{p.dim}}; display: flex; align-items: center; justify-content: center;"><svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5h14v14H5z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"></path></svg></button>
+          </div>
+        </sc-for>
+      </div>
+
+      <div style="grid-column: span 2; display: flex; flex-direction: column; gap: 8px;">
+        <div style="padding: 16px; border-radius: 20px; background: {{p.card}}; border: 1px solid {{p.line}}; display: flex; flex-direction: column; gap: 12px;">
+          <span style="font-size: 15px; font-weight: 600;">Placer « Coucou — README.md »</span>
+          <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px;">
+            <sc-for list="{{snaps}}" as="s" hint-placeholder-count="8">
+              <button aria-label="{{s.label}}" style="height: 44px; border-radius: 12px; border: 1px solid {{p.line}}; background: {{p.chip}}; padding: 8px; display: flex;">
+                <span style="position: relative; flex-grow: 1; border-radius: 4px; border: 1.5px solid {{p.dim}};"><span style="{{s.fill}}"></span></span>
+              </button>
+            </sc-for>
+          </div>
+          <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px;">
+            <button style="height: 36px; border-radius: 12px; border: 1px solid {{p.line}}; background: {{p.chip}}; color: {{p.ink}}; font-size: 13px;">Écran 1</button>
+            <button style="height: 36px; border-radius: 12px; border: none; background: {{accentSoft}}; color: {{accent}}; font-size: 13px; font-weight: 600;">Écran 2</button>
+          </div>
+        </div>
+
+        <div style="padding: 16px; border-radius: 20px; background: {{p.card}}; border: 1px solid {{p.line}}; display: flex; flex-direction: column; gap: 12px;">
+          <div style="display: flex; justify-content: space-between; align-items: baseline;">
+            <span style="font-size: 15px; font-weight: 600;">Mes dispositions</span>
+            <a href="#" style="font-size: 13px;">Enregistrer l'actuelle</a>
+          </div>
+          <sc-for list="{{layouts}}" as="l" hint-placeholder-count="2">
+            <button style="display: flex; align-items: center; gap: 12px; padding: 8px; border-radius: 14px; border: 1px solid {{p.line}}; background: {{p.chip}}; color: {{p.ink}}; text-align: left;">
+              <span style="display: flex; gap: 3px; width: 64px; height: 40px; padding: 3px; box-sizing: border-box; border-radius: 6px; background: {{p.track}};">
+                <span style="{{l.a}}"></span><span style="{{l.b}}"></span>
+              </span>
+              <span style="display: flex; flex-direction: column; gap: 2px;">
+                <span style="font-size: 14px; font-weight: 600;">{{l.name}}</span>
+                <span style="font-size: 12px; color: {{p.dim}};">{{l.detail}}</span>
+              </span>
+            </button>
+          </sc-for>
+        </div>
+      </div>
+    </div>
+
+    <div style="display: flex; justify-content: center;"><span style="width: 44px; height: 4px; border-radius: 2px; background: {{p.track}};"></span></div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"theme":{"editor":"enum","options":["sombre","clair"],"default":"sombre"},"accent":{"editor":"color","default":"#60a5fa","options":["#60a5fa","#f472b6","#34d399","#f5a524"]},"$preview":{"width":1200,"height":760}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const light = (this.props.theme ?? 'sombre') === 'clair';
+    const accent = this.props.accent ?? '#60a5fa';
+    const n = parseInt(accent.slice(1), 16);
+    const rgb = ((n >> 16) & 255) + ',' + ((n >> 8) & 255) + ',' + (n & 255);
+    const p = light
+      ? { desk: 'radial-gradient(120% 90% at 20% 10%, #e8eef6 0%, #d6dde8 50%, #cfd3dc 100%)', glass: 'rgba(250,250,252,0.80)', card: 'rgba(255,255,255,0.70)', ink: '#15171b', dim: '#555b65', line: 'rgba(0,0,0,0.08)', track: 'rgba(0,0,0,0.10)', chip: 'rgba(0,0,0,0.05)' }
+      : { desk: 'radial-gradient(120% 90% at 20% 10%, #2b3550 0%, #1a1f2e 45%, #141418 100%)', glass: 'rgba(10,11,13,0.74)', card: 'rgba(255,255,255,0.045)', ink: '#f5f6f8', dim: '#9398a1', line: 'rgba(255,255,255,0.08)', track: 'rgba(255,255,255,0.10)', chip: 'rgba(255,255,255,0.06)' };
+    const icons = [
+      ['Contrôles', 'M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6'],
+      ["Aujourd'hui", 'M8 2v4M16 2v4M3 10h18M5 4h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z'],
+      ['Stats', 'M22 12h-4l-3 9L9 3l-3 9H2'],
+      ['Presse-papiers', 'M9 2h6a1 1 0 0 1 1 1v2a1 1 0 0 1-1 1H9a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1zM16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2'],
+      ['Apps', 'M3 3h7v7H3zM14 3h7v7h-7zM14 14h7v7h-7zM3 14h7v7H3z'],
+      ['Fonds', 'M5 3h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2zM21 15l-5-5L5 21M8.5 10a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3z'],
+      ['Alimentation', 'M12 2v10M18.4 6.6a9 9 0 1 1-12.8 0'],
+      ['Fenêtres', 'M3 3h18v18H3zM12 3v18M12 12h9']
+    ];
+    const active = 7;
+    const tabs = icons.map((ic, i) => ({
+      label: ic[0],
+      d: ic[1],
+      on: i === active,
+      style: 'height: 32px; padding: 0 ' + (i === active ? '12px 0 10px' : '8px') + '; border-radius: 16px; border: none; display: flex; align-items: center; gap: 6px; '
+        + (i === active ? 'background: rgba(' + rgb + ',0.22); color: ' + accent + ';' : 'background: transparent; color: ' + p.dim + ';')
+    }));
+    const list = [
+      ['Coucou — README.md', 'VS Code', 'écran 1', '#60a5fa', true],
+      ['Docs Windows · Shell — Microsoft Learn', 'Edge', 'écran 2', '#38bdf8', false],
+      ['Daily Mix 2', 'Spotify', 'écran 2', '#22c55e', false],
+      ['MainScene — Unity 6', 'Unity', 'écran 1', '#e5e7eb', false],
+      ['#général', 'Discord', 'écran 2', '#818cf8', false],
+      ['Téléchargements', 'Explorateur', 'écran 1', '#f5a524', false]
+    ];
+    const wins = list.map((w) => ({
+      title: w[0], app: w[1], screen: w[2],
+      dot: 'width: 10px; height: 10px; border-radius: 5px; flex-shrink: 0; background: ' + w[3] + ';',
+      row: 'display: flex; align-items: center; gap: 12px; padding: 8px 8px 8px 12px; border-radius: 14px; ' + (w[4] ? 'background: rgba(' + rgb + ',0.14);' : '')
+    }));
+    const area = (l, t, w, h) => 'position: absolute; left: ' + l + '%; top: ' + t + '%; width: ' + w + '%; height: ' + h + '%; background: ' + accent + '; border-radius: 2px; opacity: 0.85;';
+    const snaps = [
+      ['Moitié gauche', area(0, 0, 50, 100)], ['Moitié droite', area(50, 0, 50, 100)], ['Plein écran', area(0, 0, 100, 100)], ['Centre', area(20, 15, 60, 70)],
+      ['Quart haut gauche', area(0, 0, 50, 50)], ['Quart haut droit', area(50, 0, 50, 50)], ['Quart bas gauche', area(0, 50, 50, 50)], ['Quart bas droit', area(50, 50, 50, 50)]
+    ].map((s) => ({ label: s[0], fill: s[1] }));
+    const half = (c, f) => 'flex: ' + f + ' 1 0; border-radius: 3px; background: ' + c + ';';
+    return {
+      p: p,
+      accent: accent,
+      accentSoft: 'rgba(' + rgb + ',0.20)',
+      tabs: tabs,
+      wins: wins,
+      snaps: snaps,
+      layouts: [
+        { name: 'Mode code', detail: 'VS Code à gauche, Edge à droite', a: half('#60a5fa', 1), b: half('#38bdf8', 1) },
+        { name: 'Unity', detail: 'Unity en grand, Spotify à côté', a: half('#e5e7eb', 3), b: half('#22c55e', 1) }
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>
