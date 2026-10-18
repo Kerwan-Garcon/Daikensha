@@ -112,30 +112,50 @@ enum Mode {
     FollowUp { until: Instant },
 }
 
-fn run(app: AppHandle, stop: Arc<AtomicBool>) {
-    let mic = crate::flow::get(&app).map(|f| f.store.lock().unwrap().prefs.mic.clone()).unwrap_or_default();
-    let (tx, rx) = mpsc::channel::<Vec<f32>>();
-    let capture = audio::Capture::start(audio::Source::Mic(if mic.is_empty() { None } else { Some(mic) }), move |s| {
+/// No audio for this long while listening: the stream is dead, open it again.
+const SILENT_STREAM: Duration = Duration::from_secs(5);
+
+/// How long to wait before the `attempt`-th try at opening the microphone
+/// again (0 is the first): 0.5 s, 1 s, 2 s… up to 30 s.
+fn reopen_delay(attempt: u32) -> Duration {
+    Duration::from_millis(500u64.saturating_mul(1 << attempt.min(16))).min(Duration::from_secs(30))
+}
+
+/// Whether the stream has gone quiet for good: no frame for `SILENT_STREAM`
+/// while Coucou listens (dictation and calls pause it, and so does waiting
+/// for Claude or speaking).
+fn stream_is_dead(since_last_frame: Duration, listening: bool) -> bool {
+    listening && since_last_frame >= SILENT_STREAM
+}
+
+fn open_mic(app: &AppHandle, tx: &mpsc::Sender<Vec<f32>>) -> Result<audio::Capture, String> {
+    let mic = crate::flow::get(app).map(|f| f.store.lock().unwrap().prefs.mic.clone()).unwrap_or_default();
+    let tx = tx.clone();
+    audio::Capture::start(audio::Source::Mic(if mic.is_empty() { None } else { Some(mic) }), move |s| {
         let _ = tx.send(s.to_vec());
-    });
-    let mut capture = match capture {
-        Ok(c) => c,
+    })
+}
+
+fn run(app: AppHandle, stop: Arc<AtomicBool>) {
+    let (tx, rx) = mpsc::channel::<Vec<f32>>();
+    let mut capture = match open_mic(&app, &tx) {
+        Ok(c) => Some(c),
         Err(err) => {
             crate::log::line(format!("voice: microphone: {err}"));
             *RUNNING.lock().unwrap() = None;
             return;
         }
     };
+    // While the microphone is lost: how many tries so far, and when the next one is.
+    let mut attempt = 0u32;
+    let mut reopen_at = Instant::now();
+    let mut last_frame = Instant::now();
     let mut vad = wake::Vad::default();
     let mut mode = Mode::Wake;
     let mut brain = brain::Brain::default();
     let mut hide_at: Option<Instant> = None;
     while !stop.load(Ordering::Relaxed) {
-        let chunk = match rx.recv_timeout(Duration::from_millis(300)) {
-            Ok(c) => Some(c),
-            Err(mpsc::RecvTimeoutError::Timeout) => None,
-            Err(mpsc::RecvTimeoutError::Disconnected) => break,
-        };
+        let paused = pill::dictating(&app) || crate::notes::is_recording(&app);
         let now = Instant::now();
         // The pill's last answer goes away after a while.
         if hide_at.is_some_and(|t| now > t) {
@@ -150,8 +170,64 @@ fn run(app: AppHandle, stop: Arc<AtomicBool>) {
             }
             _ => {}
         }
+        // The device went away (the default one changed, say) or the stream
+        // went quiet: open the microphone again, on the default device now.
+        let lost = match &capture {
+            Some(c) if c.fault().is_some() => Some("the stream stopped"),
+            Some(_) if stream_is_dead(last_frame.elapsed(), !paused) => Some("no audio for 5 s"),
+            _ => None,
+        };
+        if let Some(why) = lost {
+            if let Some(mut c) = capture.take() {
+                c.stop();
+            }
+            while rx.try_recv().is_ok() {}
+            // Logged once per outage: `attempt` goes back to 0 only when audio comes again.
+            if attempt == 0 {
+                crate::log::line(format!("voice: microphone lost ({why}), opening it again"));
+            }
+            reopen_at = Instant::now() + reopen_delay(attempt);
+            attempt = attempt.saturating_add(1);
+            vad.reset();
+        }
+        if capture.is_none() {
+            if now < reopen_at {
+                // Sleeps in short steps so turning « OK Coucou » off stops it at once.
+                std::thread::sleep((reopen_at - now).min(Duration::from_millis(300)));
+                continue;
+            }
+            match open_mic(&app, &tx) {
+                Ok(c) => {
+                    capture = Some(c);
+                    last_frame = Instant::now();
+                }
+                Err(err) => {
+                    if attempt == 1 {
+                        crate::log::line(format!("voice: microphone: {err}"));
+                    }
+                    reopen_at = Instant::now() + reopen_delay(attempt);
+                    attempt = attempt.saturating_add(1);
+                }
+            }
+            continue;
+        }
+        let chunk = match rx.recv_timeout(Duration::from_millis(300)) {
+            Ok(c) => {
+                last_frame = Instant::now();
+                if attempt > 0 {
+                    attempt = 0;
+                    crate::log::line("voice: microphone back");
+                }
+                Some(c)
+            }
+            Err(mpsc::RecvTimeoutError::Timeout) => None,
+            Err(mpsc::RecvTimeoutError::Disconnected) => break,
+        };
+        if paused {
+            last_frame = Instant::now();
+        }
         // Dictation and calls have the microphone: Coucou doesn't listen meanwhile.
-        if pill::dictating(&app) || crate::notes::is_recording(&app) {
+        if paused {
             vad.reset();
             continue;
         }
@@ -192,6 +268,7 @@ fn run(app: AppHandle, stop: Arc<AtomicBool>) {
             vad.hangover = 25;
             show(&app, Some(VoiceView { phase: "thinking".into(), heard: question.clone(), answer: String::new() }));
             let reply = brain.respond(&app, &question);
+            last_frame = Instant::now();
             let answer = reply.as_ref().map(|r| r.text.clone()).unwrap_or_default();
             if answer.is_empty() {
                 let done = reply.is_some_and(|r| r.acted);
@@ -208,6 +285,7 @@ fn run(app: AppHandle, stop: Arc<AtomicBool>) {
             vad.reset();
             // Drop what the microphone heard of Coucou's own voice.
             while rx.try_recv().is_ok() {}
+            last_frame = Instant::now();
             if answer.trim_end().ends_with('?') {
                 mode = Mode::FollowUp { until: Instant::now() + Duration::from_secs(8) };
                 vad.hangover = 40;
@@ -217,7 +295,9 @@ fn run(app: AppHandle, stop: Arc<AtomicBool>) {
             }
         }
     }
-    capture.stop();
+    if let Some(mut c) = capture {
+        c.stop();
+    }
     show(&app, None);
 }
 
@@ -515,6 +595,23 @@ fn find_app(wanted: &str) -> Option<(String, Box<dyn FnOnce()>)> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn reopening_waits_longer_each_time_up_to_30_s() {
+        let ms = |a| reopen_delay(a).as_millis();
+        assert_eq!([ms(0), ms(1), ms(2), ms(3), ms(4), ms(5)], [500, 1000, 2000, 4000, 8000, 16000]);
+        assert_eq!(ms(6), 30_000);
+        assert_eq!(ms(7), 30_000);
+        assert_eq!(ms(u32::MAX), 30_000);
+    }
+
+    #[test]
+    fn a_quiet_stream_is_dead_only_while_listening() {
+        assert!(!stream_is_dead(Duration::from_millis(4999), true));
+        assert!(stream_is_dead(Duration::from_secs(5), true));
+        assert!(stream_is_dead(Duration::from_secs(60), true));
+        assert!(!stream_is_dead(Duration::from_secs(60), false));
+    }
 
     #[test]
     fn base64_matches_the_standard() {
