@@ -137,8 +137,8 @@ targets:
         CFBundleName: Coucou
         CFBundleDisplayName: Coucou
         CFBundleIdentifier: fr.louisraille.NotchBuddy
-        CFBundleVersion: "16"
-        CFBundleShortVersionString: "0.4.0"
+        CFBundleVersion: "18"
+        CFBundleShortVersionString: "0.5.1"
         CFBundlePackageType: APPL
         LSUIElement: YES
         NSHighResolutionCapable: YES
@@ -154,6 +154,7 @@ targets:
         NSLocalNetworkUsageDescription: "Coucou talks to your Android phone on your local network, when you turn on Settings > Android phone."
         NSBonjourServices:
           - _coucou._tcp
+        NSFocusStatusUsageDescription: "Coucou stays quiet about new WhatsApp messages while a Focus is on."
         NSAppTransportSecurity:
           NSAllowsLocalNetworking: true
         CFBundleLocalizations:

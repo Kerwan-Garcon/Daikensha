@@ -9,7 +9,7 @@
 use std::fs::File;
 use std::io::{BufWriter, Read, Seek, SeekFrom, Write};
 use std::path::Path;
-use std::sync::mpsc;
+use std::sync::{mpsc, Arc, OnceLock};
 use std::time::Duration;
 
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
@@ -255,6 +255,8 @@ fn system_device(host: &cpal::Host) -> Option<cpal::Device> {
 pub struct Capture {
     stop: Option<mpsc::Sender<()>>,
     thread: Option<std::thread::JoinHandle<()>>,
+    /// The stream's first error (the device went away, say): no audio comes after it.
+    fault: Arc<OnceLock<String>>,
 }
 
 impl Capture {
@@ -263,10 +265,12 @@ impl Capture {
     pub fn start(source: Source, sink: impl FnMut(&[f32]) + Send + 'static) -> Result<Capture, String> {
         let (ready_tx, ready_rx) = mpsc::channel::<Result<(), String>>();
         let (stop_tx, stop_rx) = mpsc::channel::<()>();
+        let fault = Arc::new(OnceLock::new());
+        let fault2 = fault.clone();
         let thread = std::thread::Builder::new()
             .name("coucou-audio".into())
             .spawn(move || {
-                let stream = match build_stream(&source, sink) {
+                let stream = match build_stream(&source, sink, fault2) {
                     Ok(s) => s,
                     Err(err) => {
                         let _ = ready_tx.send(Err(err));
@@ -283,10 +287,15 @@ impl Capture {
             })
             .map_err(|e| e.to_string())?;
         match ready_rx.recv_timeout(Duration::from_secs(5)) {
-            Ok(Ok(())) => Ok(Capture { stop: Some(stop_tx), thread: Some(thread) }),
+            Ok(Ok(())) => Ok(Capture { stop: Some(stop_tx), thread: Some(thread), fault }),
             Ok(Err(err)) => Err(err),
             Err(_) => Err("the audio device did not answer".into()),
         }
+    }
+
+    /// The error that stopped the stream, if one did.
+    pub fn fault(&self) -> Option<&str> {
+        self.fault.get().map(String::as_str)
     }
 
     pub fn stop(&mut self) {
@@ -305,7 +314,11 @@ impl Drop for Capture {
     }
 }
 
-fn build_stream(source: &Source, mut sink: impl FnMut(&[f32]) + Send + 'static) -> Result<cpal::Stream, String> {
+fn build_stream(
+    source: &Source,
+    mut sink: impl FnMut(&[f32]) + Send + 'static,
+    fault: Arc<OnceLock<String>>,
+) -> Result<cpal::Stream, String> {
     let device = open_device(source).ok_or("no audio device")?;
     let supported = if *source == Source::System && cfg!(windows) {
         device.default_output_config().map_err(|e| e.to_string())?
@@ -338,7 +351,12 @@ fn build_stream(source: &Source, mut sink: impl FnMut(&[f32]) + Send + 'static) 
             sink(&out);
         }
     };
-    let err_fn = |err: cpal::Error| crate::log::line(format!("audio: {err}"));
+    // Logged once: a lost device can report the same error again and again.
+    let err_fn = move |err: cpal::Error| {
+        if fault.set(err.to_string()).is_ok() {
+            crate::log::line(format!("audio: {err}"));
+        }
+    };
     let stream = match format {
         cpal::SampleFormat::F32 => device.build_input_stream::<f32, _, _>(
             config,
