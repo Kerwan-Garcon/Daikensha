@@ -1,6 +1,6 @@
 # « Coucou Shell » : la couche Windows de Coucou
 
-État : **phase 0** (plan, spikes, maquettes). Aucun code dans l'app. Rien ne sera codé avant ta validation de la direction visuelle et des décisions listées à la fin.
+État : **phase 0** (plan, spikes, maquettes). Aucun code dans l'app. Les décisions de la phase 0 sont prises (en fin de document) ; les mesures sur ta machine (sonde et Mica) restent à faire.
 
 Ce document part de la spécification de ton prompt et des API Windows documentées par Microsoft, et seulement de là. Aucun produit tiers n'a été téléchargé, analysé ni cherché (clean room). Le design reste celui de Coucou et suit les règles de `CLAUDE.md`.
 
@@ -24,7 +24,7 @@ Ce document part de la spécification de ton prompt et des API Windows document�
 | Luminosité, écran externe | DDC/CI : `GetPhysicalMonitorsFromHMONITOR`, `Get/SetMonitorBrightness` | ✓ | `Win32_Devices_Display` |
 | Luminosité, écran d'un portable | WMI `WmiMonitorBrightnessMethods` | ✓ (WMI) | `Win32_System_Wmi` |
 | Éclairage nocturne | aucune | **✗** | — |
-| Thème clair/sombre | clés `Personalize` (`AppsUseLightTheme`, `SystemUsesLightTheme`) + `WM_SETTINGCHANGE "ImmersiveColorSet"` | **≈** (usage courant, pas une API) | déjà là (`Win32_System_Registry`) |
+| Thème clair/sombre | lien vers `ms-settings:colors` (retenu) | ✓ | déjà là |
 | CPU global | `GetSystemTimes` | ✓ | déjà là |
 | RAM | `GlobalMemoryStatusEx` | ✓ | déjà là |
 | Réseau | `GetIfTable2` | ✓ | `Win32_NetworkManagement_IpHelper`, `Win32_NetworkManagement_Ndis` |
@@ -34,7 +34,7 @@ Ce document part de la spécification de ton prompt et des API Windows document�
 | Focus, réduire, agrandir, déplacer | `SetForegroundWindow`, `ShowWindow`, `SetWindowPos`, `MonitorFromWindow` | ✓ | déjà là |
 | Snap moitié/quart | pas d'API Snap Layouts ; rectangle calculé sur la zone de travail + `SetWindowPos` | ✓ (par calcul) | — |
 | Lanceur d'apps | `SHGetKnownFolderItem(FOLDERID_AppsFolder)` + `IEnumShellItems` ; lancement par `shell:AppsFolder\<AUMID>` | ✓ | `Win32_UI_Shell_Common` |
-| Fonds d'écran | `IDesktopWallpaper` | ✓ | déjà là (`Win32_UI_Shell`) |
+| Fonds d'écran | `IDesktopWallpaper` ; images déposées par l'utilisateur, copiées dans le dossier de Coucou | ✓ | déjà là (`Win32_UI_Shell`) |
 | Verrouiller, veille, redémarrer, éteindre | `LockWorkStation`, `SetSuspendState`, `ExitWindowsEx` (+ privilège `SE_SHUTDOWN_NAME`) | ✓ | `Win32_System_Power`, `Win32_System_Shutdown` |
 | Presse-papiers | `AddClipboardFormatListener`, `WM_CLIPBOARDUPDATE`, formats `ExcludeClipboardContentFromMonitorProcessing`, `CanIncludeInClipboardHistory` | ✓ | `Win32_System_DataExchange` |
 | Taper du texte | `SendInput` (déjà utilisé par Flow) | ✓ | déjà là |
@@ -48,14 +48,17 @@ Ce document part de la spécification de ton prompt et des API Windows document�
 
 ## Hypothèses du prompt qui ne tiennent pas (je m'arrête dessus)
 
-1. **Choisir la sortie audio** : Windows n'a pas d'API documentée pour changer le périphérique par défaut. Je propose le volume et le muet (documentés), la liste des sorties en lecture, et un bouton qui ouvre `ms-settings:sound`.
-2. **Éclairage nocturne** : aucune API ; son état est un blob non documenté du registre. Je propose un bouton qui ouvre `ms-settings:nightlight`, sans interrupteur dans le panneau.
-3. **Thème clair/sombre** : pas d'API non plus, seulement deux valeurs du registre de l'utilisateur et une notification à diffuser. C'est ce que font la plupart des outils, mais ce n'est pas « une API documentée » comme le demande ton prompt. **À toi de trancher** : l'accepter, ou ouvrir `ms-settings:colors`.
+1. **Choisir la sortie audio** : Windows n'a pas d'API documentée pour changer le périphérique par défaut. **Décidé** : le volume et le muet (documentés), la sortie en cours affichée, et un lien vers `ms-settings:sound`.
+2. **Éclairage nocturne** : aucune API ; son état est un blob non documenté du registre. **Décidé** : un lien vers `ms-settings:nightlight`.
+3. **Thème clair/sombre** : pas d'API non plus, seulement deux valeurs du registre. **Décidé** : un lien vers `ms-settings:colors`, sans écriture dans le registre.
 4. **Luminosité** : documentée, mais par deux chemins. DDC/CI pour un écran externe (tous ne le gèrent pas), WMI pour l'écran d'un portable. Le spike dit ce que ta machine supporte.
 5. **Snap** : Snap Layouts n'a pas d'API. Les moitiés et les quarts seront calculés sur la zone de travail et appliqués avec `SetWindowPos`. Le rendu sera le même, mais sans l'animation de Windows.
 6. **Icônes de la zone de notification** : impossible proprement. Ce sera documenté comme limite, comme ton prompt le prévoit.
-7. **Fonds Unsplash** : l'API Unsplash exige une clé d'accès et des règles (attribution, signaler chaque téléchargement). Le plus simple et le plus propre : tu crées une clé Unsplash, elle va dans le gestionnaire d'identifiants comme les autres, et les fonds ne se téléchargent qu'au clic. L'alternative est une petite sélection figée avec les crédits des photographes, mais elle reste soumise aux mêmes règles de téléchargement. **À toi de choisir.**
-8. **Météo sans clé** : Open-Meteo marche sans clé. Mais `CLAUDE.md` dit « appels réseau seulement vers les services configurés par l'utilisateur » : la météo sera donc **désactivée par défaut**, avec une ville saisie à la main (pas de géolocalisation).
+7. **Fonds Unsplash** : leur API exige une clé et des règles d'attribution. **Décidé** : pas d'Unsplash ni d'appel réseau. L'utilisateur glisse sa propre sélection d'images dans l'onglet.
+   - Seuls les chemins d'un vrai dépôt du système sont acceptés, comme pour l'inbox actuelle (`files.rs`).
+   - Le fichier est vérifié comme image (JPG, PNG ou WebP par ses premiers octets) et sa taille est plafonnée.
+   - Il est copié dans `%LOCALAPPDATA%\Coucou\wallpapers`, puis appliqué avec `IDesktopWallpaper`.
+8. **Météo sans clé** : Open-Meteo marche sans clé. Mais `CLAUDE.md` dit « appels réseau seulement vers les services configurés par l'utilisateur ». **Décidé** : désactivée par défaut, une ville saisie à la main (pas de géolocalisation), au plus un appel toutes les 30 minutes et seulement quand l'onglet Aujourd'hui est ouvert.
 9. **Mica sur l'island** :
    - Mica n'existe que sous Windows 11 (22H2+ pour le réglage par fenêtre). Sous Windows 10, il n'y a qu'Acrylic, qui saccade connu lors des déplacements et redimensionnements, et l'island change de taille en s'animant.
    - Il faut aussi vérifier que le WebView transparent laisse voir le fond DWM.
@@ -167,14 +170,14 @@ Le style suit `windows/src/style.css` :
 
 Mochi est dessiné en code : il dort sur l'onglet Alimentation et regarde l'onglet actif. Les icônes sont des tracés simples, faits à la main dans le style « trait » de Lucide. Les photos de fonds d'écran sont des dégradés de remplacement, avec « [Photographe] » à la place des crédits.
 
-## Décisions qu'il me faut avant la phase 1
+## Décisions (18 octobre)
 
-1. **La direction visuelle** des maquettes, et les retouches éventuelles.
-2. **Thème clair/sombre** : registre `Personalize` (usage courant, non documenté) ou lien vers les Paramètres ?
-3. **Fonds d'écran** : ta clé Unsplash, ou une sélection figée avec crédits ?
-4. **Météo** : Open-Meteo, en option et avec une ville saisie : d'accord ?
-5. **Sortie audio et éclairage nocturne** : d'accord pour des liens vers les Paramètres plutôt que des interrupteurs ?
-6. **Branche** : cette phase 0 est sur `feat/windows-shell`, une branche partant du code de la PR 1. Je ne la pousse qu'avec ton accord.
+1. **Direction visuelle** : validée. Dans l'island repliée (mode « barre du haut »), l'heure et une date courte (« sam. 18 ») ; la date complète au survol. L'island prend la largeur de son contenu, sans barre de séparation.
+2. **Thème** : un lien vers les Paramètres.
+3. **Fonds d'écran** : la sélection de l'utilisateur, déposée dans l'onglet.
+4. **Météo** : Open-Meteo, en option, avec une ville saisie.
+5. **Sortie audio et éclairage nocturne** : des liens vers les Paramètres.
+6. **Branche** : `feat/windows-shell`, une PR à part qui part de la PR 1 (mode abonnement).
 
 ## Mesures
 

@@ -50,12 +50,9 @@ a{color:#93c5fd}a:hover{color:#bfdbfe}
       </div>
 
       <div style="padding: 16px; border-radius: 20px; background: {{p.card}}; border: 1px solid {{p.line}}; display: flex; flex-direction: column; gap: 12px;">
-        <span style="font-size: 15px; font-weight: 600;">Thème</span>
-        <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px; padding: 4px; border-radius: 14px; background: {{p.chip}};">
-          <button aria-pressed="{{darkOn}}" style="{{darkBtn}}">Sombre</button>
-          <button aria-pressed="{{lightOn}}" style="{{lightBtn}}">Clair</button>
-        </div>
-        <a href="#" style="font-size: 13px;">Éclairage nocturne dans les Paramètres</a>
+        <span style="font-size: 15px; font-weight: 600;">Écran et couleurs</span>
+        <a href="#" style="display: flex; align-items: center; justify-content: space-between; height: 40px; padding: 0 12px; border-radius: 12px; background: {{p.chip}}; color: {{p.ink}}; font-size: 13px; text-decoration: none;"><span>Thème clair ou sombre</span><svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 17 17 7M8 7h9v9" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg></a>
+        <a href="#" style="display: flex; align-items: center; justify-content: space-between; height: 40px; padding: 0 12px; border-radius: 12px; background: {{p.chip}}; color: {{p.ink}}; font-size: 13px; text-decoration: none;"><span>Éclairage nocturne</span><svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 17 17 7M8 7h9v9" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg></a>
       </div>
 
       <div style="padding: 16px; border-radius: 20px; background: {{p.card}}; border: 1px solid {{p.line}}; display: flex; align-items: center; gap: 12px;">

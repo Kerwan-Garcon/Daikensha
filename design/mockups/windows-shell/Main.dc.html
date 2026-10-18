@@ -59,11 +59,12 @@ a{color:#93c5fd}a:hover{color:#bfdbfe}
   <div style="flex: 1 1 0; display: flex; flex-direction: column; gap: 16px;">
     <div style="position: relative; height: 400px; border-radius: 20px; overflow: hidden; background: {{desk}}; border: 1px solid rgba(255,255,255,0.06);">
       <div style="position: absolute; top: 0; left: 0; right: 0; height: 36px; background: rgba(0,0,0,0.18); border-bottom: 1px dashed rgba(255,255,255,0.18);"></div>
-      <div style="position: absolute; top: 0; left: 50%; transform: translateX(-50%); height: 36px; padding: 0 14px 0 10px; display: flex; align-items: center; gap: 10px; background: #000; border-radius: 0 0 16px 16px;">
+      <div style="position: absolute; top: 0; left: 50%; transform: translateX(-50%); height: 36px; padding: 0 14px; display: flex; align-items: center; gap: 12px; background: #000; border-radius: 0 0 18px 18px;">
         <svg width="26" height="20" viewBox="0 0 44 34" aria-hidden="true"><defs><linearGradient id="mc" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fbf7f2"></stop><stop offset="1" stop-color="{{accent}}"></stop></linearGradient></defs><rect x="2" y="3" width="40" height="29" rx="13" fill="url(#mc)"></rect><circle cx="16" cy="20" r="2.6" fill="#111"></circle><circle cx="28" cy="20" r="2.6" fill="#111"></circle></svg>
-        <span style="font-family: 'Cascadia Mono', Consolas, ui-monospace, monospace; font-variant-numeric: tabular-nums; font-size: 14px;">14:32</span>
-        <span style="font-size: 13px; color: #9398a1;">sam. 18 oct.</span>
-        <span style="width: 1px; height: 14px; background: rgba(255,255,255,0.14);"></span>
+        <span style="display: flex; align-items: baseline; gap: 6px;" title="samedi 18 octobre">
+          <span style="font-family: 'Cascadia Mono', Consolas, ui-monospace, monospace; font-variant-numeric: tabular-nums; font-size: 14px;">14:32</span>
+          <span style="font-size: 13px; color: #9398a1;">sam. 18</span>
+        </span>
         <span style="display: flex; gap: 5px;" aria-label="Apps ouvertes">
           <span style="width: 8px; height: 8px; border-radius: 4px; background: #60a5fa;"></span>
           <span style="width: 8px; height: 8px; border-radius: 4px; background: #f97316;"></span>
@@ -74,7 +75,7 @@ a{color:#93c5fd}a:hover{color:#bfdbfe}
     </div>
     <div style="display: flex; flex-direction: column; gap: 4px;">
       <div style="font-size: 18px; font-weight: 600;">Barre du haut</div>
-      <div style="font-size: 14px; color: #9398a1; line-height: 1.45;">Option désactivée par défaut. L'heure, la date et les apps ouvertes restent visibles ; le haut de l'écran peut être réservé (AppBar). Un raccourci de secours réaffiche la barre des tâches.</div>
+      <div style="font-size: 14px; color: #9398a1; line-height: 1.45;">Option désactivée par défaut. L'heure, la date courte et les apps ouvertes restent visibles ; l'island prend la largeur de son contenu (la date complète au survol). Le haut de l'écran peut être réservé (AppBar), et un raccourci de secours réaffiche la barre des tâches.</div>
     </div>
   </div>
 
