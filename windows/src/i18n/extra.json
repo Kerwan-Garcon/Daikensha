@@ -4625,6 +4625,61 @@
    "pt-BR": "O Claude Code parou inesperadamente.",
    "ru": "Claude Code неожиданно остановился.",
    "id": "Claude Code berhenti secara tak terduga."
+  },
+  "Not available on this system.": {
+   "zh-Hans": "此系统不支持。",
+   "hi": "इस सिस्टम पर उपलब्ध नहीं है।",
+   "es": "No disponible en este sistema.",
+   "ar": "غير متاح على هذا النظام.",
+   "fr": "Non disponible sur ce système.",
+   "bn": "এই সিস্টেমে উপলব্ধ নয়।",
+   "pt-BR": "Não disponível neste sistema.",
+   "ru": "Недоступно в этой системе.",
+   "id": "Tidak tersedia di sistem ini."
+  },
+  "Turn on the panel in Settings first.": {
+   "zh-Hans": "请先在设置中开启面板。",
+   "hi": "पहले सेटिंग्स में पैनल चालू करें।",
+   "es": "Activa primero el panel en Ajustes.",
+   "ar": "فعّل اللوحة في الإعدادات أولًا.",
+   "fr": "Active d'abord le panneau dans les Réglages.",
+   "bn": "প্রথমে সেটিংসে প্যানেল চালু করুন।",
+   "pt-BR": "Ative primeiro o painel nas Configurações.",
+   "ru": "Сначала включите панель в настройках.",
+   "id": "Aktifkan dulu panel di Pengaturan."
+  },
+  "Windows did not allow it.": {
+   "zh-Hans": "Windows 不允许此操作。",
+   "hi": "Windows ने इसकी अनुमति नहीं दी।",
+   "es": "Windows no lo ha permitido.",
+   "ar": "لم يسمح Windows بذلك.",
+   "fr": "Windows ne l'a pas autorisé.",
+   "bn": "Windows এটি অনুমোদন করেনি।",
+   "pt-BR": "O Windows não permitiu.",
+   "ru": "Windows не разрешил это.",
+   "id": "Windows tidak mengizinkannya."
+  },
+  "This screen does not let its brightness be changed.": {
+   "zh-Hans": "此屏幕不允许调节亮度。",
+   "hi": "यह स्क्रीन अपनी चमक बदलने नहीं देती।",
+   "es": "Esta pantalla no permite cambiar su brillo.",
+   "ar": "هذه الشاشة لا تسمح بتغيير سطوعها.",
+   "fr": "Cet écran ne permet pas de changer sa luminosité.",
+   "bn": "এই স্ক্রিন তার উজ্জ্বলতা বদলাতে দেয় না।",
+   "pt-BR": "Esta tela não permite alterar o brilho.",
+   "ru": "Этот экран не позволяет менять яркость.",
+   "id": "Layar ini tidak mengizinkan kecerahannya diubah."
+  },
+  "Screen {n}": {
+   "zh-Hans": "屏幕 {n}",
+   "hi": "स्क्रीन {n}",
+   "es": "Pantalla {n}",
+   "ar": "الشاشة {n}",
+   "fr": "Écran {n}",
+   "bn": "স্ক্রিন {n}",
+   "pt-BR": "Tela {n}",
+   "ru": "Экран {n}",
+   "id": "Layar {n}"
   }
  }
 }

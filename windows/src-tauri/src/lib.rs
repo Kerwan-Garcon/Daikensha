@@ -30,6 +30,7 @@ mod recap;
 mod secrets;
 mod session_window;
 mod settings;
+mod shell;
 mod shortcuts;
 mod sounds;
 mod speech;
@@ -747,6 +748,23 @@ pub fn run() {
             save_settings,
             set_system_languages,
             claude_cli_status,
+            shell::shell_capabilities,
+            shell::shell_stats,
+            shell::shell_stats_reset,
+            shell::shell_controls,
+            shell::shell_set_volume,
+            shell::shell_set_mute,
+            shell::shell_set_radio,
+            shell::shell_set_brightness,
+            shell::shell_open_settings,
+            shell::shell_windows,
+            shell::shell_window_action,
+            shell::shell_layouts,
+            shell::shell_layout_save,
+            shell::shell_layout_apply,
+            shell::shell_layout_delete,
+            shell::shell_apps,
+            shell::shell_app_launch,
             set_collapsed,
             set_island_rect,
             focus_window,
