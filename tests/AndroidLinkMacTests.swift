@@ -119,19 +119,17 @@ func identityInThrowawayKeychain(_ id: LinkIdentity) -> SecIdentity? {
     let password = "test"
     guard SecKeychainCreate(path, UInt32(password.utf8.count), password, false, nil, &keychain) == errSecSuccess,
           let keychain else { return nil }
-    let attributes: [String: Any] = [
-        kSecAttrKeyType as String: kSecAttrKeyTypeECSECPrimeRandom,
-        kSecAttrKeyClass as String: kSecAttrKeyClassPrivate,
-        kSecAttrKeySizeInBits as String: 256,
-    ]
-    guard let key = SecKeyCreateWithData(id.privateKey as CFData, attributes as CFDictionary, nil),
-          let certificate = SecCertificateCreateWithData(nil, Data(id.certificate) as CFData) else { return nil }
-    let addKey = SecItemAdd([kSecClass as String: kSecClassKey, kSecValueRef as String: key,
-                             kSecUseKeychain as String: keychain, kSecAttrLabel as String: "test"] as CFDictionary, nil)
+    guard let certificate = SecCertificateCreateWithData(nil, Data(id.certificate) as CFData),
+          let pem = id.signingKey?.pemRepresentation else { return nil }
+    // A file keychain takes a key as imported data (PKCS#8), not as a key reference.
+    var format = SecExternalFormat.formatUnknown
+    var type = SecExternalItemType.itemTypePrivateKey
+    var imported: CFArray?
+    let importKey = SecItemImport(Data(pem.utf8) as CFData, "key.pem" as CFString, &format, &type, [], nil, keychain, &imported)
     let addCert = SecItemAdd([kSecClass as String: kSecClassCertificate, kSecValueRef as String: certificate,
                               kSecUseKeychain as String: keychain] as CFDictionary, nil)
-    guard addKey == errSecSuccess, addCert == errSecSuccess else {
-        print("keychain: key \(addKey), certificate \(addCert)")
+    guard importKey == errSecSuccess, addCert == errSecSuccess else {
+        print("keychain: key \(importKey), certificate \(addCert)")
         return nil
     }
     var identity: SecIdentity?
