@@ -144,16 +144,18 @@ final class LinkServer: @unchecked Sendable {
             self.queue.async { self.connections[id] = nil }
         }
         // The TLS handshake gets the ticket's wait; then the conversation gives the hello the same.
-        let handshake = DispatchWorkItem { connection.cancel() }
-        connQueue.asyncAfter(deadline: .now() + ticket.wait, execute: handshake)
+        let handshake = HandshakeFlag()
+        connQueue.asyncAfter(deadline: .now() + ticket.wait) {
+            if !handshake.done { connection.cancel() }
+        }
         connection.stateUpdateHandler = { state in
             switch state {
             case .ready:
-                handshake.cancel()
+                handshake.finish()
                 conversation.start()
                 Self.receive(connection, into: conversation)
             case .failed, .cancelled:
-                handshake.cancel()
+                handshake.finish()
                 conversation.receivedEnd()
             default:
                 break
@@ -187,6 +189,13 @@ final class LinkServer: @unchecked Sendable {
             return nil
         }
     }
+}
+
+/// Whether a connection's TLS handshake ended (well or not) before its deadline.
+private final class HandshakeFlag: Sendable {
+    private let value = Atomic<Bool>(false)
+    var done: Bool { value.load(ordering: .sequentiallyConsistent) }
+    func finish() { value.store(true, ordering: .sequentiallyConsistent) }
 }
 
 /// A conversation's byte stream over an NWConnection (TLS already done).
