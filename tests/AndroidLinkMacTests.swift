@@ -37,7 +37,8 @@ final class Recorder: LinkHost {
 final class PinnedClient: @unchecked Sendable {
     let connection: NWConnection
     private let queue = DispatchQueue(label: "test.client")
-    private let lines = Mutex<[[String: Any]]>([])
+    /// Raw JSON lines (parsed when read: a dictionary of Any is not Sendable).
+    private let lines = Mutex<[[UInt8]]>([])
     private let buffer = Mutex<[UInt8]>([])
     let state = Mutex<String>("setup")
 
@@ -72,9 +73,7 @@ final class PinnedClient: @unchecked Sendable {
                     while let nl = b.firstIndex(of: 10) {
                         let line = Array(b[..<nl])
                         b.removeSubrange(...nl)
-                        if let obj = (try? JSONSerialization.jsonObject(with: Data(line))) as? [String: Any] {
-                            lines.withLock { $0.append(obj) }
-                        }
+                        lines.withLock { $0.append(line) }
                     }
                 }
             }
@@ -94,12 +93,17 @@ final class PinnedClient: @unchecked Sendable {
     func expect(_ type: String, _ seconds: Double = 5) -> [String: Any]? {
         var found: [String: Any]?
         _ = eventually(seconds) {
-            lines.withLock { l in
-                if let i = l.firstIndex(where: { $0["type"] as? String == type }) {
-                    found = l[i]
-                    l.removeSubrange(...i)
+            let taken = lines.withLock { l -> [[UInt8]] in defer { l = [] }; return l }
+            var rest: [[UInt8]] = []
+            for raw in taken {
+                let obj = (try? JSONSerialization.jsonObject(with: Data(raw))) as? [String: Any]
+                if found == nil, let obj {
+                    if obj["type"] as? String == type { found = obj }
+                    continue   // lines before the one wanted are skipped
                 }
+                if found != nil { rest.append(raw) }
             }
+            if !rest.isEmpty { lines.withLock { $0.insert(contentsOf: rest, at: 0) } }
             return found != nil
         }
         return found
