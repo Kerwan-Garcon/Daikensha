@@ -2,9 +2,9 @@
 // the conversation, fed a user message per line on stdin (`stream-json`), with
 // web search and the voice's five tools through Coucou's MCP server (mcp.rs).
 // It is started as soon as the wake word is heard, so it is ready by the time
-// the question is, and dropped (process and server) after the voice's 90 s
-// without a turn. A process that dies is replaced once, cold, with the
-// conversation so far as text.
+// the question is. The process (about 250 MB) goes after PROCESS_IDLE without a
+// turn; the conversation is kept for the voice's 90 s, and a new process gets
+// it as text with its first question. A process that dies is replaced once.
 
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
@@ -21,6 +21,9 @@ use super::{blocked, build_args, command_with, contain, guard_command, job, loca
 const MODEL: &str = "haiku";
 /// The same as the voice forgets its conversation after (voice/brain.rs).
 const FORGET_AFTER: Duration = Duration::from_secs(90);
+/// The process is let go well before that: a follow-up comes within seconds,
+/// and a new process starts in about a second (in parallel with the speech).
+const PROCESS_IDLE: Duration = Duration::from_secs(30);
 /// One spoken turn, tools and web search included.
 const TURN_TIMEOUT: Duration = Duration::from_secs(60);
 /// Turns kept to seed a replacement process.
@@ -36,6 +39,8 @@ struct Session {
     _job: Option<job::Job>,
     /// Set by a tool that changed something during the turn.
     acted: Arc<AtomicBool>,
+    /// Turns it answered: the first one carries the conversation so far.
+    turns: usize,
 }
 
 #[derive(Default)]
@@ -48,9 +53,13 @@ pub struct Voice {
 
 impl Voice {
     /// Forgets everything once the voice has been quiet for 90 s.
+    /// Lets the process go after PROCESS_IDLE, and the conversation after 90 s.
     pub fn idle(&mut self) {
-        if self.last.is_some_and(|t| t.elapsed() > FORGET_AFTER) {
+        let quiet = self.last.map(|t| t.elapsed()).unwrap_or_default();
+        if quiet > PROCESS_IDLE {
             self.session = None;
+        }
+        if quiet > FORGET_AFTER {
             self.history.clear();
             self.last = None;
         }
@@ -72,12 +81,11 @@ impl Voice {
         self.idle();
         self.last = Some(Instant::now());
         for attempt in 0..2 {
-            let fresh = self.session.is_none();
-            if fresh {
+            if self.session.is_none() {
                 self.session = Some(start(tools, system).await?);
             }
             let mut content = Vec::new();
-            if fresh || attempt > 0 {
+            if self.session.as_ref().is_some_and(|s| s.turns == 0) {
                 let earlier: Vec<Value> = self
                     .history
                     .iter()
@@ -91,6 +99,7 @@ impl Voice {
             let session = self.session.as_mut().expect("started above");
             match session.turn(content).await {
                 Ok(answer) => {
+                    session.turns += 1;
                     let acted = session.acted.swap(false, Ordering::Relaxed);
                     self.history.push((text.to_string(), answer.clone()));
                     if self.history.len() > KEPT_TURNS {
@@ -165,7 +174,7 @@ async fn start(tools: &mcp::Runner, system: &str) -> Result<Session, Failure> {
     let job = contain(&child);
     let stdin = child.stdin.take().ok_or(Failure::Exited)?;
     let stdout = child.stdout.take().ok_or(Failure::Exited)?;
-    Ok(Session { child, stdin, lines: BufReader::new(stdout).lines(), _server: server, _job: job, acted })
+    Ok(Session { child, stdin, lines: BufReader::new(stdout).lines(), _server: server, _job: job, acted, turns: 0 })
 }
 
 impl Session {
@@ -212,6 +221,19 @@ impl Session {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn the_process_goes_first_and_the_conversation_later() {
+        let mut v = Voice { history: vec![("q".into(), "a".into())], ..Default::default() };
+        v.last = Instant::now().checked_sub(PROCESS_IDLE + Duration::from_secs(1));
+        v.idle();
+        assert_eq!(v.history.len(), 1, "kept for a new process");
+        assert!(v.last.is_some());
+        v.last = Instant::now().checked_sub(FORGET_AFTER + Duration::from_secs(1));
+        v.idle();
+        assert!(v.history.is_empty());
+        assert!(v.last.is_none());
+    }
 
     /// `cargo test -p coucou --lib -- --ignored live_voice`: two spoken turns
     /// through the installed `claude` with a fake pills tool, and an injection.

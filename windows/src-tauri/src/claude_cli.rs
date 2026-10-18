@@ -95,6 +95,11 @@ const SCRUBBED_ENV: &[&str] = &[
     "CLAUDE_CODE_ENTRYPOINT",
 ];
 
+/// Set in the child's environment: none of Claude Code's own telemetry, error
+/// reports, update checks or other background requests (Coucou sends none
+/// either), and the CLI answers about 2 s sooner, a little lighter (measured).
+const ADDED_ENV: &[(&str, &str)] = &[("CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC", "1"), ("DISABLE_AUTOUPDATER", "1")];
+
 /// The guard must answer well within this; past it Claude Code lets the tool run.
 const GUARD_TIMEOUT_SECS: u64 = 10;
 /// What is kept of the child's stderr, for the log and an error message.
@@ -406,6 +411,7 @@ fn command_with(launcher: &Launcher, args: &[String], cwd: &Path, token: Option<
     for var in SCRUBBED_ENV {
         std_cmd.env_remove(var);
     }
+    std_cmd.envs(ADDED_ENV.iter().copied());
     match token {
         Some(token) => std_cmd.env(mcp::TOKEN_VAR, token),
         None => std_cmd.env_remove(mcp::TOKEN_VAR),

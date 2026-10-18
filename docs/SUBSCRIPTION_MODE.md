@@ -84,7 +84,7 @@ Chacune suffit seule à bloquer un appel `Bash` ; le test `with_any_one_layer_do
 
    L'island affiche « Arrêté : Claude Code a tenté un outil que Coucou n'autorise pas (…) ». Le journal ne garde que le nom de l'outil. Ce cas ne devrait jamais arriver : s'il arrive, une couche au-dessus a cédé.
 
-S'y ajoute `--disallowedTools` dans tous les modes. Sous Windows, chaque processus `claude` vit en plus dans un **Job Object** (`JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE`, 3 Go au plus) : si Coucou meurt, le CLI et ses enfants meurent avec lui. Ailleurs, le processus est tué avec son handle (`kill_on_drop`).
+S'y ajoute `--disallowedTools` dans tous les modes. Sous Windows, chaque processus `claude` vit en plus dans un **Job Object** (`JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE`, 1 Go au plus) : si Coucou meurt, le CLI et ses enfants meurent avec lui. Ailleurs, le processus est tué avec son handle (`kill_on_drop`).
 
 ## Le serveur MCP de la voix
 
@@ -96,6 +96,21 @@ Il démarre seulement quand le mode abonnement et la voix sont actifs, au mot «
 - Toute requête sans le bon jeton est refusée (401), ainsi que tout `Origin` et tout `Host` autre que `127.0.0.1:<port>` ou `localhost:<port>` (403, contre le DNS rebinding). Les en-têtes sont limités à 16 Ko, le corps à 1 Mo, et la lecture d'une requête à 10 s.
 - Il expose exactement les 5 outils de `voice/brain.rs::coucou_tools()`, avec les mêmes `input_schema` (test `the_mcp_server_serves_exactly_coucous_five_tools`), et appelle `voice::run_tool` existant. `prepare_email` ouvre l'app de mail et l'utilisateur clique Envoyer. Aucun outil n'envoie, n'approuve ou ne supprime quoi que ce soit.
 - Pas de crate `rmcp` : les quelques messages JSON-RPC (`initialize`, `notifications/initialized`, `ping`, `tools/list`, `tools/call`) sont traités à la main, et tout le reste reçoit « method not found ». Aucune nouvelle dépendance n'a été ajoutée : seule la feature `process` de tokio et la feature `Win32_System_JobObjects` de la crate `windows`, toutes deux déjà présentes.
+
+## Mémoire et vitesse
+
+Mesuré dans le conteneur Linux avec Claude Code 2.1.302, pour « Dis bonjour » avec `haiku`. Les chiffres sont la somme des RSS de `claude` et de ses enfants, et la durée du lancement à la sortie.
+
+| Réglage | RAM (pic) | Durée d'un tour à froid |
+| --- | --- | --- |
+| Flags seuls | ≈ 244 Mio | ≈ 3,2 s |
+| + `CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1`, `DISABLE_AUTOUPDATER=1` (retenu) | ≈ 237 Mio | ≈ 1,1 s |
+
+- **Chat, téléphone, dictée, Notetaker** : un processus par tour, qui se termine avec la réponse. Coucou ne garde rien en mémoire entre deux tours, en dehors du texte de la conversation.
+- **Voix** : un processus est démarré au mot « OK Coucou », en parallèle de la phrase, et libéré **30 s** après le dernier tour. La conversation reste **90 s**, comme en mode API : un processus relancé la reçoit en texte avec la première question. On ne paie donc environ 240 Mio que pendant qu'on parle.
+- **Coucou lui-même** : quelques Ko par tour. Le flux est lu ligne à ligne, stderr est gardé jusqu'à 16 Ko et stdout est plafonné à 32 Mo. Le serveur MCP lit au plus 16 Ko d'en-têtes et 1 Mo de corps par requête.
+- **Windows** : le Job Object plafonne chaque processus `claude` et ses enfants à 1 Go, soit environ 4 fois le pic mesuré.
+- Les deux variables d'environnement coupent aussi la télémétrie, les rapports d'erreur et les vérifications de mise à jour de Claude Code pour ces processus. `rate_limit_event`, WebSearch et MCP fonctionnent toujours (vérifié).
 
 ## Erreurs montrées
 
@@ -114,7 +129,7 @@ Le bouton **Réglages → Claude → Vérifier** appelle `claude auth status` et
 
 ## Limites et risques connus
 
-- **Latence** : chaque tour à froid coûte environ 3 s de démarrage du CLI. La voix démarre son processus dès le mot-clé pour le masquer. Le nettoyage de dictée passe à 10 s de délai au lieu de 4 ; au-delà, le texte est collé tel quel, comme avant.
+- **Latence** : un tour à froid prend environ 1 s de plus qu'avec l'API (le démarrage du CLI). La voix démarre son processus dès le mot-clé pour le masquer. Le délai du nettoyage de dictée passe de 4 à 10 s, par prudence ; au-delà, le texte est collé tel quel, comme avant.
 - **Le chat n'a pas de recherche web** en mode abonnement, contrairement au mode API (aucun outil, par choix). La voix l'a.
 - **Exfiltration par la recherche** : une page web lue par `WebSearch` peut contenir une injection. Sans outil dangereux, elle ne peut rien exécuter. En revanche, elle pourrait pousser le modèle à lire `service_info` (les données de l'utilisateur), puis à glisser une partie de ces données dans une requête de recherche suivante. Le risque est le même en mode API avec `web_search`. Il est accepté ici et documenté, car le filtrer par « détection d'injection » serait contournable.
 - **`open_app` et `prepare_email`** restent ce qu'ils sont en mode API : ouvrir un raccourci du menu Démarrer, ouvrir l'app de mail pré-remplie.

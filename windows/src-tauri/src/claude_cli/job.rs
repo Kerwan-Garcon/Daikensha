@@ -4,9 +4,10 @@
 // and together they may not use more than MEMORY_LIMIT. Elsewhere this is a
 // no-op: the child is killed with its handle (kill_on_drop).
 
-/// More than Claude Code needs for a chat or a spoken turn by far.
+/// Claude Code peaks at about 250 MB for a chat or a spoken turn (measured):
+/// four times that, so a runaway process is stopped long before it hurts.
 #[cfg(windows)]
-const MEMORY_LIMIT: usize = 3 * 1024 * 1024 * 1024;
+const MEMORY_LIMIT: usize = 1024 * 1024 * 1024;
 
 /// Kept as long as the child should live; dropping it ends the job.
 pub struct Job {

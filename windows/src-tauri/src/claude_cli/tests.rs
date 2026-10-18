@@ -461,3 +461,24 @@ fn live_chat_resumes() {
     assert!(text.to_lowercase().contains("giraffe"), "{text}");
     forget(Mode::Chat);
 }
+
+#[test]
+fn the_child_runs_without_keys_and_without_claude_codes_background_traffic() {
+    let launcher = Launcher { program: PathBuf::from("claude"), pre: vec![] };
+    let envs = |token: Option<&str>| -> Vec<(String, Option<String>)> {
+        let cmd = command_with(&launcher, &[], Path::new("."), token);
+        cmd.as_std()
+            .get_envs()
+            .map(|(k, v)| (k.to_string_lossy().to_string(), v.map(|v| v.to_string_lossy().to_string())))
+            .collect()
+    };
+    let plain = envs(None);
+    for var in SCRUBBED_ENV {
+        assert!(plain.contains(&(var.to_string(), None)), "{var} not removed");
+    }
+    for (k, v) in ADDED_ENV {
+        assert!(plain.contains(&(k.to_string(), Some(v.to_string()))), "{k} not set");
+    }
+    assert!(plain.contains(&(mcp::TOKEN_VAR.to_string(), None)), "the token is only for the voice");
+    assert!(envs(Some("t0k")).contains(&(mcp::TOKEN_VAR.to_string(), Some("t0k".into()))));
+}
