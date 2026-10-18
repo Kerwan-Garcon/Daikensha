@@ -2,9 +2,16 @@
 //
 // Windows: the named pipe `\\.\pipe\coucou-<sid>`, one instance per connection.
 // Linux: the Unix socket `$XDG_RUNTIME_DIR/coucou.sock`. Every hook event is
-// forwarded to the island as a `hook` event. `PermissionRequest` is the only one
-// that keeps its connection open: it waits for the island's decision and writes
-// it back on the same connection, which is how approving from the island works.
+// forwarded to the island as a `hook` event. `PermissionRequest` keeps its
+// connection open: it waits for the island's decision and writes it back on the
+// same connection, which is how approving from the island works.
+//
+// Claude Code's `Stop` may be held too, only with Settings → "Reply from the
+// island" on and once the island has the card on screen: we answer `hold`, and
+// the relay waits, with no deadline, for the user's reply (`{"reply":"…"}`,
+// which Claude Code takes as its next instruction in the same session) or for
+// the card to be closed. Esc in the terminal ends the hook, which closes the
+// connection: the island is told and drops the reply field.
 //
 // Claude Code is never blocked by us. Three things guarantee it:
 //   * coucou-hook gives the connection 300 ms and exits cleanly if we are closed;
@@ -216,6 +223,11 @@ async fn handle(app: AppHandle, mut pipe: impl Relay) {
     // Counts for the weekly recap — never the command, path or prompt itself.
     crate::recap::observe(&app, &payload);
 
+    if event == "Stop" && holds_for_reply(&app, &payload) {
+        hold_for_reply(app, pipe, payload).await;
+        return;
+    }
+
     if event != "PermissionRequest" {
         // The status line relay calls in with every Claude Code update: not log-worthy.
         if event != "StatusLine" {
@@ -247,6 +259,63 @@ async fn handle(app: AppHandle, mut pipe: impl Relay) {
         let _ = pipe.flush().await;
     }
     pipe.finish();
+}
+
+/// A Stop from Claude Code itself (no other agent's tag) with the option on.
+fn holds_for_reply(app: &AppHandle, payload: &Value) -> bool {
+    payload.get("coucou_agent").is_none()
+        && app.try_state::<crate::Shared>().is_some_and(|s| s.settings.lock().unwrap().reply_from_island)
+}
+
+/// The longest reply handed to Claude Code.
+const MAX_REPLY_CHARS: usize = 8_000;
+
+/// The reply line the relay turns into Claude Code's `decision: block`.
+pub fn reply_line(text: &str) -> Option<String> {
+    let text: String = text.trim().chars().take(MAX_REPLY_CHARS).collect();
+    (!text.is_empty()).then(|| json!({ "reply": text }).to_string())
+}
+
+async fn hold_for_reply(app: AppHandle, mut pipe: impl Relay, mut payload: Value) {
+    let id = format!("{}-{}", std::process::id(), COUNTER.fetch_add(1, Ordering::Relaxed));
+    let (tx, mut rx) = mpsc::channel::<Reply>(4);
+    app.state::<Pending>().0.lock().unwrap().insert(id.clone(), tx);
+    payload["reply_id"] = json!(id);
+    log::line(format!("hook Stop id={id} (reply from the island)"));
+    let _ = app.emit_to(WINDOW_LABEL, "hook", payload);
+
+    // The card must be on screen before the session is held.
+    let shown = matches!(tokio::time::timeout(ACK_TIMEOUT, rx.recv()).await, Ok(Some(Reply::Ack)));
+    if shown && pipe.write_all(b"hold\n").await.is_ok() {
+        let _ = pipe.flush().await;
+        let mut probe = [0u8; 64];
+        // No deadline: the user may take their time. It ends with a reply, the
+        // card being closed, Coucou quitting, or the relay going away.
+        tokio::select! {
+            reply = rx.recv() => {
+                if let Some(Reply::Decision(line)) = reply {
+                    log::line(format!("hook Stop id={id} replied"));
+                    let _ = pipe.write_all(format!("{line}\n").as_bytes()).await;
+                    let _ = pipe.flush().await;
+                } else {
+                    log::line(format!("hook Stop id={id} closed without a reply"));
+                }
+            }
+            _ = pipe.read(&mut probe) => {
+                log::line(format!("hook Stop id={id} ended in the terminal"));
+                let _ = app.emit_to(WINDOW_LABEL, "reply-closed", json!({ "reply_id": id }));
+            }
+        }
+    }
+    app.state::<Pending>().0.lock().unwrap().remove(&id);
+    pipe.finish();
+}
+
+/// The island's reply to a held Claude Code session.
+pub fn reply(app: &AppHandle, reply_id: &str, text: &str) -> bool {
+    let Some(line) = reply_line(text) else { return false };
+    send(app, reply_id, Reply::Decision(line), false);
+    true
 }
 
 /// Finds, once per session, the window it runs in — see session_window.rs.
@@ -358,4 +427,19 @@ pub fn answer_question(app: &AppHandle, request_id: &str, answers: &HashMap<Stri
     // One line: the relay reads up to the first newline.
     let line = json!({ "answers": answers }).to_string();
     send(app, request_id, Reply::Decision(line), false);
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn a_reply_is_one_trimmed_bounded_line() {
+        let line = reply_line("  add the tests\nthen push  ").unwrap();
+        assert!(!line.contains('\n'), "one line on the wire");
+        assert_eq!(serde_json::from_str::<Value>(&line).unwrap()["reply"], "add the tests\nthen push");
+        assert!(reply_line("   ").is_none());
+        let long = reply_line(&"é".repeat(20_000)).unwrap();
+        assert_eq!(serde_json::from_str::<Value>(&long).unwrap()["reply"].as_str().unwrap().chars().count(), MAX_REPLY_CHARS);
+    }
 }

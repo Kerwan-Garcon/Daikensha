@@ -22,6 +22,7 @@ import { USC, UploadSeq } from "../upload/sequence";
 import { closePlanCard, openPlanColor, planCardOpen } from "../views/usage";
 import { buildHeader, buildViews, type ViewActions, type ViewHost } from "../views/views";
 import { h } from "../views/dom";
+import { t } from "../i18n/i18n";
 import { IslandStateMachine } from "./fsm";
 import { refreshHookPills } from "./integrations";
 import { DesktopLink } from "./desktop";
@@ -168,12 +169,45 @@ export class Island {
         // after looking at another pill brings the card up again.
         const req = State.pendingApproval;
         if (req?.pillId === id) this.setView(req.questions ? "question" : "approval");
+        else if (State.focusTask?.replyId) this.setView("finished");
       },
       openTerminal: () => {
         const task = State.focusTask;
         // Sessions from the Claude desktop app live there, not in a terminal.
         if (task?.id === CLAUDE_DESKTOP_ID) void Bridge.openClaudeDesktop();
-        else void Bridge.openSession(task?.sessionId ?? null, task?.sessionCwd ?? null);
+        else
+          void Bridge.openSession(task?.sessionId ?? null, task?.sessionCwd ?? null).then((found) => {
+            // Never an editor instead: say so, and the answer stays readable here.
+            if (found === false) this.note(t("The session's terminal window was not found."));
+          });
+      },
+      replyToSession: (text) => {
+        const task = State.focusTask;
+        const id = task?.replyId;
+        if (!task || !id) return;
+        void Bridge.sessionReply(id, text).then((sent) => {
+          if (!sent) {
+            this.note(t("This turn is over: reply in the terminal."));
+            return;
+          }
+          task.replyId = null;
+          task.replySession = null;
+          task.finalLine = null;
+          task.finalText = null;
+          Sound.play("send");
+          State.updateTask(task.id, "thinking");
+          State.appendStep(task.id, text.slice(0, 60));
+          this.setView(State.defaultView());
+        });
+      },
+      endHeldTurn: () => {
+        const task = State.focusTask;
+        if (task?.replyId) void Bridge.approvalDecline(task.replyId);
+        if (task) {
+          task.replyId = null;
+          task.replySession = null;
+        }
+        this.collapse();
       },
       // The ↗ button — same targets as openAgentTarget() on macOS.
       openTarget: () => {
@@ -389,6 +423,15 @@ export class Island {
     else this.animateGeometry(false);
     State.lastActivity = performance.now();
     State.notify();
+  }
+
+  /** A short message in the island, then back to the usual view. */
+  note(message: string) {
+    State.noteMessage = message;
+    this.setView("note");
+    window.setTimeout(() => {
+      if (State.view === "note" && State.noteMessage === message) this.setView(State.defaultView());
+    }, 3000);
   }
 
   setView(view: IslandViewName) {

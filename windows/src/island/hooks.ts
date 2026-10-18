@@ -57,6 +57,8 @@ interface HookPayload {
   prompt?: string;
   /** Stop: the turn's final answer (Markdown) — Claude Code's, Hermes's, Codex's. */
   last_assistant_message?: string;
+  /** Stop held for a reply from the island (pipe.rs): answer with Bridge.sessionReply. */
+  reply_id?: string;
   tool_name?: string;
   tool_input?: Record<string, unknown>;
   /** Set by the relay when an edit was too big to forward whole (> 256 KB). */
@@ -201,12 +203,18 @@ function clearSession(id: string) {
   t.pillBadge = null;
   t.sessionId = null;
   t.finalLine = null;
+  t.finalText = null;
+  t.replyId = null;
+  t.replySession = null;
 }
 
 /** The final message stays on the card until the next turn starts. */
 function clearFinalLine(id: string) {
   const t = State.tasks.find((x) => x.id === id);
-  if (t) t.finalLine = null;
+  if (t) {
+    t.finalLine = null;
+    t.finalText = null;
+  }
 }
 
 /**
@@ -228,6 +236,14 @@ export function registerHookHandlers(island: Island) {
   // The last plan numbers seen survive a restart, as on the Mac.
   State.planUsage ??= restorePlanUsage(storedClaudePlanUsage());
   void onEvent<HookPayload>("hook", (payload) => handleHook(island, payload));
+  // A held turn ended in the terminal (Esc) or its relay went away: no reply any more.
+  void onEvent<{ reply_id: string }>("reply-closed", ({ reply_id }) => {
+    const t = State.tasks.find((x) => x.replyId === reply_id);
+    if (!t) return;
+    t.replyId = null;
+    t.replySession = null;
+    State.notify();
+  });
 }
 
 function handleHook(island: Island, payload: HookPayload) {
@@ -244,6 +260,7 @@ function handleHook(island: Island, payload: HookPayload) {
     // for a decision from an island that had already decided not to look. Say so,
     // and the terminal takes the question immediately.
     if (payload.request_id) void Bridge.approvalDecline(payload.request_id);
+    if (payload.reply_id) void Bridge.approvalDecline(payload.reply_id);
     return;
   }
 
@@ -307,6 +324,14 @@ function handleHook(island: Island, payload: HookPayload) {
     pendingTimeout = null;
     if (pending.requestId) void Bridge.approvalDecline(pending.requestId);
     dropPendingCard(island);
+  }
+
+  // Any other event of a held session means its turn went on without us (the
+  // relay is gone): the reply field goes.
+  const held = State.tasks.find((x) => x.id === agentId);
+  if (held?.replyId && name !== "Stop" && name !== "StatusLine" && held.replySession === sessionId) {
+    held.replyId = null;
+    held.replySession = null;
   }
 
   // Read after the card above is dropped: its pill may have handed the front
@@ -391,17 +416,34 @@ function handleHook(island: Island, payload: HookPayload) {
       // no transcript to read (the relay does not even forward its path). Other
       // agents report their last words the same way (Hermes, Codex) or as
       // `message`.
-      const finalText = toOneLine(payload.last_assistant_message ?? payload.message ?? "");
+      const whole = (payload.last_assistant_message ?? payload.message ?? "").trim();
+      const finalText = toOneLine(whole);
+      const t = State.tasks.find((x) => x.id === agentId);
       if (finalText) {
         State.appendStep(agentId, finalText);
-        const t = State.tasks.find((x) => x.id === agentId);
-        if (t) t.finalLine = finalText;
+        if (t) {
+          t.finalLine = finalText;
+          t.finalText = whole;
+        }
+      }
+      // Held for a reply: the card says so, and this session waits for it.
+      // Another session's held turn on the same pill is let go first, so no
+      // terminal stays waiting behind a card it no longer owns.
+      if (payload.reply_id) {
+        if (t?.replyId && t.replyId !== payload.reply_id) void Bridge.approvalDecline(t.replyId);
+        if (t) {
+          t.replyId = payload.reply_id;
+          t.replySession = sessionId;
+        }
+        void Bridge.approvalAck(payload.reply_id);
       }
       Sound.play("finish");
       // A card waiting for an answer is never covered by another alert.
       if (focused && !State.pendingApproval) surface("finished", true);
       else State.setPillBadge(agentId, "finished");
       cancelStopTimer(agentId);
+      // A held turn keeps its card until it is answered or closed.
+      if (t?.replyId) break;
       stopTimers.set(
         agentId,
         window.setTimeout(() => {

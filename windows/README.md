@@ -179,6 +179,28 @@ in time, Coucou stays quiet and Claude Code asks in the terminal as usual.
 
 It works from any terminal — Windows Terminal, PowerShell, VS Code, Git Bash.
 
+### Reply from the island
+
+When a turn ends, the finished card shows Claude's whole answer (scrolling, with
+a copy button). Turn on **Settings → Claude Code → Reply from the island** to
+answer from there too:
+
+- the card gets a reply field; **Enter** sends your text to the *same* session,
+  which carries on in its terminal as if you had typed it there (Claude Code
+  shows it as "Stop hook feedback");
+- the session waits for you with no time limit — until you reply, click
+  **Done**, or press `Esc` in its terminal to take it back;
+- folding the island or looking at another pill keeps the card; reopening the
+  island, or clicking that pill, brings it back.
+
+How it works: the relay's `Stop` hook asks Coucou, which answers `hold` only
+with the option on and the card on screen; the reply comes back as Claude
+Code's documented `decision: block`. A closed or older Coucou never answers,
+and the relay exits at once as before. The `Stop` hook is installed with a
+24-hour timeout for this; hooks from an older Coucou keep their 10 s until you
+reinstall them (Settings says so). Only Claude Code's own sessions are held,
+never another agent's.
+
 ### Plan usage
 
 As on the Mac, the island's header can show your plan limits: a small pill
@@ -451,9 +473,10 @@ own window.
 - "Open terminal" finds the session's window by walking up from the relay's
   process to the terminal or editor that runs it. A session in a classic
   console window (`cmd.exe` or PowerShell without Windows Terminal) has no such
-  ancestor — conhost owns that window — so its folder opens in VS Code instead,
-  as it does when `code` is on your `PATH` and nothing was found. Linux walks
-  the same tree; what it can bring forward depends on the desktop (see Linux).
+  ancestor — conhost owns that window. When no window is found, nothing else
+  opens (no editor in its place): the island says so, and the answer stays
+  readable, and answerable, on the card. Linux walks the same tree; what it can
+  bring forward depends on the desktop (see Linux).
 - Global keyboard shortcuts are hot keys on Windows, key grabs on Linux under
   X11, and go through the desktop's GlobalShortcuts portal under Wayland (see
   [Linux](#linux)). A waiting card is also folded with its **⌃** or `Esc` in

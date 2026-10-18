@@ -21,8 +21,14 @@ use crate::agents::{self, Shell};
 use crate::config_file::{self, FileEdit};
 use crate::{platform, settings};
 
+/// How long Claude Code lets the Stop hook run: a day, so a reply typed in the
+/// island has, in practice, no deadline (pipe.rs). The relay itself exits at
+/// once whenever Coucou does not hold the turn.
+pub const STOP_TIMEOUT: u64 = 24 * 60 * 60;
+
 /// Every event the island reacts to, with the hook timeout written to settings.json.
-/// PermissionRequest waits for a human, so it gets the decision timeout + 10 s.
+/// PermissionRequest waits for a human, so it gets the decision timeout + 10 s;
+/// Stop may wait for a reply from the island.
 pub const HOOK_EVENTS: &[(&str, u64)] = &[
     ("SessionStart", 10),
     ("SessionEnd", 10),
@@ -32,7 +38,7 @@ pub const HOOK_EVENTS: &[(&str, u64)] = &[
     ("PostToolUseFailure", 10),
     ("PermissionRequest", 120),
     ("Notification", 10),
-    ("Stop", 10),
+    ("Stop", STOP_TIMEOUT),
     ("StopFailure", 10),
     ("SubagentStart", 10),
     ("SubagentStop", 10),
@@ -50,6 +56,25 @@ pub struct HookStatus {
     pub settings_path: String,
     pub hook_path: String,
     pub hook_ready: bool,
+    /// The Stop hook in settings.json has the long timeout "Reply from the
+    /// island" needs. False on hooks installed by an older Coucou: Settings
+    /// then offers to update them (backup, diff, click).
+    pub reply_ready: bool,
+}
+
+/// Coucou's Stop entry waits long enough for a reply.
+fn stop_waits(current: &Value) -> bool {
+    current
+        .get("hooks")
+        .and_then(|h| h.get("Stop"))
+        .and_then(Value::as_array)
+        .is_some_and(|list| {
+            list.iter().filter(|e| entry_is_ours(e)).any(|e| {
+                e.get("hooks")
+                    .and_then(Value::as_array)
+                    .is_some_and(|hs| hs.iter().any(|h| h.get("timeout").and_then(Value::as_u64).unwrap_or(0) >= STOP_TIMEOUT))
+            })
+        })
 }
 
 #[derive(Serialize)]
@@ -201,6 +226,7 @@ pub fn status() -> HookStatus {
         plan_relay_installed: plan_relay_installed(&current),
         settings_path: settings_path().to_string_lossy().to_string(),
         hook_ready: hook_path.exists(),
+        reply_ready: stop_waits(&current),
         hook_path: hook_path.to_string_lossy().to_string(),
     }
 }
@@ -425,6 +451,19 @@ fn install_relay(src: &Path, dest: &Path) {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn the_stop_hook_waits_long_enough_to_reply_from_the_island() {
+        let fresh = merged(&json!({})).unwrap();
+        assert!(stop_waits(&fresh));
+        assert_eq!(fresh["hooks"]["Stop"][0]["hooks"][0]["timeout"], STOP_TIMEOUT);
+        // Hooks from an older Coucou (10 s) are not enough; somebody else's entry never counts.
+        let mut old = fresh.clone();
+        old["hooks"]["Stop"][0]["hooks"][0]["timeout"] = json!(10);
+        assert!(!stop_waits(&old));
+        let theirs = json!({ "hooks": { "Stop": [{ "hooks": [{ "type": "command", "command": "other", "timeout": 999_999 }] }] } });
+        assert!(!stop_waits(&theirs));
+    }
 
     #[test]
     fn the_hooks_leave_the_status_line_alone() {
