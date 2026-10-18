@@ -6187,6 +6187,127 @@
    "pt-BR": "O Windows recusou as teclas (o app está rodando como administrador?).",
    "ru": "Windows отклонил нажатия (приложение запущено от администратора?).",
    "id": "Windows menolak ketukan tombol (apakah aplikasi berjalan sebagai administrator?)."
+  },
+  "A routine is a fixed list of steps you approved on its card. Coucou replays it as it is, without asking Claude, only while Coucou runs and the panel is on.": {
+   "zh-Hans": "例程是你在卡片上批准的一组固定步骤。Coucou 会原样重放，不询问 Claude，且仅在 Coucou 运行且面板开启时。",
+   "hi": "रूटीन वह तय कदमों की सूची है जिसे आपने उसके कार्ड पर मंज़ूर किया। Coucou उसे वैसे ही दोहराता है, Claude से पूछे बिना, सिर्फ़ जब Coucou चल रहा हो और पैनल चालू हो।",
+   "es": "Una rutina es una lista fija de pasos que aprobaste en su tarjeta. Coucou la repite tal cual, sin preguntar a Claude, solo mientras Coucou funciona y el panel está activado.",
+   "ar": "الروتين قائمة ثابتة من الخطوات وافقت عليها في بطاقتها. يعيدها Coucou كما هي دون سؤال Claude، فقط أثناء تشغيل Coucou وتفعيل اللوحة.",
+   "fr": "Une routine est une liste d’étapes figée que vous avez validée sur sa carte. Coucou la rejoue telle quelle, sans demander à Claude, seulement quand Coucou tourne et que le panneau est activé.",
+   "bn": "রুটিন হলো তার কার্ডে আপনার অনুমোদিত নির্দিষ্ট ধাপের তালিকা। Coucou হুবহু তা আবার চালায়, Claude-কে না জিজ্ঞেস করে, শুধু Coucou চলাকালীন এবং প্যানেল চালু থাকলে।",
+   "pt-BR": "Uma rotina é uma lista fixa de passos que você aprovou no cartão. O Coucou a repete como está, sem perguntar ao Claude, só enquanto o Coucou roda e o painel está ligado.",
+   "ru": "Сценарий — это неизменный список шагов, одобренный вами на его карточке. Coucou повторяет его как есть, не спрашивая Claude, только пока Coucou работает и панель включена.",
+   "id": "Rutinitas adalah daftar langkah tetap yang Anda setujui di kartunya. Coucou memutarnya apa adanya, tanpa bertanya ke Claude, hanya saat Coucou berjalan dan panel aktif."
+  },
+  "No routine yet. With the panel on, ask « OK Coucou »: every Monday at 9, open Unity and Spotify.": {
+   "zh-Hans": "还没有例程。开启面板后，对 « OK Coucou » 说：每周一 9 点打开 Unity 和 Spotify。",
+   "hi": "अभी कोई रूटीन नहीं। पैनल चालू करके « OK Coucou » से कहें: हर सोमवार 9 बजे Unity और Spotify खोलो।",
+   "es": "Aún no hay rutinas. Con el panel activado, pide a « OK Coucou »: cada lunes a las 9, abre Unity y Spotify.",
+   "ar": "لا يوجد روتين بعد. مع تفعيل اللوحة، اطلب من « OK Coucou »: كل اثنين الساعة 9، افتح Unity وSpotify.",
+   "fr": "Pas encore de routine. Avec le panneau activé, demandez à « OK Coucou » : tous les lundis à 9 h, ouvre Unity et Spotify.",
+   "bn": "এখনও কোনো রুটিন নেই। প্যানেল চালু করে « OK Coucou »-কে বলুন: প্রতি সোমবার ৯টায় Unity আর Spotify খোলো।",
+   "pt-BR": "Nenhuma rotina ainda. Com o painel ligado, peça ao « OK Coucou »: toda segunda às 9, abra o Unity e o Spotify.",
+   "ru": "Сценариев пока нет. С включённой панелью скажите « OK Coucou »: каждый понедельник в 9 открывай Unity и Spotify.",
+   "id": "Belum ada rutinitas. Dengan panel aktif, minta « OK Coucou »: tiap Senin jam 9, buka Unity dan Spotify."
+  },
+  "Create the routine": {
+   "zh-Hans": "创建例程",
+   "hi": "रूटीन बनाएँ",
+   "es": "Crear la rutina",
+   "ar": "إنشاء الروتين",
+   "fr": "Créer la routine",
+   "bn": "রুটিন তৈরি করুন",
+   "pt-BR": "Criar a rotina",
+   "ru": "Создать сценарий",
+   "id": "Buat rutinitas"
+  },
+  "New routine: {name}": {
+   "zh-Hans": "新例程：{name}",
+   "hi": "नया रूटीन: {name}",
+   "es": "Nueva rutina: {name}",
+   "ar": "روتين جديد: {name}",
+   "fr": "Nouvelle routine : {name}",
+   "bn": "নতুন রুটিন: {name}",
+   "pt-BR": "Nova rotina: {name}",
+   "ru": "Новый сценарий: {name}",
+   "id": "Rutinitas baru: {name}"
+  },
+  "{when}. This list is frozen: Coucou replays it as is, without asking Claude. Deletable in Settings.": {
+   "zh-Hans": "{when}。此列表是固定的：Coucou 会原样重放，不询问 Claude。可在设置中删除。",
+   "hi": "{when}। यह सूची तय है: Coucou इसे वैसे ही दोहराता है, Claude से पूछे बिना। सेटिंग्स में हटाई जा सकती है।",
+   "es": "{when}. Esta lista es fija: Coucou la repite tal cual, sin preguntar a Claude. Se puede borrar en Configuración.",
+   "ar": "{when}. هذه القائمة ثابتة: يعيدها Coucou كما هي دون سؤال Claude. يمكن حذفها من الإعدادات.",
+   "fr": "{when}. Cette liste est figée : Coucou la rejoue telle quelle, sans demander à Claude. Supprimable dans les Paramètres.",
+   "bn": "{when}। এই তালিকা নির্দিষ্ট: Coucou হুবহু আবার চালায়, Claude-কে না জিজ্ঞেস করে। সেটিংসে মোছা যায়।",
+   "pt-BR": "{when}. Esta lista é fixa: o Coucou a repete como está, sem perguntar ao Claude. Dá para apagar nas Configurações.",
+   "ru": "{when}. Список неизменен: Coucou повторяет его как есть, не спрашивая Claude. Удаляется в настройках.",
+   "id": "{when}. Daftar ini tetap: Coucou memutarnya apa adanya, tanpa bertanya ke Claude. Bisa dihapus di Pengaturan."
+  },
+  "Ask « OK Coucou »: every Monday at 9, open Unity and Spotify.": {
+   "zh-Hans": "对 « OK Coucou » 说：每周一 9 点打开 Unity 和 Spotify。",
+   "hi": "« OK Coucou » से कहें: हर सोमवार 9 बजे Unity और Spotify खोलो।",
+   "es": "Pide a « OK Coucou »: cada lunes a las 9, abre Unity y Spotify.",
+   "ar": "اطلب من « OK Coucou »: كل اثنين الساعة 9، افتح Unity وSpotify.",
+   "fr": "Demandez à « OK Coucou » : tous les lundis à 9 h, ouvre Unity et Spotify.",
+   "bn": "« OK Coucou »-কে বলুন: প্রতি সোমবার ৯টায় Unity আর Spotify খোলো।",
+   "pt-BR": "Peça ao « OK Coucou »: toda segunda às 9, abra o Unity e o Spotify.",
+   "ru": "Скажите « OK Coucou »: каждый понедельник в 9 открывай Unity и Spotify.",
+   "id": "Minta « OK Coucou »: tiap Senin jam 9, buka Unity dan Spotify."
+  },
+  "Routines": {
+   "zh-Hans": "例程",
+   "hi": "रूटीन",
+   "es": "Rutinas",
+   "ar": "الروتينات",
+   "fr": "Routines",
+   "bn": "রুটিন",
+   "pt-BR": "Rotinas",
+   "ru": "Сценарии",
+   "id": "Rutinitas"
+  },
+  "every day": {
+   "zh-Hans": "每天",
+   "hi": "हर दिन",
+   "es": "todos los días",
+   "ar": "كل يوم",
+   "fr": "tous les jours",
+   "bn": "প্রতিদিন",
+   "pt-BR": "todos os dias",
+   "ru": "каждый день",
+   "id": "setiap hari"
+  },
+  "You already have 20 routines: delete one in Settings first.": {
+   "zh-Hans": "你已有 20 个例程：请先在设置中删除一个。",
+   "hi": "आपके पास पहले से 20 रूटीन हैं: पहले सेटिंग्स में एक हटाएँ।",
+   "es": "Ya tienes 20 rutinas: borra una en Configuración primero.",
+   "ar": "لديك 20 روتينًا بالفعل: احذف واحدًا من الإعدادات أولًا.",
+   "fr": "Vous avez déjà 20 routines : supprimez-en une dans les Paramètres d’abord.",
+   "bn": "আপনার ইতিমধ্যে ২০টি রুটিন আছে: আগে সেটিংসে একটি মুছুন।",
+   "pt-BR": "Você já tem 20 rotinas: apague uma nas Configurações primeiro.",
+   "ru": "У вас уже 20 сценариев: сначала удалите один в настройках.",
+   "id": "Anda sudah punya 20 rutinitas: hapus satu di Pengaturan dulu."
+  },
+  "Routine “{name}” ran.": {
+   "zh-Hans": "例程“{name}”已运行。",
+   "hi": "रूटीन “{name}” चल गया।",
+   "es": "La rutina «{name}» se ejecutó.",
+   "ar": "تم تشغيل الروتين «{name}».",
+   "fr": "La routine « {name} » s’est lancée.",
+   "bn": "রুটিন “{name}” চলেছে।",
+   "pt-BR": "A rotina “{name}” foi executada.",
+   "ru": "Сценарий «{name}» выполнен.",
+   "id": "Rutinitas “{name}” sudah berjalan."
+  },
+  "Routine “{name}” ran; {n} step(s) did nothing.": {
+   "zh-Hans": "例程“{name}”已运行；{n} 个步骤没有效果。",
+   "hi": "रूटीन “{name}” चला; {n} कदमों ने कुछ नहीं किया।",
+   "es": "La rutina «{name}» se ejecutó; {n} paso(s) no hicieron nada.",
+   "ar": "تم تشغيل الروتين «{name}»؛ {n} خطوة لم تفعل شيئًا.",
+   "fr": "La routine « {name} » s’est lancée ; {n} étape(s) n’ont rien fait.",
+   "bn": "রুটিন “{name}” চলেছে; {n}টি ধাপ কিছু করেনি।",
+   "pt-BR": "A rotina “{name}” foi executada; {n} passo(s) não fizeram nada.",
+   "ru": "Сценарий «{name}» выполнен; шагов без результата: {n}.",
+   "id": "Rutinitas “{name}” berjalan; {n} langkah tidak berbuat apa-apa."
   }
  }
 }

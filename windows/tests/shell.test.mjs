@@ -4,7 +4,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
-  agoText, availableTabs, clipPreview, clockText, fold, isoWeek, timerText, weatherKey, formatBytes, formatPct, gaugeDash, initial, pushSample, searchApps, sparkline, tileColor,
+  agoText, availableTabs, clipPreview, clockText, fold, fromLocalMinutes, isoWeek, timerText, weatherKey, whenText, formatBytes, formatPct, gaugeDash, initial, pushSample, searchApps, sparkline, tileColor,
 } from "../src/core/shell.ts";
 
 test("only the tabs this system can fill show, Stats everywhere", () => {
@@ -83,4 +83,19 @@ test("week numbers, weather families, the focus timer, ages and previews", () =>
   assert.match(agoText(1_000, 1_000 + 120_000, "en"), /2 min/);
   assert.equal(clipPreview("  a\n\n b  "), "a b");
   assert.equal(clipPreview("x".repeat(200), 10).length, 10);
+});
+
+test("routines read in local time", () => {
+  const sunday = Math.round((Date.UTC(2026, 9, 18) / 86_400_000)) * 1440;
+  const d = fromLocalMinutes(sunday + 9 * 60 + 5);
+  assert.equal(d.getFullYear(), 2026);
+  assert.equal(d.getMonth(), 9);
+  assert.equal(d.getDate(), 18);
+  assert.equal(d.getHours(), 9);
+  assert.equal(d.getMinutes(), 5);
+  const names = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  assert.equal(whenText({ kind: "weekly", days: [3, 1], time: "09:00" }, "en", (i) => names[i], "every day"), "Mon, Wed · 09:00");
+  assert.equal(whenText({ kind: "weekly", days: [1, 2, 3, 4, 5, 6, 7], time: "08:30" }, "en", (i) => names[i], "every day"), "every day · 08:30");
+  assert.equal(whenText({ kind: "weekly", days: [7], time: "10:00" }, "en", (i) => names[i], "x"), "Sun · 10:00");
+  assert.match(whenText({ kind: "once", date: "2026-11-10", time: "11:00" }, "fr", (i) => names[i], "x"), /10.*11:00/);
 });

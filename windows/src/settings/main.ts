@@ -4,7 +4,8 @@
 // island's settings are drawn here, one Notch page at a time.
 
 import "./settings.css";
-import { Bridge, onEvent, type ClaudeCliStatus, type HookPreview, type HookStatus, type ShortcutsReport } from "../core/bridge";
+import { Bridge, onEvent, type ClaudeCliStatus, type HookPreview, type HookStatus, type ShellRoutine, type ShortcutsReport } from "../core/bridge";
+import { whenText } from "../core/shell";
 import { CUSTOM_SERVER_KEY, providerDef, urlExposure } from "../core/providers";
 import {
   ISLAND_SHORTCUTS, SHORTCUTS, SHORTCUT_TEXT, activeKeys, displayKeys, duplicates, effective,
@@ -24,7 +25,7 @@ import { phoneSection } from "./phone";
 import { colorDot } from "./colors";
 import { renderDiff, statusDot } from "./parts";
 import {
-  LANGUAGES, N_, isRtl, onLanguageChange, resolveLanguage, setLanguage, systemLanguages, t, tn,
+  LANGUAGES, N_, isRtl, language, onLanguageChange, resolveLanguage, setLanguage, systemLanguages, t, tn, weekdayShort,
 } from "../i18n/i18n";
 
 /** Where secrets.rs keeps the keys on this OS. */
@@ -1059,6 +1060,7 @@ function generalSection(): HTMLElement {
       toggle(settings.autostart, (v) => { settings.autostart = v; void save(); }),
     ),
     ...recapRows(),
+    ...routineRows(),
     languageRow(),
   );
 }
@@ -1294,6 +1296,34 @@ function shortcutsSection(initial: ShortcutsReport | null): HTMLElement {
     h("div", { class: "subhead", text: SHORTCUTS_UI.island }),
     islandList,
   );
+}
+
+/** Coucou Shell's routines (shell/routines.rs): listed and deletable here, as promised on their card. */
+function routineRows(): HTMLElement[] {
+  const list = h("div", { class: "routine-list" });
+  const draw = (routines: ShellRoutine[]) => {
+    clear(list);
+    if (routines.length === 0) {
+      list.append(h("div", { class: "hint", text: t("No routine yet. With the panel on, ask « OK Coucou »: every Monday at 9, open Unity and Spotify.") }));
+      return;
+    }
+    for (const r of routines) {
+      const when = whenText(r.when, language(), weekdayShort, t("every day"));
+      list.append(
+        h("div", { class: "row" },
+          h("label", { text: r.name }),
+          h("span", { class: "hint", style: "flex:1 1 auto;min-width:0", text: `${when} — ${r.steps.join(" → ")}` }),
+          h("button", { class: "danger", text: t("Delete"), onclick: () => void Bridge.shellRoutineDelete(r.id).then(draw).catch(() => {}) }),
+        ),
+      );
+    }
+  };
+  void Bridge.shellRoutines().then(draw).catch(() => draw([]));
+  return [
+    h("div", { class: "row" }, h("label", { text: t("Routines") })),
+    list,
+    h("div", { class: "hint", text: t("A routine is a fixed list of steps you approved on its card. Coucou replays it as it is, without asking Claude, only while Coucou runs and the panel is on.") }),
+  ];
 }
 
 /** Settings → General → Weekly recap. The prefs live with the history in Rust. */

@@ -34,6 +34,8 @@ pub const LEVELS: &[(&str, u8)] = &[
     ("web_open", 1),
     ("power_action", 2),
     ("type_text", 2),
+    ("create_routine", 2),
+    ("schedule_action", 2),
 ];
 
 pub fn level(name: &str) -> Option<u8> {
@@ -132,7 +134,46 @@ pub fn definitions() -> Vec<Value> {
             "description": "Ask to type a text into the window in front (a message, a reply). This only shows a card the user must click; Enter is never pressed, the user sends it.",
             "input_schema": { "type": "object", "properties": { "text": { "type": "string" } }, "required": ["text"] }
         }),
+        json!({
+            "name": "create_routine",
+            "description": "Propose a routine that repeats on some days at a time, as a fixed list of steps Coucou will replay without you (each step is one of: open_app, set_volume, toggle_wifi, toggle_bluetooth, focus_window, snap_window, apply_layout, set_wallpaper, web_open, with that tool's input). This only shows a card the user must click.",
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "name": { "type": "string", "description": "A short name, in the user's language." },
+                    "days": { "type": "array", "items": { "type": "integer" }, "description": "1 Monday … 7 Sunday." },
+                    "time": { "type": "string", "description": "HH:MM, 24 h." },
+                    "steps": steps_schema()
+                },
+                "required": ["name", "days", "time", "steps"]
+            }
+        }),
+        json!({
+            "name": "schedule_action",
+            "description": "Propose to do a fixed list of steps once, at a date and time (same steps as create_routine). This only shows a card the user must click.",
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "name": { "type": "string" },
+                    "date": { "type": "string", "description": "YYYY-MM-DD" },
+                    "time": { "type": "string", "description": "HH:MM, 24 h." },
+                    "steps": steps_schema()
+                },
+                "required": ["date", "time", "steps"]
+            }
+        }),
     ]
+}
+
+fn steps_schema() -> Value {
+    json!({
+        "type": "array",
+        "items": {
+            "type": "object",
+            "properties": { "tool": { "type": "string" }, "input": { "type": "object" } },
+            "required": ["tool", "input"]
+        }
+    })
 }
 
 fn fold(s: &str) -> String {
@@ -355,6 +396,26 @@ pub fn run(app: &AppHandle, name: &str, input: &Value) -> Option<(String, bool)>
             Ok(a) => card(app, super::confirm::Action::Power(a)),
             Err(_) => ("Unknown action.".into(), false),
         },
+        "create_routine" | "schedule_action" => {
+            let steps: Vec<super::routines::Step> = match serde_json::from_value(input["steps"].clone()) {
+                Ok(s) => s,
+                Err(_) => return Some(("The steps must be a list of { tool, input }.".into(), false)),
+            };
+            let when = if name == "create_routine" {
+                let days: Vec<u8> = input["days"].as_array().map(|a| a.iter().filter_map(|d| d.as_u64()).map(|d| d.min(99) as u8).collect()).unwrap_or_default();
+                super::routines::When::Weekly { days, time: s("time") }
+            } else {
+                super::routines::When::Once { date: s("date"), time: s("time") }
+            };
+            let title = match s("name") {
+                n if !n.is_empty() => n,
+                _ => steps.first().map(super::routines::step_summary).unwrap_or_default(),
+            };
+            match super::routines::validate(&title, when, steps) {
+                Ok(r) => card(app, super::confirm::Action::Routine(r)),
+                Err(e) => (e, false),
+            }
+        }
         "type_text" => {
             let text = super::confirm::clean_typed(&s("text"));
             if text.is_empty() {
@@ -406,9 +467,13 @@ mod tests {
         assert_eq!(level("power_action"), Some(2));
         assert_eq!(level("type_text"), Some(2));
         assert_eq!(level("bash"), None);
-        // The only level 2 tools are the two that put a card up.
+        // The only level 2 tools are the ones that put a card up.
         let two: Vec<&str> = LEVELS.iter().filter(|(_, l)| *l == 2).map(|(n, _)| *n).collect();
-        assert_eq!(two, ["power_action", "type_text"]);
+        assert_eq!(two, ["power_action", "type_text", "create_routine", "schedule_action"]);
+        // A routine's steps are level 1 tools (or open_app), never a level 2 one.
+        for step in super::super::routines::STEP_TOOLS {
+            assert!(*step == "open_app" || level(step) == Some(1), "{step}");
+        }
     }
 
     #[test]

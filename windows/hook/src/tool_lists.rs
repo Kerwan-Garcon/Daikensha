@@ -33,6 +33,8 @@ pub const VOICE: &[&str] = &[
     "mcp__coucou__web_open",
     "mcp__coucou__power_action",
     "mcp__coucou__type_text",
+    "mcp__coucou__create_routine",
+    "mcp__coucou__schedule_action",
 ];
 
 /// The list for a mode name as the guard receives it; None for any other name.

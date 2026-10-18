@@ -4,12 +4,12 @@
 // end-of-timer timeout.
 
 import {
-  Bridge, onEvent, type ShellClip, type ShellPowerAction, type ShellCard, type ShellTodo, type ShellWallpapers,
+  Bridge, onEvent, type ShellClip, type ShellPowerAction, type ShellCard, type ShellRoutine, type ShellTodo, type ShellWallpapers,
 } from "../core/bridge";
-import { agoText, clipPreview, clockText, isoWeek, timerText, weatherKey, type WeatherKind } from "../core/shell";
+import { agoText, clipPreview, clockText, fromLocalMinutes, isoWeek, timerText, weatherKey, whenText, type WeatherKind } from "../core/shell";
 import { Sound } from "../core/sound";
 import { State } from "../core/state";
-import { N_, language, t, tl } from "../i18n/i18n";
+import { N_, language, t, tl, weekdayShort } from "../i18n/i18n";
 import { clear, h, svg } from "./dom";
 import { card, cardTitle, linkButton, message, note, type Tab } from "./shell-parts";
 
@@ -71,7 +71,10 @@ function buildToday(): Tab {
     h("span", { class: "shell-dim", text: tl("Kept on this PC only") }),
   );
 
-  const el = h("div", { class: "shell-tab" }, h("div", { class: "shell-grid3" }, clockCard, weatherCard, focusCard, todoCard), info.el);
+  const routineList = h("div", { class: "shell-stack" });
+  const routineCard = card("", cardTitle(tl("Routines")), routineList);
+
+  const el = h("div", { class: "shell-tab" }, h("div", { class: "shell-grid3" }, clockCard, weatherCard, focusCard, todoCard, routineCard), info.el);
   let clockTimer: number | null = null;
   let focusTimer: number | null = null;
 
@@ -172,6 +175,21 @@ function buildToday(): Tab {
     );
   }
 
+  function drawRoutines(list: ShellRoutine[]) {
+    clear(routineList);
+    if (list.length === 0) {
+      routineList.append(h("span", { class: "shell-dim", text: tl("Ask « OK Coucou »: every Monday at 9, open Unity and Spotify.") }));
+      return;
+    }
+    const lang = language();
+    for (const r of list.slice(0, 4)) {
+      const next = r.next == null ? "" : fromLocalMinutes(r.next).toLocaleString(lang, { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+      routineList.append(
+        h("div", { class: "shell-grow" }, h("span", { class: "shell-ellipsis", text: r.name }), h("span", { class: "shell-dim shell-ellipsis", text: next || whenText(r.when, lang, weekdayShort, t("every day")) })),
+      );
+    }
+  }
+
   async function change(c: Parameters<typeof Bridge.shellTodoChange>[0]) {
     try {
       drawTodos(await Bridge.shellTodoChange(c));
@@ -199,6 +217,7 @@ function buildToday(): Tab {
       focusTimer = window.setInterval(() => focus.endAt && drawFocus(), 1000);
       void drawWeather();
       Bridge.shellTodos().then(drawTodos, (e) => info.say(message(e)));
+      Bridge.shellRoutines().then(drawRoutines, () => drawRoutines([]));
     },
     hide() {
       if (clockTimer != null) window.clearInterval(clockTimer);

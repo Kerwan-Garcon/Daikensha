@@ -793,6 +793,8 @@ pub fn run() {
             shell::shell_power_prepare,
             shell::shell_confirm,
             shell::shell_confirm_cancel,
+            shell::shell_routines,
+            shell::shell_routine_delete,
             set_collapsed,
             set_shell_open,
             set_island_rect,
@@ -970,6 +972,7 @@ pub fn run() {
             integrations::start(handle.clone());
             spotify::sync(&handle, &loaded.active_integrations);
             shell::settings_saved(&handle, &loaded);
+            shell::routines::start(&handle);
             shortcuts::apply(&handle, &loaded.shortcuts);
             if loaded.autostart {
                 // Login items written before 0.5 start Coucou without --autostart:

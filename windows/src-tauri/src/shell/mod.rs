@@ -8,6 +8,7 @@ pub mod clipboard;
 pub mod confirm;
 pub mod controls;
 pub mod power;
+pub mod routines;
 pub mod stats;
 pub mod today;
 pub mod voice_tools;
@@ -288,4 +289,44 @@ pub async fn shell_confirm(shared: State<'_, Shared>, token: String) -> Result<(
 #[tauri::command]
 pub fn shell_confirm_cancel() {
     confirm::cancel();
+}
+
+// ── Routines ──────────────────────────────────────────────────────────────────
+
+/// A routine as Settings and the Today tab show it.
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RoutineView {
+    id: u64,
+    name: String,
+    when: routines::When,
+    steps: Vec<String>,
+    /// The next run, in local minutes since 1970-01-01.
+    next: Option<i64>,
+}
+
+fn routine_views() -> Vec<RoutineView> {
+    let now = routines::now_minutes();
+    routines::list()
+        .into_iter()
+        .map(|r| RoutineView {
+            id: r.id,
+            next: routines::next_due(&r.when, now),
+            steps: r.steps.iter().map(routines::step_summary).collect(),
+            name: r.name,
+            when: r.when,
+        })
+        .collect()
+}
+
+/// Listed and deleted even while the panel is off: they are the user's.
+#[tauri::command]
+pub fn shell_routines() -> Vec<RoutineView> {
+    routine_views()
+}
+
+#[tauri::command]
+pub fn shell_routine_delete(id: u64) -> Result<Vec<RoutineView>, String> {
+    routines::delete(id)?;
+    Ok(routine_views())
 }

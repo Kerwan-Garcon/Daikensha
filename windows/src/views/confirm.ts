@@ -1,14 +1,15 @@
-// The level 2 card (docs/WINDOWS_SHELL.md): « OK Coucou » asked to type a text
-// or to shut the computer down, and nothing happens unless this card's button
-// is clicked. Same look as the approval card: Mochi on the left, the exact
-// action in a code line, two pill buttons. As there, clicks in the first
+// The level 2 card (docs/WINDOWS_SHELL.md): « OK Coucou » asked to type a text,
+// to shut the computer down or to keep a routine, and nothing happens unless
+// this card's button is clicked. Same look as the approval card: Mochi on the
+// left, the exact action in a code line, two pill buttons. As there, clicks in the first
 // moments after it appears are ignored, so a click meant for another window
 // never lands on it.
 
 import { State } from "../core/state";
 import { washRGBA } from "../core/layout";
 import type { ShellCard, ShellPowerAction } from "../core/bridge";
-import { N_, t, tl } from "../i18n/i18n";
+import { whenText } from "../core/shell";
+import { N_, language, t, tl, weekdayShort } from "../i18n/i18n";
 import { h } from "./dom";
 import type { ViewHost } from "./views";
 
@@ -64,7 +65,15 @@ export function buildConfirm(decide: (ok: boolean) => void): ViewHost {
       }
       who.replaceChildren(h("span", { class: "n", text: "Coucou" }), h("span", { text: tl("asks before acting") }));
       const label = yes.firstElementChild as HTMLElement;
-      if (c.kind === "type") {
+      if (c.kind === "routine") {
+        title.textContent = t("New routine: {name}", { name: c.name });
+        code.textContent = c.steps.join("  →  ");
+        code.title = c.steps.join("\n");
+        hint.textContent = t("{when}. This list is frozen: Coucou replays it as is, without asking Claude. Deletable in Settings.", {
+          when: whenText(c.when, language(), weekdayShort, t("every day")),
+        });
+        label.textContent = t("Create the routine");
+      } else if (c.kind === "type") {
         title.textContent = c.app ? t("Type this text in {app}?", { app: c.app }) : t("Type this text?");
         code.textContent = c.text;
         code.title = c.text;

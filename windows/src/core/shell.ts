@@ -2,7 +2,7 @@
 // tested without a webview — which tabs show, how numbers read, how the app
 // search ranks, where a gauge's arc ends and how a sparkline is drawn.
 
-import type { ShellApp, ShellCapabilities } from "./bridge";
+import type { ShellApp, ShellCapabilities, ShellWhen } from "./bridge";
 
 export type ShellTab = "controls" | "today" | "stats" | "clipboard" | "apps" | "wallpapers" | "power" | "windows";
 
@@ -152,4 +152,26 @@ export function agoText(at: number, now: number, lang: string): string {
 export function clipPreview(text: string, max = 140): string {
   const flat = text.replace(/\s+/g, " ").trim();
   return flat.length > max ? `${flat.slice(0, max - 1)}…` : flat;
+}
+
+/** A local date from minutes since 1970-01-01 in local time (shell/routines.rs). */
+export function fromLocalMinutes(minutes: number): Date {
+  const days = Math.floor(minutes / 1440);
+  const rest = minutes - days * 1440;
+  return new Date(1970, 0, 1 + days, Math.floor(rest / 60), rest % 60);
+}
+
+/**
+ * "Mon, Wed · 09:00", "every day · 09:00" or the date of a one-off, with the
+ * week's day names from `dayName` (0 Sunday … 6 Saturday) and `everyDay`.
+ */
+export function whenText(when: ShellWhen, lang: string, dayName: (d: number) => string, everyDay: string): string {
+  if (when.kind === "once") {
+    const [y, m, d] = when.date.split("-").map(Number);
+    const date = new Date(y, (m || 1) - 1, d || 1);
+    return `${date.toLocaleDateString(lang, { weekday: "short", day: "numeric", month: "short" })} · ${when.time}`;
+  }
+  const days = [...when.days].sort((a, b) => a - b);
+  const label = days.length === 7 ? everyDay : days.map((d) => dayName(d % 7)).join(", ");
+  return `${label} · ${when.time}`;
 }

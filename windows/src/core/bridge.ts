@@ -371,6 +371,8 @@ export const Bridge = {
   shellPowerPrepare: (action: ShellPowerAction) => callOrThrow<ShellCard>("shell_power_prepare", { action }),
   shellConfirm: (token: string) => callOrThrow<void>("shell_confirm", { token }),
   shellConfirmCancel: () => call<void>("shell_confirm_cancel"),
+  shellRoutines: () => callOrThrow<ShellRoutine[]>("shell_routines"),
+  shellRoutineDelete: (id: number) => callOrThrow<ShellRoutine[]>("shell_routine_delete", { id }),
 
   /** Settings → Claude → Check: is Claude Code installed and signed in to a subscription? */
   claudeCliStatus: () => call<ClaudeCliStatus>("claude_cli_status"),
@@ -539,7 +541,12 @@ export type ShellPowerAction = "lock" | "sleep" | "signOut" | "restart" | "shutD
 /** A level 2 card (shell/confirm.rs): it runs only on its button's click. */
 export type ShellCard =
   | { token: string; kind: "power"; action: ShellPowerAction; apps: string[] }
-  | { token: string; kind: "type"; text: string; app: string };
+  | { token: string; kind: "type"; text: string; app: string }
+  | { token: string; kind: "routine"; name: string; when: ShellWhen; steps: string[] };
+/** When a routine runs (shell/routines.rs): days are 1 Monday … 7 Sunday. */
+export type ShellWhen = { kind: "weekly"; days: number[]; time: string } | { kind: "once"; date: string; time: string };
+/** `next` is in local minutes since 1970-01-01. */
+export interface ShellRoutine { id: number; name: string; when: ShellWhen; steps: string[]; next: number | null }
 
 /** What claude_cli::status() says about the user's Claude Code (nothing about the account). */
 export type ClaudeCliStatus =

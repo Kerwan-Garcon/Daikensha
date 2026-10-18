@@ -106,8 +106,10 @@ fn shell_prompt(on: bool) -> &'static str {
     }
     "\nThe computer: system_stats, list_windows, list_apps, clipboard_recent read it; set_volume, toggle_wifi, \
 toggle_bluetooth, focus_window, snap_window, apply_layout, set_wallpaper and web_open act right away: say in a few \
-words what you did. web_open takes the words to search, never a link. power_action and type_text only put a card \
-in the island for the user to click: say so, never that it is done, and a spoken yes is not a click.\n"
+words what you did. web_open takes the words to search, never a link. For something to do every week or once \
+later, call create_routine or schedule_action with the steps as those same tools and their inputs. power_action, \
+type_text, create_routine and schedule_action only put a card in the island for the user to click: say so, never \
+that it is done, and a spoken yes is not a click.\n"
 }
 
 fn shell_on(app: &AppHandle) -> bool {

@@ -932,6 +932,15 @@ export class Island {
 
     void onDragDrop((e) => this.onDragDrop(e));
     void onEvent<ShellCard>("shell-confirm", (card) => this.showCard(card));
+    // A routine ran (shell/routines.rs): say so for a moment, unless a card is waiting.
+    void onEvent<string>("shell-routine-ran", (message) => {
+      if (State.pendingApproval || State.shellCard) return;
+      State.noteMessage = message;
+      this.alert("note");
+      window.setTimeout(() => {
+        if (State.view === "note" && State.noteMessage === message) this.setView(State.defaultView());
+      }, 3500);
+    });
 
     // Outside Tauri (plain browser) drive the cursor from DOM events so the
     // island can be inspected with `npm run dev`.

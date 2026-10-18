@@ -1,5 +1,6 @@
-// Level 2 (docs/WINDOWS_SHELL.md): what Coucou never does on its own. Asking
-// for it — from the Power tab or by voice — only puts a card up, with a
+// Level 2 (docs/WINDOWS_SHELL.md): what Coucou never does on its own — power,
+// typing, keeping a routine. Asking for it — from the Power tab or by voice —
+// only puts a card up, with a
 // one-time token; the action exists nowhere else. Only the card's button,
 // clicked by the user, runs it. One card at a time: a newer one replaces the
 // older, a wrong token spends it, and a card goes stale after 90 seconds.
@@ -23,6 +24,8 @@ pub enum Action {
     Power(PowerAction),
     /// Text typed into the window that was in front when the card went up.
     Type { text: String, window: isize, app: String },
+    /// A routine to keep, with its frozen list of steps (shell/routines.rs).
+    Routine(super::routines::Routine),
 }
 
 /// What the card shows.
@@ -31,6 +34,7 @@ pub enum Action {
 pub enum CardBody {
     Power { action: PowerAction, apps: Vec<String> },
     Type { text: String, app: String },
+    Routine { name: String, when: super::routines::When, steps: Vec<String> },
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -73,6 +77,11 @@ pub fn prepare(action: Action) -> Result<Card, String> {
     let body = match &action {
         Action::Power(a) => CardBody::Power { action: *a, apps: super::power::apps_open() },
         Action::Type { text, app, .. } => CardBody::Type { text: text.clone(), app: app.clone() },
+        Action::Routine(r) => CardBody::Routine {
+            name: r.name.clone(),
+            when: r.when.clone(),
+            steps: r.steps.iter().map(super::routines::step_summary).collect(),
+        },
     };
     *PENDING.lock().unwrap_or_else(|e| e.into_inner()) = Some(Pending { token: token.clone(), action, at: Instant::now() });
     Ok(Card { token, body })
@@ -96,6 +105,7 @@ pub fn confirm(token: &str) -> Result<(), String> {
     match take(token)? {
         Action::Power(a) => super::power::run(a),
         Action::Type { text, window, .. } => type_into(window, &text),
+        Action::Routine(r) => super::routines::add(r),
     }
 }
 

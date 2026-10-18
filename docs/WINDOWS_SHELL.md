@@ -1,6 +1,6 @@
 # « Coucou Shell » : la couche Windows de Coucou
 
-État : **phases 1 et 2 faites** — le panneau et ses 8 onglets (Contrôles, Aujourd'hui, Stats, Presse-papiers, Apps, Fonds, Alimentation, Fenêtres), désactivé par défaut dans Réglages → Général, et les outils vocaux de « OK Coucou » à niveaux de risque (`shell/voice_tools.rs`, cartes de niveau 2 dans `shell/confirm.rs` et `views/confirm.ts`). `create_routine` et `schedule_action` arrivent avec les routines (phase 3). Les mesures sur ta machine (sonde et Mica) restent à faire.
+État : **phases 1, 2 et 3 faites** — le panneau et ses 8 onglets (Contrôles, Aujourd'hui, Stats, Presse-papiers, Apps, Fonds, Alimentation, Fenêtres), désactivé par défaut dans Réglages → Général, les outils vocaux de « OK Coucou » à niveaux de risque (`shell/voice_tools.rs`, cartes de niveau 2 dans `shell/confirm.rs` et `views/confirm.ts`), et les routines (`shell/routines.rs` : liste d'étapes de niveau 1 figée, validée sur une carte, rejouée sans LLM, listée et supprimable dans Réglages → Général). Les mesures sur ta machine (sonde et Mica) restent à faire.
 
 Ce document part de la spécification de ton prompt et des API Windows documentées par Microsoft, et seulement de là. Aucun produit tiers n'a été téléchargé, analysé ni cherché (clean room). Le design reste celui de Coucou et suit les règles de `CLAUDE.md`.
 
