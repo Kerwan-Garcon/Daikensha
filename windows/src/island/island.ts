@@ -22,6 +22,7 @@ import { USC, UploadSeq } from "../upload/sequence";
 import { closePlanCard, openPlanColor, planCardOpen } from "../views/usage";
 import { buildHeader, buildViews, type ViewActions, type ViewHost } from "../views/views";
 import { h } from "../views/dom";
+import type { ShellHost } from "../views/shell";
 import { IslandStateMachine } from "./fsm";
 import { refreshHookPills } from "./integrations";
 import { DesktopLink } from "./desktop";
@@ -40,6 +41,17 @@ const UPLOAD_VIEWS: ReadonlySet<IslandViewName> = new Set(["upload", "uploading"
 
 /** Seconds between the drop and the moment the progress bar starts filling. */
 const PRE_PROGRESS = USC.T_PROG_START - USC.T_DROP;
+
+/** True when the wheel would scroll something inside the island rather than reach it. */
+function scrollsWithin(target: EventTarget | null, stop: Element, deltaY: number): boolean {
+  for (let el = target instanceof Element ? target : null; el && el !== stop; el = el.parentElement) {
+    if (el.scrollHeight <= el.clientHeight + 1) continue;
+    const overflow = getComputedStyle(el).overflowY;
+    if (overflow !== "auto" && overflow !== "scroll") continue;
+    if (deltaY > 0 ? el.scrollTop + el.clientHeight < el.scrollHeight - 1 : el.scrollTop > 0) return true;
+  }
+  return false;
+}
 
 const modeOrder = (m: IslandMode) => (m === "hidden" ? 0 : m === "compact" ? 1 : 2);
 
@@ -83,6 +95,12 @@ export class Island {
 
   // Rust starts the window at full size so the launch greeting has room.
   private collapsed = false;
+  /** « Coucou Shell »'s panel is on screen (its tabs poll only then). */
+  private shellOn = false;
+  private shellTimer: number | null = null;
+  /** Wheel gestures on the island: one fold per flick, not one per notch. */
+  private wheelSum = 0;
+  private wheelQuietUntil = 0;
   private collapseTimer: number | null = null;
   private wasInIsland = false;
   /** Last shape handed to Rust for the click-through test. */
@@ -440,6 +458,85 @@ export class Island {
     this.silentReveal = false;
   }
 
+  /**
+   * Folds the island down into « Coucou Shell »'s panel (Settings turns it on).
+   * The window grows first, so the panel opens to the height it will have.
+   */
+  async openShell() {
+    if (!State.settings.shellPanel || State.paused || State.pendingApproval) return;
+    if (this.shellTimer != null) window.clearTimeout(this.shellTimer);
+    this.shellTimer = null;
+    try {
+      await Bridge.setShellOpen(true);
+    } catch {
+      return;
+    }
+    // The panel's height follows the window's: let the new size land first.
+    await new Promise<void>((resolve) => {
+      const done = () => {
+        window.removeEventListener("resize", done);
+        resolve();
+      };
+      window.addEventListener("resize", done);
+      window.setTimeout(done, 150);
+    });
+    if (State.pendingApproval || !State.settings.shellPanel) {
+      if (!this.shellOn) void Bridge.setShellOpen(false);
+      return;
+    }
+    if (State.mode === "expanded") this.setView("shell");
+    else {
+      this.fsm.forceHome();
+      this.expand("shell");
+    }
+  }
+
+  /** Back from the panel to the usual view. */
+  closeShell() {
+    if (State.mode === "expanded" && State.view === "shell") this.setView(State.defaultView());
+  }
+
+  /** Starts or stops the panel's tabs, and gives the window its size back once it has folded. */
+  private syncShell(on: boolean) {
+    if (on === this.shellOn) return;
+    this.shellOn = on;
+    const shell = this.views.get("shell") as ShellHost | undefined;
+    shell?.shown(on);
+    if (this.shellTimer != null) window.clearTimeout(this.shellTimer);
+    this.shellTimer = null;
+    if (!on) {
+      this.shellTimer = window.setTimeout(() => {
+        this.shellTimer = null;
+        if (!this.shellOn) void Bridge.setShellOpen(false);
+      }, 450);
+    }
+  }
+
+  /** Wheel on the island: down opens the panel, up closes it. Lists that scroll keep their wheel. */
+  private onWheel(e: WheelEvent) {
+    if (e.ctrlKey || !State.settings.shellPanel) return;
+    const now = performance.now();
+    if (now < this.wheelQuietUntil) return;
+    const inShell = State.mode === "expanded" && State.view === "shell";
+    const homeView = State.mode === "compact" || (State.mode === "expanded" && (State.view === "overview" || State.view === "empty"));
+    if (!inShell && !homeView) return;
+    if (scrollsWithin(e.target, this.islandEl, e.deltaY)) {
+      this.wheelSum = 0;
+      return;
+    }
+    this.wheelSum = Math.sign(e.deltaY) === Math.sign(this.wheelSum) ? this.wheelSum + e.deltaY : e.deltaY;
+    if (Math.abs(this.wheelSum) < 60) return;
+    const down = this.wheelSum > 0;
+    this.wheelSum = 0;
+    if (inShell && !down) {
+      this.wheelQuietUntil = now + 600;
+      this.closeShell();
+    } else if (!inShell && down) {
+      this.wheelQuietUntil = now + 600;
+      void this.openShell();
+    }
+  }
+
   /** Right-click on Mochi: wardrobe open ↔ back to the usual view. */
   toggleWardrobe() {
     if (State.paused || State.mode === "hidden") return;
@@ -787,9 +884,12 @@ export class Island {
     // Only keys typed into the island itself land here, never Escape typed in
     // a terminal — so it may fold a waiting card away, as Escape in the notch
     // does on macOS.
+    this.islandEl.addEventListener("wheel", (e) => this.onWheel(e), { passive: true });
+
     window.addEventListener("keydown", (e) => {
       if (e.key === "Escape" && State.mode === "expanded") {
-        if (State.pendingApproval) this.foldApproval();
+        if (State.view === "shell") this.closeShell();
+        else if (State.pendingApproval) this.foldApproval();
         else if (!State.isPinned) this.collapse();
       }
       State.lastActivity = performance.now();
@@ -1160,6 +1260,7 @@ export class Island {
       view.el.classList.toggle("on", on);
       if (on) view.sync();
     }
+    this.syncShell(expanded && State.view === "shell");
 
     // The chat is the only view with a text field, so it is the only time the
     // island is allowed to take keyboard focus.
@@ -1200,6 +1301,7 @@ export class Island {
     Sound.setVolume(State.settings.soundVolume);
     this.fsm.homeToPetitDelay = State.settings.autoCloseInterval;
     this.fsm.openOnHover = State.settings.openOnHover;
+    if (!State.settings.shellPanel) this.closeShell();
     State.notify();
   }
 

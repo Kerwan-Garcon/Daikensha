@@ -172,6 +172,18 @@ fn set_collapsed(app: AppHandle, shared: State<Shared>, collapsed: bool) {
     platform::set_pointer_watch(!collapsed);
 }
 
+/// « Coucou Shell »'s panel opens or closes: the window grows for it, and goes
+/// back to the usual panel after (shell/).
+#[tauri::command]
+fn set_shell_open(app: AppHandle, shared: State<Shared>, open: bool) {
+    let open = open && shared.settings.lock().unwrap().shell_panel;
+    island::set_shell_open(open);
+    let pref = shared.settings.lock().unwrap().screen.clone();
+    let collapsed = shared.gate.collapsed.load(Ordering::Relaxed);
+    island::apply_geometry(&app, &pref, collapsed);
+    island::refresh_click_through(&app, &shared.gate);
+}
+
 /// The front end pushes the island shape; Rust decides click-through from it.
 #[tauri::command]
 fn set_island_rect(app: AppHandle, shared: State<Shared>, x: f64, y: f64, width: f64, height: f64) {
@@ -766,6 +778,7 @@ pub fn run() {
             shell::shell_apps,
             shell::shell_app_launch,
             set_collapsed,
+            set_shell_open,
             set_island_rect,
             focus_window,
             reposition,

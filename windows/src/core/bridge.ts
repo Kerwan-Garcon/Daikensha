@@ -336,6 +336,27 @@ export const Bridge = {
    * the provider only when it has a key (or a server address).
    */
   chatModels: (provider: string) => callOrThrow<ModelInfo[]>("chat_models", { provider }),
+  // ── Coucou Shell (views/shell.ts) ─────────────────────────────────────────
+  /** The panel opens or closes: the window grows for it, then shrinks back. */
+  setShellOpen: (open: boolean) => call<void>("set_shell_open", { open }),
+  shellCapabilities: () => call<ShellCapabilities>("shell_capabilities"),
+  shellStats: (top: boolean) => callOrThrow<ShellStats>("shell_stats", { top }),
+  shellStatsReset: () => call<void>("shell_stats_reset"),
+  shellControls: () => callOrThrow<ShellControls>("shell_controls"),
+  shellSetVolume: (level: number) => callOrThrow<void>("shell_set_volume", { level }),
+  shellSetMute: (muted: boolean) => callOrThrow<void>("shell_set_mute", { muted }),
+  shellSetRadio: (kind: string, on: boolean) => callOrThrow<void>("shell_set_radio", { kind, on }),
+  shellSetBrightness: (index: number, value: number) => callOrThrow<void>("shell_set_brightness", { index, value }),
+  shellOpenSettings: (page: ShellSettingsPage) => callOrThrow<void>("shell_open_settings", { page }),
+  shellWindows: () => callOrThrow<ShellWindow[]>("shell_windows"),
+  shellWindowAction: (id: string, action: ShellWindowAction) => callOrThrow<void>("shell_window_action", { id, action }),
+  shellLayouts: () => callOrThrow<ShellLayout[]>("shell_layouts"),
+  shellLayoutSave: (name: string) => callOrThrow<ShellLayout[]>("shell_layout_save", { name }),
+  shellLayoutApply: (name: string) => callOrThrow<number>("shell_layout_apply", { name }),
+  shellLayoutDelete: (name: string) => callOrThrow<ShellLayout[]>("shell_layout_delete", { name }),
+  shellApps: () => callOrThrow<ShellApp[]>("shell_apps"),
+  shellAppLaunch: (id: string) => callOrThrow<void>("shell_app_launch", { id }),
+
   /** Settings → Claude → Check: is Claude Code installed and signed in to a subscription? */
   claudeCliStatus: () => call<ClaudeCliStatus>("claude_cli_status"),
   /** Settings → Local models → Connect: does the server answer, and with which models? */
@@ -466,6 +487,29 @@ export interface ModelInfo {
   id: string;
   label: string;
 }
+
+// ── Coucou Shell (shell/ in Rust) ─────────────────────────────────────────────
+
+export interface ShellCapabilities { stats: boolean; controls: boolean; apps: boolean; windows: boolean }
+export interface ShellProc { name: string; cpu: number; mem: number }
+export interface ShellStats {
+  cpu: number; memUsed: number; memTotal: number; netRx: number; netTx: number;
+  gpu: number | null; top: ShellProc[]; ownCpu: number | null; ownMem: number | null;
+}
+export interface ShellRadio { kind: string; name: string; on: boolean }
+export interface ShellDisplay { index: number; name: string; brightness: number | null }
+export interface ShellControls {
+  volume: number | null; muted: boolean | null; output: string | null;
+  radios: ShellRadio[]; displays: ShellDisplay[];
+}
+export type ShellSettingsPage = "sound" | "colors" | "nightLight" | "display" | "bluetooth" | "network";
+export interface ShellWindow { id: string; title: string; app: string; screen: number; minimized: boolean; focused: boolean }
+export type ShellSnap = "left" | "right" | "full" | "center" | "topLeft" | "topRight" | "bottomLeft" | "bottomRight";
+export type ShellWindowAction =
+  | { kind: "focus" } | { kind: "minimize" } | { kind: "maximize" } | { kind: "restore" }
+  | { kind: "snap"; to: ShellSnap } | { kind: "screen"; index: number };
+export interface ShellLayout { name: string; windows: { app: string; screen: number }[] }
+export interface ShellApp { id: string; name: string }
 
 /** What claude_cli::status() says about the user's Claude Code (nothing about the account). */
 export type ClaudeCliStatus =

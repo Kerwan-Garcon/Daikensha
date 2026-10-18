@@ -125,6 +125,8 @@ export interface Settings {
    * API key (claude_cli.rs). Off by default; only Settings → Claude turns it on.
    */
   claudeSubscription: boolean;
+  /** « Coucou Shell »: the island folds down into a panel of tabs (views/shell.ts). Off by default. */
+  shellPanel: boolean;
   /** Who the chat talks to (see core/providers.ts); picked in the chat view. */
   chatProvider: ProviderId;
   /** The model picked for each provider other than Anthropic, by provider id. */
@@ -187,6 +189,7 @@ export const DEFAULT_SETTINGS: Settings = {
   planRelayInstalled: false,
   showCodexPlanInNotch: false,
   claudeSubscription: false,
+  shellPanel: false,
   chatProvider: "anthropic",
   chatModels: {},
   ollamaUrl: "",

@@ -23,7 +23,8 @@ export type IslandViewName =
   | "settings"
   | "greeting"
   | "recap"
-  | "wardrobe";
+  | "wardrobe"
+  | "shell";
 
 export type BotStateName =
   | "idle"
@@ -61,6 +62,10 @@ export const NOTCH_H = 32;
 export const COMPACT_W = 288; // NOTCH_W + 104
 export const EXPANDED_W = 640;
 
+/** « Coucou Shell »'s panel (views/shell.ts): wider than the other views, and as tall as the window lets it be. */
+export const SHELL_W = 880;
+export const SHELL_MAX_H = 600;
+
 export const ROUNDED_CORNER = 14; // hidden / compact
 export const EXPANDED_CORNER = 22;
 
@@ -93,7 +98,14 @@ export const VIEW_LAYOUTS: Record<IslandViewName, ViewLayout> = {
   // to the shared image.
   recap: { height: 184, botX: 62, botY: null, botDiameter: 58, agentMode: "column" },
   wardrobe: { height: 160, botX: 68, botY: null, botDiameter: 58, agentMode: "none" },
+  // Mochi lives in the panel's header, left of the tabs.
+  shell: { height: SHELL_MAX_H, botX: 40, botY: 34, botDiameter: 34, agentMode: "none" },
 };
+
+/** The Shell panel's height: SHELL_MAX_H, or what the window has room for. */
+export function shellHeight(windowH: number): number {
+  return Math.max(300, Math.min(SHELL_MAX_H, (windowH > 0 ? windowH : SHELL_MAX_H) - 8));
+}
 
 // The upload views above are only the fallback geometry. Once a file is actually
 // dropped the whole sequence — Mochi included — is drawn by src/upload, which
@@ -120,6 +132,7 @@ export function islandSize(
     case "compact":
       return { w: COMPACT_W, h: NOTCH_H };
     case "expanded": {
+      if (view === "shell") return { w: SHELL_W, h: shellHeight(typeof window === "undefined" ? 0 : window.innerHeight) };
       const h = view === "prompt" ? chatPromptHeight(chatCount) : VIEW_LAYOUTS[view].height;
       return { w: EXPANDED_W, h };
     }
