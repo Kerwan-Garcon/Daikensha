@@ -21,6 +21,9 @@ final class TestClient {
         guard fd >= 0 else { return nil }
         if let source {
             var local = sockaddr_in()
+            #if canImport(Darwin)
+            local.sin_len = UInt8(MemoryLayout<sockaddr_in>.size)
+            #endif
             local.sin_family = sa_family_t(AF_INET)
             inet_pton(AF_INET, source, &local.sin_addr)
             let ok = withUnsafePointer(to: &local) {
@@ -29,6 +32,9 @@ final class TestClient {
             guard ok == 0 else { Glibc_close(fd); return nil }
         }
         var addr = sockaddr_in()
+        #if canImport(Darwin)
+        addr.sin_len = UInt8(MemoryLayout<sockaddr_in>.size)
+        #endif
         addr.sin_family = sa_family_t(AF_INET)
         addr.sin_port = in_port_t(port).bigEndian
         inet_pton(AF_INET, "127.0.0.1", &addr.sin_addr)
@@ -125,4 +131,25 @@ final class TestClient {
         while case .line(let l) = read(quiet) { out.append(l) }
         return out
     }
+}
+
+/// Whether this machine answers on loopback addresses other than 127.0.0.1 (Linux does; macOS has only
+/// 127.0.0.1 unless aliases are added). The tests that play several devices need them.
+func loopbackAliases() -> Bool {
+    #if canImport(Glibc)
+    let fd = socket(AF_INET, Int32(SOCK_STREAM.rawValue), 0)
+    #else
+    let fd = socket(AF_INET, SOCK_STREAM, 0)
+    #endif
+    guard fd >= 0 else { return false }
+    defer { Glibc_close(fd) }
+    var local = sockaddr_in()
+    #if canImport(Darwin)
+    local.sin_len = UInt8(MemoryLayout<sockaddr_in>.size)
+    #endif
+    local.sin_family = sa_family_t(AF_INET)
+    inet_pton(AF_INET, "127.0.1.1", &local.sin_addr)
+    return withUnsafePointer(to: &local) {
+        $0.withMemoryRebound(to: sockaddr.self, capacity: 1) { bind(fd, $0, socklen_t(MemoryLayout<sockaddr_in>.size)) }
+    } == 0
 }

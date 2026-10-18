@@ -806,6 +806,7 @@ enum AndroidLinkTests {
             check(eventually { rig.recorder.all.count == 1 && rig.recorder.all[0] == ("req-long", false) })
         }
         test("the_total_number_of_connections_is_limited") {
+            guard loopbackAliases() else { return print("skipped \(current): no loopback aliases here") }
             let rig = try Rig()
             var phones: [TestClient] = []
             for n in 0..<Admission.maxConnections {
@@ -820,6 +821,7 @@ enum AndroidLinkTests {
             check(ninth.expect("welcome", 1) == nil && ninth.closed(1), "the ninth is not served")
         }
         test("one_address_cannot_hold_more_than_two_silent_connections") {
+            guard loopbackAliases() else { return print("skipped \(current): no loopback aliases here") }
             let rig = try Rig()
             let a = TestClient(port: rig.server.port, source: "127.0.2.1")!
             let b = TestClient(port: rig.server.port, source: "127.0.2.1")!
@@ -833,6 +835,7 @@ enum AndroidLinkTests {
             _ = (a, b)
         }
         test("a_flood_from_several_addresses_still_leaves_room_for_the_known_phone") {
+            guard loopbackAliases() else { return print("skipped \(current): no loopback aliases here") }
             let rig = try Rig()
             let phone = TestClient(port: rig.server.port, source: "127.0.3.1")!
             phone.hello(token: Rig.token)

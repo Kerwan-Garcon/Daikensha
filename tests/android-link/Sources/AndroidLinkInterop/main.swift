@@ -42,6 +42,9 @@ func freePort() -> UInt16 {
     let fd = socket(AF_INET, SOCK_STREAM, 0)
     #endif
     var addr = sockaddr_in()
+    #if canImport(Darwin)
+    addr.sin_len = UInt8(MemoryLayout<sockaddr_in>.size)
+    #endif
     addr.sin_family = sa_family_t(AF_INET)
     inet_pton(AF_INET, "127.0.0.1", &addr.sin_addr)
     _ = withUnsafePointer(to: &addr) {

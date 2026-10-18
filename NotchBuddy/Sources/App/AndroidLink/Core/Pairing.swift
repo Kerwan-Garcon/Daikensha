@@ -103,6 +103,9 @@ enum LinkPairing {
         guard fd >= 0 else { return nil }
         defer { close(fd) }
         var remote = sockaddr_in()
+        #if canImport(Darwin)
+        remote.sin_len = UInt8(MemoryLayout<sockaddr_in>.size)
+        #endif
         remote.sin_family = sa_family_t(AF_INET)
         remote.sin_port = in_port_t(9).bigEndian
         inet_pton(AF_INET, "192.0.2.1", &remote.sin_addr)

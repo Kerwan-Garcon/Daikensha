@@ -63,6 +63,9 @@ final class PosixServer: @unchecked Sendable {
         var one: Int32 = 1
         setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &one, socklen_t(MemoryLayout<Int32>.size))
         var addr = sockaddr_in()
+        #if canImport(Darwin)
+        addr.sin_len = UInt8(MemoryLayout<sockaddr_in>.size)
+        #endif
         addr.sin_family = sa_family_t(AF_INET)
         addr.sin_port = in_port_t(port).bigEndian
         inet_pton(AF_INET, host, &addr.sin_addr)

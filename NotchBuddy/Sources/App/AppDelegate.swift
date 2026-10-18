@@ -13,6 +13,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         #endif
         DemoEngine.shared.stop()
         HotKeyCenter.shared.unregisterAll()
+        #if ANDROID_LINK
+        AndroidLinkController.shared.stopOnExit()
+        #endif
     }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -47,6 +50,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         #endif
         #if PHONE_LINK
         CloudProbe.shared.startIfEnabled()
+        #endif
+        #if ANDROID_LINK
+        AndroidLinkController.shared.startIfEnabled()
         #endif
     }
 
