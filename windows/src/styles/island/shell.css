@@ -356,7 +356,11 @@
   width: 100%;
   aspect-ratio: 16 / 10;
   border-radius: 14px;
-  background: var(--shell-chip) center / cover no-repeat !important;
+  /* Not the background shorthand: it would reset the thumbnail set inline (views/shell-tabs.ts). */
+  background-color: var(--shell-chip);
+  background-position: center;
+  background-size: cover;
+  background-repeat: no-repeat;
   outline: 2px solid transparent;
   outline-offset: 2px;
 }
