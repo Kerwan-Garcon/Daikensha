@@ -5,13 +5,13 @@
 // Rust where the pill and its bubble are (`pill_hot`), so the rest of the
 // window lets clicks through; it draws only while something moves.
 
-import "./pill.css";
 import { Bridge, onEvent } from "../core/bridge";
 import { FlowBridge, clock, type PillState } from "../core/flow";
 import type { Settings } from "../core/state";
 import { BotEngine, hexToRGB } from "../mochi/engine";
 import { resolveLanguage, setLanguage, systemLanguages, t } from "../i18n/i18n";
 import { HUB_ICONS, keyLabel } from "../hub/ui";
+import { colorHex } from "../design/tokens";
 
 const RESTING_LENGTH = 44;
 const RESTING_THICKNESS = 8;
@@ -49,7 +49,7 @@ function el<K extends keyof HTMLElementTagNameMap>(tag: K, cls = "", text = ""):
 
 const mochi = new BotEngine();
 mochi.isMini = true;
-mochi.bodyColor = hexToRGB("#F5F6F8");
+mochi.bodyColor = hexToRGB(colorHex("--color-text"));
 mochi.setState("idle", true);
 const mochiCanvas = el("canvas");
 
@@ -177,7 +177,7 @@ function content(l: Look): HTMLElement {
       if (vertical()) {
         const icon = el("span");
         icon.append(svgIcon(state.phase === "failed" ? "mic" : "copy"));
-        icon.querySelector("svg")!.setAttribute("style", "width:13px;height:13px;fill:none;stroke:#e8e9ec;stroke-width:2");
+        icon.querySelector("svg")!.setAttribute("style", "width:13px;height:13px;fill:none;stroke:var(--gray-918);stroke-width:2");
         c.append(mochiSlot(), icon);
       } else {
         c.append(mochiSlot(), el("span", "message", messageText() ?? ""));

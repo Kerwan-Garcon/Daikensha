@@ -1,6 +1,6 @@
 // « OK Coucou » in the Claude subscription mode: one `claude` process kept for
 // the conversation, fed a user message per line on stdin (`stream-json`), with
-// web search and the voice's five tools through Coucou's MCP server (mcp.rs).
+// web search and the voice's tools through Coucou's MCP server (mcp.rs).
 // It is started as soon as the wake word is heard, so it is ready by the time
 // the question is. The process (about 250 MB) goes after PROCESS_IDLE without a
 // turn; the conversation is kept for the voice's 90 s, and a new process gets

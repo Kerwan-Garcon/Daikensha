@@ -1,0 +1,126 @@
+/* ── Overview ───────────────────────────────────────────────────────────── */
+
+.overview {
+  display: flex;
+  gap: 10px;
+  height: 100%;
+}
+
+.overview > .left {
+  flex: 0 0 322px;
+  width: 322px;
+}
+
+.overview > .right {
+  flex: 1 1 auto;
+}
+
+.card-body {
+  position: relative;
+  z-index: 1;
+  padding-top: 10px;
+}
+
+.who {
+  padding: 0 36px 0 108px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.who .name {
+  font: 600 12px var(--font-sans);
+  color: var(--color-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.who .tool {
+  font: 400 11px var(--font-sans);
+  color: var(--color-text-subtle);
+  white-space: nowrap;
+}
+
+.who .count {
+  font: 400 11px var(--font-sans);
+  color: var(--color-text-faint);
+  margin-left: auto;
+  flex: 0 0 auto;
+}
+
+.jump {
+  position: absolute;
+  top: 8px;
+  right: 10px;
+  z-index: 2;
+}
+
+/* Folds a waiting permission card or question away without answering it. */
+.fold {
+  position: absolute;
+  top: 8px;
+  right: 10px;
+  z-index: 2;
+}
+
+/* Ticker */
+
+.ticker {
+  position: relative;
+  height: 44px;
+  margin: 6px 12px 0 108px;
+  overflow: hidden;
+  -webkit-mask-image: linear-gradient(
+    to bottom,
+    transparent 0%,
+    var(--color-black) 12%,
+    var(--color-black) 85%,
+    transparent 100%
+  );
+  mask-image: linear-gradient(to bottom, transparent 0%, var(--color-black) 12%, var(--color-black) 85%, transparent 100%);
+}
+
+.ticker-row {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transform-origin: left center;
+  will-change: transform, opacity;
+}
+
+.ticker-row .tick-icon {
+  width: 12px;
+  display: grid;
+  place-items: center;
+  flex: 0 0 12px;
+  color: var(--color-text-subtle);
+}
+
+.ticker-row .tick-text {
+  font: 500 13px var(--font-sans);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Live diff step: file name, then +N −M right after it (TickerRowView). */
+.ticker-row .tick-count {
+  flex: 0 0 auto;
+  margin-left: -6px; /* no row gap: the counts sit right after the name */
+  font: 500 10px var(--font-mono);
+  white-space: pre;
+}
+
+.ticker-row .tick-count .plus {
+  color: var(--color-success);
+}
+
+.ticker-row .tick-count .minus {
+  color: var(--color-danger);
+}

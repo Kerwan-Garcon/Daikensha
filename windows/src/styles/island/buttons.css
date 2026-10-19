@@ -1,0 +1,65 @@
+/* ── Buttons ────────────────────────────────────────────────────────────── */
+
+.btn {
+  font: 500 12.5px var(--font-sans);
+  padding: 7px 13px;
+  border: 0;
+  border-radius: 999px;
+  cursor: default;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  transition: transform 0.08s ease-out, background 0.12s ease-out;
+}
+
+.btn:active {
+  transform: scale(0.94);
+}
+
+.btn.primary {
+  background: var(--color-text);
+  color: var(--color-bg);
+}
+
+.btn.secondary {
+  background: rgb(var(--color-overlay-rgb) / 0.09);
+  color: var(--color-text-2);
+}
+
+.btn.secondary:hover {
+  background: rgb(var(--color-overlay-rgb) / 0.15);
+}
+
+.btn .kbd {
+  font-size: 10.5px;
+  padding: 0 4px;
+  border-radius: 4px;
+  opacity: 0.55;
+}
+
+.btn.primary .kbd {
+  border: 1px solid rgb(var(--color-scrim-rgb) / 0.4);
+}
+
+.btn.secondary .kbd {
+  border: 1px solid rgb(var(--color-overlay-rgb) / 0.4);
+}
+
+.link-btn {
+  border: 0;
+  background: transparent;
+  font: 500 11px var(--font-sans);
+  cursor: default;
+}
+
+.icon-btn {
+  width: 16px;
+  height: 16px;
+  border: 0;
+  border-radius: 50%;
+  background: rgb(var(--color-overlay-rgb) / 0.07);
+  color: var(--color-text-disabled);
+  display: grid;
+  place-items: center;
+  cursor: default;
+}

@@ -9,6 +9,7 @@ import type { HubContext } from "../shell";
 import { emptyState, glowCard } from "../hero";
 import { button, iconButton, segmented } from "../ui";
 import { modelsControl } from "./flowsettings";
+import { colorHex } from "../../design/tokens";
 
 const lang = () => document.documentElement.lang || undefined;
 
@@ -26,9 +27,9 @@ export async function notesPage(page: HTMLElement, ctx: HubContext) {
   page.append(ctx.hero("notes", t("Notetaker"), t("Your calls transcribed person by person, with a summary and the to-dos. No bot in the meeting."), [], true));
   if (ctx.status.models.parakeet.state !== "ready") {
     page.append(glowCard(
-      "#3B9EFF",
-      h("div", { style: "font:700 15px var(--font)", text: t("One download, then offline") }),
-      h("div", { class: "hub-note", style: "color:#b7bbc2", text: t("Coucou writes your calls on this computer with Parakeet, and tells the voices apart with a second small model. Both are downloaded once (about {0} MB), then everything works offline.", { 0: ctx.status.models.downloadMb }) }),
+      colorHex("--blue-62"),
+      h("div", { style: "font:700 15px var(--font-sans)", text: t("One download, then offline") }),
+      h("div", { class: "hub-note", style: "color:var(--gray-739)", text: t("Coucou writes your calls on this computer with Parakeet, and tells the voices apart with a second small model. Both are downloaded once (about {0} MB), then everything works offline.", { 0: ctx.status.models.downloadMb }) }),
       modelsControl(ctx, () => ctx.navigate("notes")),
     ));
   }
@@ -61,7 +62,7 @@ export async function notesPage(page: HTMLElement, ctx: HubContext) {
         drawList();
       });
     }, "primary");
-    b.prepend(h("span", { class: "hub-rec", style: "background:#170c04;box-shadow:none;margin-inline-end:8px" }));
+    b.prepend(h("span", { class: "hub-rec", style: "background:var(--color-on-brand);box-shadow:none;margin-inline-end:8px" }));
     return b;
   }
 
@@ -97,20 +98,20 @@ export async function notesPage(page: HTMLElement, ctx: HubContext) {
       if (n.status === "recording") item.querySelector(".m")!.prepend(h("span", { class: "hub-rec", style: "margin-inline-end:6px" }));
       listEl.append(item);
     }
-    listEl.append(h("div", { style: "flex:1" }), h("div", { class: "hub-note", style: "padding:10px;border-radius:10px;background:rgba(255,255,255,0.04)", text: t("Everything stays on this computer. Tell the people in the call that you are recording.") }));
+    listEl.append(h("div", { style: "flex:1" }), h("div", { class: "hub-note", style: "padding:10px;border-radius:10px;background:rgb(var(--color-overlay-rgb) / 0.04)", text: t("Everything stays on this computer. Tell the people in the call that you are recording.") }));
   }
 
   function drawDetail() {
     clear(detail);
     const note = state.notes.find((n) => n.id === selected);
     if (!note) {
-      detail.append(emptyState(t("Your calls will show here. Click Record a call when one starts."), "sleeping", "#3B9EFF"));
+      detail.append(emptyState(t("Your calls will show here. Click Record a call when one starts."), "sleeping", colorHex("--blue-62")));
       return;
     }
     // Title, renamed in place.
     const title = h("h2", { text: note.title, title: t("Edit"), style: "cursor:text" });
     title.addEventListener("click", () => {
-      const input = h("input", { class: "hub-input", style: "font:700 20px var(--font);width:100%" }) as HTMLInputElement;
+      const input = h("input", { class: "hub-input", style: "font:700 20px var(--font-sans);width:100%" }) as HTMLInputElement;
       input.value = note.title;
       const done = () => void FlowBridge.renameNote(note.id, input.value);
       input.addEventListener("keydown", (e) => {
@@ -182,7 +183,7 @@ export async function notesPage(page: HTMLElement, ctx: HubContext) {
       return;
     }
     if (note.status === "processing" || state.working.includes(note.id) && note.lines.length === 0) {
-      detail.append(emptyState(t("Coucou is writing the transcript, person by person…"), "working", "#3B9EFF"));
+      detail.append(emptyState(t("Coucou is writing the transcript, person by person…"), "working", colorHex("--blue-62")));
       return;
     }
     if (note.status === "failed") {
@@ -191,7 +192,7 @@ export async function notesPage(page: HTMLElement, ctx: HubContext) {
       return;
     }
     if (note.lines.length === 0) {
-      detail.append(emptyState(t("Nobody was heard in this recording."), "idle", "#3B9EFF"));
+      detail.append(emptyState(t("Nobody was heard in this recording."), "idle", colorHex("--blue-62")));
       return;
     }
     const tabs = segmented<"summary" | "transcript">([["summary", t("Summary")], ["transcript", t("Transcript")]], tab, (next) => {
@@ -210,7 +211,7 @@ export async function notesPage(page: HTMLElement, ctx: HubContext) {
       if (!busy) el.append(button(t("Write the summary"), () => void FlowBridge.summarize(note.id), "primary", true));
       return el;
     }
-    if (note.summary) el.append(h("div", { class: "hub-card", style: "font-size:14px;line-height:1.55;color:var(--hub-body);align-self:stretch", text: note.summary }));
+    if (note.summary) el.append(h("div", { class: "hub-card", style: "font-size:14px;line-height:1.55;color:var(--color-text-body);align-self:stretch", text: note.summary }));
     if (note.keyPoints.length) {
       const ul = h("ul", { style: "margin:0;padding-inline-start:20px;display:flex;flex-direction:column;gap:6px;font-size:13.5px" });
       for (const p of note.keyPoints) ul.append(h("li", { text: p }));

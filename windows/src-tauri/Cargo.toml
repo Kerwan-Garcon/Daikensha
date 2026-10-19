@@ -88,6 +88,33 @@ windows = { version = "0.61", features = [
   # The Claude subscription mode: the claude processes live in a Job Object
   # (claude_cli/job.rs), killed with it and capped in memory.
   "Win32_System_JobObjects",
+  # Coucou Shell (shell/win.rs): Wi-Fi and Bluetooth, screen brightness (DDC/CI),
+  # the audio endpoint and its name, window frames, network and GPU counters,
+  # per-process memory, the Start menu's apps. Features of the windows crate
+  # already here: no new crate.
+  "Devices_Radios",
+  "Foundation_Collections",
+  "Win32_Devices_Display",
+  "Win32_Devices_FunctionDiscovery",
+  "Win32_Graphics_Dwm",
+  "Win32_Graphics_Gdi",
+  "Win32_Media_Audio_Endpoints",
+  "Win32_NetworkManagement_IpHelper",
+  "Win32_NetworkManagement_Ndis",
+  "Win32_Networking_WinSock",
+  "Win32_System_Performance",
+  "Win32_System_ProcessStatus",
+  "Win32_System_WinRT",
+  "Win32_UI_Shell_Common",
+  "Win32_UI_Shell_PropertiesSystem",
+  # Coucou Shell (shell/win_desk.rs): the clipboard listener, lock, sleep,
+  # sign out, restart and shut down, the battery.
+  "Win32_System_DataExchange",
+  "Win32_System_Memory",
+  "Win32_System_Power",
+  "Win32_System_Shutdown",
+  # The « top bar » mode's reserved band (shell/appbar_win.rs): its height in pixels.
+  "Win32_UI_HiDpi",
 ] }
 # The clipboard for Flow dictation, kept out of the clipboard history. MIT/Apache-2.0.
 arboard = { version = "3.6", default-features = false }

@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Panneau Fonds d'écran</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0}
+a{color:#93c5fd}a:hover{color:#bfdbfe}
+</style>
+</helmet>
+<div style="position: relative; width: 1200px; height: 760px; overflow: hidden; background: {{p.desk}}; font-family: 'Segoe UI Variable Text', 'Segoe UI', system-ui, sans-serif;">
+  <div style="position: absolute; left: 160px; top: 0; width: 880px; box-sizing: border-box; padding: 14px 20px 14px; display: flex; flex-direction: column; gap: 16px; background: {{p.glass}}; backdrop-filter: blur(28px) saturate(1.4); border: 1px solid {{p.line}}; border-top: none; border-radius: 0 0 30px 30px; box-shadow: 0 30px 70px rgba(0,0,0,0.38); color: {{p.ink}};">
+
+    <div style="display: flex; align-items: center; gap: 12px; height: 40px;">
+      <svg width="40" height="31" viewBox="0 0 44 34" aria-hidden="true"><defs><linearGradient id="m7" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fbf7f2"></stop><stop offset="1" stop-color="{{accent}}"></stop></linearGradient></defs><rect x="2" y="3" width="40" height="29" rx="13" fill="url(#m7)"></rect><circle cx="17" cy="19" r="2.6" fill="#111"></circle><circle cx="29" cy="19" r="2.6" fill="#111"></circle><ellipse cx="10" cy="22" rx="3" ry="1.6" fill="#f9a8b8" opacity="0.7"></ellipse><ellipse cx="34" cy="22" rx="3" ry="1.6" fill="#f9a8b8" opacity="0.7"></ellipse></svg>
+      <nav aria-label="Onglets" style="display: flex; gap: 4px;">
+        <sc-for list="{{tabs}}" as="t" hint-placeholder-count="8">
+          <button aria-label="{{t.label}}" style="{{t.style}}">
+            <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path d="{{t.d}}" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+            <sc-if value="{{t.on}}" hint-placeholder-val="{{false}}"><span style="font-size: 13px; font-weight: 600;">{{t.label}}</span></sc-if>
+          </button>
+        </sc-for>
+      </nav>
+      <div style="flex-grow: 1;"></div>
+      <span style="font-family: 'Cascadia Mono', Consolas, ui-monospace, monospace; font-variant-numeric: tabular-nums; font-size: 15px;">14:32</span>
+      <span style="font-size: 13px; color: {{p.dim}};">sam. 18 oct.</span>
+    </div>
+
+    <div style="padding: 16px; border-radius: 20px; background: {{p.card}}; border: 1px solid {{p.line}}; display: flex; flex-direction: column; gap: 12px;">
+      <div style="display: flex; justify-content: space-between; align-items: baseline;">
+        <span style="font-size: 15px; font-weight: 600;">Ma sélection</span>
+        <span style="font-size: 13px; color: {{p.dim}};">4 images · copiées dans le dossier de Coucou</span>
+      </div>
+      <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px;">
+        <sc-for list="{{mine}}" as="w" hint-placeholder-count="4">
+          <button aria-label="{{w.label}}" style="{{w.style}}">
+            <sc-if value="{{w.on}}" hint-placeholder-val="{{false}}"><span style="position: absolute; right: 8px; bottom: 8px; width: 24px; height: 24px; border-radius: 12px; background: {{accent}}; color: #0b0c0e; display: flex; align-items: center; justify-content: center;"><svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6 9 17l-5-5" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"></path></svg></span></sc-if>
+          </button>
+        </sc-for>
+      </div>
+    </div>
+
+    <div style="height: 168px; box-sizing: border-box; border-radius: 20px; border: 2px dashed {{accentLine}}; background: {{accentFaint}}; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px;">
+      <svg width="32" height="32" viewBox="0 0 24 24" aria-hidden="true" style="color: {{accent}};"><path d="M12 15V3M7 8l5-5 5 5M5 21h14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+      <span style="font-size: 15px; font-weight: 600;">Glissez vos images ici</span>
+      <span style="font-size: 13px; color: {{p.dim}};">JPG, PNG ou WebP, une ou plusieurs à la fois · rien ne part sur Internet</span>
+    </div>
+
+    <div style="display: flex; align-items: center; gap: 8px;">
+      <span style="font-size: 13px; color: {{p.dim}};">Appliquer à</span>
+      <button style="height: 36px; padding: 0 14px; border-radius: 12px; border: none; background: {{accentSoft}}; color: {{accent}}; font-size: 13px; font-weight: 600;">Tous les écrans</button>
+      <button style="height: 36px; padding: 0 14px; border-radius: 12px; border: 1px solid {{p.line}}; background: {{p.chip}}; color: {{p.ink}}; font-size: 13px;">Écran 1</button>
+      <button style="height: 36px; padding: 0 14px; border-radius: 12px; border: 1px solid {{p.line}}; background: {{p.chip}}; color: {{p.ink}}; font-size: 13px;">Écran 2</button>
+      <div style="flex-grow: 1;"></div>
+      <span style="width: 44px; height: 4px; border-radius: 2px; background: {{p.track}};"></span>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"theme":{"editor":"enum","options":["sombre","clair"],"default":"sombre"},"accent":{"editor":"color","default":"#60a5fa","options":["#60a5fa","#f472b6","#34d399","#f5a524"]},"$preview":{"width":1200,"height":760}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const light = (this.props.theme ?? 'sombre') === 'clair';
+    const accent = this.props.accent ?? '#60a5fa';
+    const n = parseInt(accent.slice(1), 16);
+    const rgb = ((n >> 16) & 255) + ',' + ((n >> 8) & 255) + ',' + (n & 255);
+    const p = light
+      ? { desk: 'radial-gradient(120% 90% at 20% 10%, #e8eef6 0%, #d6dde8 50%, #cfd3dc 100%)', glass: 'rgba(250,250,252,0.80)', card: 'rgba(255,255,255,0.70)', ink: '#15171b', dim: '#555b65', line: 'rgba(0,0,0,0.08)', track: 'rgba(0,0,0,0.10)', chip: 'rgba(0,0,0,0.05)' }
+      : { desk: 'radial-gradient(120% 90% at 20% 10%, #2b3550 0%, #1a1f2e 45%, #141418 100%)', glass: 'rgba(10,11,13,0.74)', card: 'rgba(255,255,255,0.045)', ink: '#f5f6f8', dim: '#9398a1', line: 'rgba(255,255,255,0.08)', track: 'rgba(255,255,255,0.10)', chip: 'rgba(255,255,255,0.06)' };
+    const icons = [
+      ['Contrôles', 'M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6'],
+      ["Aujourd'hui", 'M8 2v4M16 2v4M3 10h18M5 4h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z'],
+      ['Stats', 'M22 12h-4l-3 9L9 3l-3 9H2'],
+      ['Presse-papiers', 'M9 2h6a1 1 0 0 1 1 1v2a1 1 0 0 1-1 1H9a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1zM16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2'],
+      ['Apps', 'M3 3h7v7H3zM14 3h7v7h-7zM14 14h7v7h-7zM3 14h7v7H3z'],
+      ['Fonds', 'M5 3h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2zM21 15l-5-5L5 21M8.5 10a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3z'],
+      ['Alimentation', 'M12 2v10M18.4 6.6a9 9 0 1 1-12.8 0'],
+      ['Fenêtres', 'M3 3h18v18H3zM12 3v18M12 12h9']
+    ];
+    const active = 5;
+    const tabs = icons.map((ic, i) => ({
+      label: ic[0],
+      d: ic[1],
+      on: i === active,
+      style: 'height: 32px; padding: 0 ' + (i === active ? '12px 0 10px' : '8px') + '; border-radius: 16px; border: none; display: flex; align-items: center; gap: 6px; '
+        + (i === active ? 'background: rgba(' + rgb + ',0.22); color: ' + accent + ';' : 'background: transparent; color: ' + p.dim + ';')
+    }));
+    const thumb = (bg, on) => 'position: relative; height: 104px; border-radius: 14px; border: ' + (on ? '2px solid ' + accent : '1px solid ' + p.line) + '; background: ' + bg + '; padding: 0;';
+    const mine = [
+      ['Montagne au lever du jour', 'linear-gradient(180deg, #f2b48a 0%, #8f7fb8 55%, #2d2a4a 100%)', true],
+      ['Forêt dans la brume', 'linear-gradient(180deg, #a7b7a1 0%, #4f6b58 60%, #1d2a22 100%)', false],
+      ['Désert', 'linear-gradient(180deg, #f7d9a8 0%, #d99a5b 60%, #7a4a2a 100%)', false],
+      ['Ville la nuit', 'linear-gradient(180deg, #1b2240 0%, #3b2d5c 55%, #e07a5f 100%)', false]
+    ];
+    const picks = [
+      ['Côte', 'linear-gradient(180deg, #9fd3e6 0%, #3d8fb0 55%, #e9dcc1 100%)'],
+      ['Aurore', 'linear-gradient(180deg, #0b1a2b 0%, #1f6f62 50%, #7be0b5 100%)'],
+      ['Dunes', 'linear-gradient(180deg, #f3c9a3 0%, #c47a52 70%, #5b3424 100%)'],
+      ['Lac', 'linear-gradient(180deg, #cfe3f2 0%, #6f95b8 50%, #26384f 100%)']
+    ];
+    return {
+      p: p,
+      accent: accent,
+      accentSoft: 'rgba(' + rgb + ',0.20)',
+      accentLine: 'rgba(' + rgb + ',0.55)',
+      accentFaint: 'rgba(' + rgb + ',0.06)',
+      tabs: tabs,
+      mine: mine.map((w) => ({ label: w[0], on: w[2], style: thumb(w[1], w[2]) })),
+      picks: picks.map((w) => ({ label: w[0], style: thumb(w[1], false) }))
+    };
+  }
+}
+</script>
+</body>
+</html>

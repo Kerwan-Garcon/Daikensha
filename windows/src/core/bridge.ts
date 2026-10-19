@@ -338,6 +338,52 @@ export const Bridge = {
    * the provider only when it has a key (or a server address).
    */
   chatModels: (provider: string) => callOrThrow<ModelInfo[]>("chat_models", { provider }),
+  // ── Coucou Shell (views/shell.ts) ─────────────────────────────────────────
+  /** The panel opens or closes: the window grows for it, then shrinks back. */
+  setShellOpen: (open: boolean) => call<void>("set_shell_open", { open }),
+  shellCapabilities: () => call<ShellCapabilities>("shell_capabilities"),
+  shellStats: (top: boolean) => callOrThrow<ShellStats>("shell_stats", { top }),
+  shellStatsReset: () => call<void>("shell_stats_reset"),
+  shellControls: () => callOrThrow<ShellControls>("shell_controls"),
+  shellSetVolume: (level: number) => callOrThrow<void>("shell_set_volume", { level }),
+  shellSetMute: (muted: boolean) => callOrThrow<void>("shell_set_mute", { muted }),
+  shellSetRadio: (kind: string, on: boolean) => callOrThrow<void>("shell_set_radio", { kind, on }),
+  shellSetBrightness: (index: number, value: number) => callOrThrow<void>("shell_set_brightness", { index, value }),
+  shellOpenSettings: (page: ShellSettingsPage) => callOrThrow<void>("shell_open_settings", { page }),
+  shellWindows: () => callOrThrow<ShellWindow[]>("shell_windows"),
+  shellWindowAction: (id: string, action: ShellWindowAction) => callOrThrow<void>("shell_window_action", { id, action }),
+  shellLayouts: () => callOrThrow<ShellLayout[]>("shell_layouts"),
+  shellLayoutSave: (name: string) => callOrThrow<ShellLayout[]>("shell_layout_save", { name }),
+  shellLayoutApply: (name: string) => callOrThrow<number>("shell_layout_apply", { name }),
+  shellLayoutDelete: (name: string) => callOrThrow<ShellLayout[]>("shell_layout_delete", { name }),
+  shellApps: () => callOrThrow<ShellApp[]>("shell_apps"),
+  shellAppLaunch: (id: string) => callOrThrow<void>("shell_app_launch", { id }),
+  shellTodos: () => callOrThrow<ShellTodo[]>("shell_todos"),
+  shellTodoChange: (change: ShellTodoChange) => callOrThrow<ShellTodo[]>("shell_todo_change", { change }),
+  shellWeather: () => callOrThrow<ShellWeather | null>("shell_weather"),
+  shellClipboard: () => callOrThrow<ShellClip[]>("shell_clipboard"),
+  shellClipboardCopy: (id: number) => callOrThrow<void>("shell_clipboard_copy", { id }),
+  shellClipboardRemove: (id: number) => callOrThrow<ShellClip[]>("shell_clipboard_remove", { id }),
+  shellClipboardClear: () => call<void>("shell_clipboard_clear"),
+  shellWallpapers: () => callOrThrow<ShellWallpapers>("shell_wallpapers"),
+  shellWallpaperAdd: (paths: string[]) => callOrThrow<ShellWallpapers>("shell_wallpaper_add", { paths }),
+  shellWallpaperDelete: (id: string) => callOrThrow<ShellWallpapers>("shell_wallpaper_delete", { id }),
+  shellWallpaperApply: (id: string, screen: number | null) => callOrThrow<void>("shell_wallpaper_apply", { id, screen }),
+  shellBattery: () => callOrThrow<ShellBattery>("shell_battery"),
+  shellPowerPrepare: (action: ShellPowerAction) => callOrThrow<ShellCard>("shell_power_prepare", { action }),
+  shellConfirm: (token: string) => callOrThrow<void>("shell_confirm", { token }),
+  shellConfirmCancel: () => call<void>("shell_confirm_cancel"),
+  shellRoutines: () => callOrThrow<ShellRoutine[]>("shell_routines"),
+  // « Entoure et demande » (shell/capture.rs): the pixels never come to a page, only the preview.
+  circleStart: () => call<void>("circle_start"),
+  /** The taskbar back, and the « top bar » mode off (shell/appbar.rs). */
+  shellTopBarOff: () => call<void>("shell_top_bar_off"),
+  circleCapture: (x: number, y: number, width: number, height: number) => callOrThrow<void>("circle_capture", { x, y, width, height }),
+  circleCancel: () => call<void>("circle_cancel"),
+  circlePreview: () => call<string | null>("circle_preview"),
+  circleDiscard: () => call<void>("circle_discard"),
+  shellRoutineDelete: (id: number) => callOrThrow<ShellRoutine[]>("shell_routine_delete", { id }),
+
   /** Settings → Claude → Check: is Claude Code installed and signed in to a subscription? */
   claudeCliStatus: () => call<ClaudeCliStatus>("claude_cli_status"),
   /** Settings → Local models → Connect: does the server answer, and with which models? */
@@ -462,12 +508,56 @@ export interface IntegrationUpdate {
 
 export type ChatContext =
   | { kind: "file"; name: string; path: string }
-  | { kind: "window"; appName: string; title: string; url?: string };
+  | { kind: "window"; appName: string; title: string; url?: string }
+  | { kind: "capture" };
 
 export interface ModelInfo {
   id: string;
   label: string;
 }
+
+// ── Coucou Shell (shell/ in Rust) ─────────────────────────────────────────────
+
+export interface ShellCapabilities {
+  today: boolean; stats: boolean; controls: boolean; apps: boolean; windows: boolean;
+  clipboard: boolean; wallpapers: boolean; power: boolean;
+}
+export interface ShellProc { name: string; cpu: number; mem: number }
+export interface ShellStats {
+  cpu: number; memUsed: number; memTotal: number; netRx: number; netTx: number;
+  gpu: number | null; top: ShellProc[]; ownCpu: number | null; ownMem: number | null;
+}
+export interface ShellRadio { kind: string; name: string; on: boolean }
+export interface ShellDisplay { index: number; name: string; brightness: number | null }
+export interface ShellControls {
+  volume: number | null; muted: boolean | null; output: string | null;
+  radios: ShellRadio[]; displays: ShellDisplay[];
+}
+export type ShellSettingsPage = "sound" | "colors" | "nightLight" | "display" | "bluetooth" | "network";
+export interface ShellWindow { id: string; title: string; app: string; screen: number; minimized: boolean; focused: boolean }
+export type ShellSnap = "left" | "right" | "full" | "center" | "topLeft" | "topRight" | "bottomLeft" | "bottomRight";
+export type ShellWindowAction =
+  | { kind: "focus" } | { kind: "minimize" } | { kind: "maximize" } | { kind: "restore" }
+  | { kind: "snap"; to: ShellSnap } | { kind: "screen"; index: number };
+export interface ShellLayout { name: string; windows: { app: string; screen: number }[] }
+export interface ShellApp { id: string; name: string }
+export interface ShellTodo { id: number; text: string; done: boolean }
+export type ShellTodoChange =
+  | { kind: "add"; text: string } | { kind: "toggle"; id: number } | { kind: "remove"; id: number } | { kind: "clearDone" };
+export interface ShellWeather { place: string; temperature: number; max: number; min: number; code: number }
+export interface ShellClip { id: number; text: string; app: string; at: number }
+export interface ShellWallpapers { images: { id: string; thumb: string }[]; screens: number; refused: number }
+export interface ShellBattery { percent: number | null; pluggedIn: boolean }
+export type ShellPowerAction = "lock" | "sleep" | "signOut" | "restart" | "shutDown";
+/** A level 2 card (shell/confirm.rs): it runs only on its button's click. */
+export type ShellCard =
+  | { token: string; kind: "power"; action: ShellPowerAction; apps: string[] }
+  | { token: string; kind: "type"; text: string; app: string }
+  | { token: string; kind: "routine"; name: string; when: ShellWhen; steps: string[] };
+/** When a routine runs (shell/routines.rs): days are 1 Monday … 7 Sunday. */
+export type ShellWhen = { kind: "weekly"; days: number[]; time: string } | { kind: "once"; date: string; time: string };
+/** `next` is in local minutes since 1970-01-01. */
+export interface ShellRoutine { id: number; name: string; when: ShellWhen; steps: string[]; next: number | null }
 
 /** What claude_cli::status() says about the user's Claude Code (nothing about the account). */
 export type ClaudeCliStatus =

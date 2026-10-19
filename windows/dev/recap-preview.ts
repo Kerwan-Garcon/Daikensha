@@ -2,7 +2,6 @@
 // without project names, on the sample week of scripts/test-weekly-recap.swift.
 // `npm run dev`, then open /dev/recap-preview.html. Not shipped in the app.
 
-import "../src/style.css";
 import { Island } from "../src/island/island";
 import { Recap } from "../src/recap/recap";
 import { renderShareImage } from "../src/recap/share";

@@ -69,6 +69,13 @@ pub const ACTIONS: &[ActionDef] = &[
     action("muteToggle", "Ctrl+Alt+S", true, true),
     action("desktopToggle", "Ctrl+Alt+D", true, true),
     action("wardrobeToggle", "Ctrl+Alt+G", true, true),
+    // Not the Mac's: « Entoure et demande » (shell/capture.rs). Off by default,
+    // like the panel it belongs to; X is free on the AltGr layers listed above.
+    action("circleAsk", "Ctrl+Alt+X", false, true),
+    // Brings the taskbar back from the « top bar » mode (shell/appbar.rs).
+    // Registered only while that mode is on (appbar::bindings); B is free on
+    // the AltGr layers listed above.
+    action("taskbarRescue", "Ctrl+Alt+B", false, true),
 ];
 
 pub fn find(id: &str) -> Option<&'static ActionDef> {
@@ -92,6 +99,8 @@ pub fn description(id: &str) -> &'static str {
         "muteToggle" => n_("Mute or unmute Mochi"),
         "desktopToggle" => n_("Send Mochi to the desktop"),
         "wardrobeToggle" => n_("Open the wardrobe"),
+        "circleAsk" => n_("Circle something on the screen and ask about it"),
+        "taskbarRescue" => n_("Show the Windows taskbar again"),
         _ => "Coucou",
     }
 }
@@ -322,6 +331,10 @@ pub fn plugin<R: Runtime>() -> tauri::plugin::TauriPlugin<R> {
 /// Hands an action to the island.
 pub fn dispatch<R: Runtime>(app: &AppHandle<R>, action: &str) {
     crate::log::line(format!("shortcut {action}"));
+    if action == crate::shell::appbar::RESCUE {
+        // At once, from here: the page may be the thing that is stuck.
+        crate::shell::appbar::restore();
+    }
     if action == "wardrobeToggle" {
         let _ = app.emit_to(WINDOW_LABEL, "open-wardrobe", ());
     } else {
@@ -692,6 +705,8 @@ mod tests {
         "toggleIsland", "openChat", "goToAlert", "jumpToTerminal", "attachFrontWindow",
         "nextPill", "prevPill", "muteToggle", "desktopToggle", "wardrobeToggle",
     ];
+    /// Off by default: the Mac's island toggle, and the Coucou Shell actions.
+    const OFF_BY_DEFAULT: [&str; 3] = ["toggleIsland", "circleAsk", "taskbarRescue"];
 
     fn never(_: &Shortcut) -> Option<String> {
         None
@@ -701,7 +716,9 @@ mod tests {
     #[test]
     fn every_mac_action_has_a_default_and_keeps_its_id() {
         let ids: Vec<_> = ACTIONS.iter().map(|a| a.id).collect();
-        assert_eq!(ids, MAC_IDS);
+        // The Mac's, in its order; then the ones of this version only.
+        assert_eq!(&ids[..MAC_IDS.len()], MAC_IDS);
+        assert_eq!(&ids[MAC_IDS.len()..], ["circleAsk", "taskbarRescue"]);
     }
 
     // testAllDefaultsHaveModifier
@@ -725,9 +742,9 @@ mod tests {
 
     // testEnabledByDefault
     #[test]
-    fn only_the_island_toggle_is_off_by_default() {
+    fn only_the_island_toggle_and_circle_to_ask_are_off_by_default() {
         for def in ACTIONS {
-            assert_eq!(def.enabled_by_default, def.id != "toggleIsland", "{}", def.id);
+            assert_eq!(def.enabled_by_default, !OFF_BY_DEFAULT.contains(&def.id), "{}", def.id);
         }
     }
 
@@ -740,7 +757,7 @@ mod tests {
             match outcome {
                 Ok(_) => assert!(def.ported && def.enabled_by_default, "{}", def.id),
                 Err(s) if reserved => assert_eq!(s.status, Status::NotPorted),
-                Err(s) => assert_eq!((def.id, s.status), ("toggleIsland", Status::Off)),
+                Err(s) => assert!(OFF_BY_DEFAULT.contains(&def.id) && s.status == Status::Off, "{}", def.id),
             }
         }
     }
@@ -798,7 +815,7 @@ mod tests {
         // Same key, other modifiers: not a duplicate.
         stored.insert("jumpToTerminal".into(), Binding { keys: "Ctrl+Shift+A".into(), enabled: true });
         let plan = super::plan(&stored, never);
-        assert!(plan.iter().all(|(d, o)| o.is_ok() || !d.ported || d.id == "toggleIsland"));
+        assert!(plan.iter().all(|(d, o)| o.is_ok() || !d.ported || OFF_BY_DEFAULT.contains(&d.id)));
 
         // A disabled action doesn't hold its keys.
         stored.insert("goToAlert".into(), Binding { keys: "Ctrl+Alt+A".into(), enabled: false });

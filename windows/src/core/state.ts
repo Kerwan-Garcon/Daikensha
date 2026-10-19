@@ -10,6 +10,7 @@ import type { CodexPlanUsage, PlanUsage } from "./plan";
 import type { ProviderId } from "./providers";
 import type { FileDiff } from "./diff";
 import type { Bindings } from "./shortcuts";
+import type { ShellCard } from "./bridge";
 import { DEFAULT_OUTFIT, type Outfit } from "../mochi/wardrobe";
 import { pillColor } from "./pill-colors";
 import { Spotify, musicPlaying } from "./spotify";
@@ -131,6 +132,13 @@ export interface Settings {
    * API key (claude_cli.rs). Off by default; only Settings → Claude turns it on.
    */
   claudeSubscription: boolean;
+  /** « Coucou Shell »: the island folds down into a panel of tabs (views/shell.ts). Off by default. */
+  shellPanel: boolean;
+  shellClipboard: boolean;
+  shellClipboardVoice: boolean;
+  shellTopBar: boolean;
+  shellReserveTop: boolean;
+  shellWeatherCity: string;
   /** Who the chat talks to (see core/providers.ts); picked in the chat view. */
   chatProvider: ProviderId;
   /** The model picked for each provider other than Anthropic, by provider id. */
@@ -194,6 +202,12 @@ export const DEFAULT_SETTINGS: Settings = {
   showCodexPlanInNotch: false,
   replyFromIsland: false,
   claudeSubscription: false,
+  shellPanel: false,
+  shellClipboard: false,
+  shellClipboardVoice: false,
+  shellTopBar: false,
+  shellReserveTop: false,
+  shellWeatherCity: "",
   chatProvider: "anthropic",
   chatModels: {},
   ollamaUrl: "",
@@ -236,6 +250,10 @@ class AppState {
   promptContext: PromptContext | null = null;
   droppedFile: { name: string; path: string } | null = null;
   noteMessage: string | null = null;
+  /** A level 2 card waiting for its click (views/confirm.ts). */
+  shellCard: ShellCard | null = null;
+  /** The circled capture's preview (a data: URL) until its first question goes out. */
+  capturePreview: string | null = null;
   searchResult: SearchResult | null = null;
   chatHistory: ChatMessage[] = [];
   pendingApproval: ApprovalInfo | null = null;

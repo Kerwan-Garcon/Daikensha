@@ -88,13 +88,13 @@ test("the dominant percentage is the higher window", () => {
 // ── color / labels ────────────────────────────────────────────────────────────
 
 test("colours: grey, then green below 50, orange below 80, red", () => {
-  assert.equal(planColor(null), "#6B7079");
-  assert.equal(planColor(0), "#22C55E");
-  assert.equal(planColor(49), "#22C55E");
-  assert.equal(planColor(50), "#F59E0B");
-  assert.equal(planColor(79), "#F59E0B");
-  assert.equal(planColor(80), "#F4505E");
-  assert.equal(planColor(100), "#F4505E");
+  assert.equal(planColor(null), "#6b7079");
+  assert.equal(planColor(0), "#22c55e");
+  assert.equal(planColor(49), "#22c55e");
+  assert.equal(planColor(50), "#f59e0b");
+  assert.equal(planColor(79), "#f59e0b");
+  assert.equal(planColor(80), "#f4505e");
+  assert.equal(planColor(100), "#f4505e");
 });
 
 test("pill labels read like the Mac's header pill", () => {
@@ -228,14 +228,14 @@ test("an open card follows its pill, and Mochi wears that plan's colour", () => 
   State.settings.planRelayInstalled = true;
   State.showingPlanDetail = true;
   assert.equal(planCardOpen(), true);
-  assert.equal(openPlanColor(), "#6B7079");
+  assert.equal(openPlanColor(), "#6b7079");
   // The Codex card cannot be open without its pill.
   State.planDetailIsCodex = true;
   assert.equal(planCardOpen(), false);
   State.settings.showCodexPlanInNotch = true;
   assert.equal(planCardOpen(), true);
   State.codexPlanUsage = { sevenDay: win(85, Date.now() / 1000 + 3600), updatedAt: Date.now() };
-  assert.equal(openPlanColor(), "#F4505E");
+  assert.equal(openPlanColor(), "#f4505e");
 });
 
 test("focusing another pill closes the plan card", () => {

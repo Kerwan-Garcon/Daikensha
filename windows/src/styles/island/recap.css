@@ -1,0 +1,105 @@
+/* ── Weekly recap ───────────────────────────────────────────────────────── */
+/* WeeklyRecapCardView: text from x = 116, indigo wash, chips of 17 px values. */
+
+.recap-stack {
+  padding: 4px 16px 4px 116px;
+  gap: 4px;
+}
+
+.recap-head {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.recap-title {
+  font: 600 11px var(--font-sans);
+  color: var(--indigo-74);
+}
+
+.recap-range {
+  font: 400 10px var(--font-sans);
+  color: var(--color-text-subtle);
+  white-space: nowrap;
+}
+
+.recap-chips {
+  display: flex;
+  gap: 14px;
+  white-space: nowrap;
+}
+
+.recap-chip .v {
+  font: 700 17px var(--font-sans);
+  color: var(--color-text-2);
+}
+
+.recap-chip .l {
+  font: 400 9px var(--font-sans);
+  color: var(--color-text-subtle);
+}
+
+.recap-meta {
+  display: flex;
+  gap: 5px;
+  font: 400 11px var(--font-sans);
+  color: var(--color-text-subtle);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.recap-meta .n {
+  color: var(--color-text-2);
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.recap-meta .sep {
+  color: var(--color-text-disabled);
+}
+
+.recap-stack .actions {
+  margin-top: 3px;
+}
+
+.recap-share {
+  flex-direction: row;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 16px;
+  padding: 8px 16px 8px 116px;
+}
+
+.recap-thumb {
+  flex: 0 0 64px;
+  width: 64px;
+  height: 114px;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgb(var(--color-scrim-rgb) / 0.3);
+}
+
+.recap-share-side {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.recap-status {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-height: 14px;
+  font: 400 11px var(--font-sans);
+  color: var(--color-text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.recap-link {
+  color: var(--indigo-74);
+  padding: 0;
+}

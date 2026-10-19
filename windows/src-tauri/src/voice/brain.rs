@@ -40,10 +40,12 @@ fn tools() -> Vec<Value> {
     tools
 }
 
-/// Coucou's own five tools, which run_tool carries out. The subscription's MCP
-/// server (claude_cli/mcp.rs) serves exactly these, with the same schemas.
+/// Coucou's own tools, which run_tool carries out: the five of the voice, then
+/// Coucou Shell's (shell/voice_tools.rs, which refuse while the panel is off).
+/// The subscription's MCP server (claude_cli/mcp.rs) serves exactly these,
+/// with the same schemas.
 pub(crate) fn coucou_tools() -> Vec<Value> {
-    vec![
+    let mut tools = vec![
         json!({
             "name": "pills",
             "description": "Add, remove, set as main or list the pills shown in the island at the top of the screen. At most 4 pills besides the main one: remove one first if needed.",
@@ -92,10 +94,29 @@ pub(crate) fn coucou_tools() -> Vec<Value> {
                 "required": ["recipient", "subject", "body"]
             }
         }),
-    ]
+    ];
+    tools.extend(crate::shell::voice_tools::definitions());
+    tools
 }
 
-fn system_prompt(pills: &str) -> String {
+/// What the prompt says of Coucou Shell's tools, when the panel is on.
+fn shell_prompt(on: bool) -> &'static str {
+    if !on {
+        return "";
+    }
+    "\nThe computer: system_stats, list_windows, list_apps, clipboard_recent read it; set_volume, toggle_wifi, \
+toggle_bluetooth, focus_window, snap_window, apply_layout, set_wallpaper and web_open act right away: say in a few \
+words what you did. web_open takes the words to search, never a link. For something to do every week or once \
+later, call create_routine or schedule_action with the steps as those same tools and their inputs. power_action, \
+type_text, create_routine and schedule_action only put a card in the island for the user to click: say so, never \
+that it is done, and a spoken yes is not a click.\n"
+}
+
+fn shell_on(app: &AppHandle) -> bool {
+    app.try_state::<crate::Shared>().is_some_and(|s| s.settings.lock().unwrap().shell_panel)
+}
+
+fn system_prompt(pills: &str, shell: bool) -> String {
     let t = crate::platform::local_time();
     let os = if cfg!(windows) { "Windows" } else { "Linux" };
     format!(
@@ -110,8 +131,9 @@ Email: gather the recipient's address, the subject and what to say (write the te
 wants to say, in the language they used), asking for what is missing one short question at a time, then call \
 prepare_email. The email is never sent by you: the user checks it in their mail app and sends it.\n\
 When you need an answer from the user, end with one short question. Otherwise never end with a question.\n\
-Pills: {pills}",
-        t.year, t.month, t.day, t.hour, t.minute
+{shell}Pills: {pills}",
+        t.year, t.month, t.day, t.hour, t.minute,
+        shell = shell_prompt(shell)
     )
 }
 
@@ -122,7 +144,7 @@ impl Brain {
         if !crate::claude_cli::enabled() {
             return;
         }
-        let system = system_prompt(&super::ask_island(app, "pills", json!({ "action": "list" })).unwrap_or_default());
+        let system = system_prompt(&super::ask_island(app, "pills", json!({ "action": "list" })).unwrap_or_default(), shell_on(app));
         let tools = crate::claude_cli::voice::runner(app);
         if let Err(f) = tauri::async_runtime::block_on(self.cli.warm(&tools, &system)) {
             crate::log::line(format!("voice: Claude Code did not start: {f:?}"));
@@ -142,7 +164,7 @@ impl Brain {
 
     fn respond_cli(&mut self, app: &AppHandle, transcript: &str) -> Option<Reply> {
         let pills = super::ask_island(app, "pills", json!({ "action": "list" })).unwrap_or_default();
-        let system = system_prompt(&pills);
+        let system = system_prompt(&pills, shell_on(app));
         let tools = crate::claude_cli::voice::runner(app);
         match tauri::async_runtime::block_on(self.cli.ask(&tools, &system, transcript)) {
             Ok((text, acted)) => Some(Reply { text: spoken_text(&text), acted }),
@@ -165,8 +187,10 @@ impl Brain {
         self.messages.push(json!({ "role": "user", "content": transcript }));
         self.trim();
         let pills = super::ask_island(app, "pills", json!({ "action": "list" })).unwrap_or_default();
-        let system = system_prompt(&pills);
-        let tools = tools();
+        let system = system_prompt(&pills, shell_on(app));
+        // The Shell's tools refuse while the panel is off: no need to describe them then.
+        let shell = shell_on(app);
+        let tools: Vec<Value> = tools().into_iter().filter(|t| shell || t["name"].as_str().and_then(crate::shell::voice_tools::level).is_none()).collect();
         let chat_model = app
             .try_state::<crate::Shared>()
             .map(|s| s.settings.lock().unwrap().model.clone())
@@ -281,9 +305,11 @@ mod tests {
     }
 
     #[test]
-    fn the_mcp_server_serves_exactly_coucous_five_tools() {
+    fn the_mcp_server_serves_exactly_coucous_tools() {
         let names: Vec<String> = coucou_tools().iter().map(|t| t["name"].as_str().unwrap().to_string()).collect();
-        assert_eq!(names, ["pills", "music", "service_info", "open_app", "prepare_email"]);
+        let mut expected_names = vec!["pills", "music", "service_info", "open_app", "prepare_email"];
+        expected_names.extend(crate::shell::voice_tools::LEVELS.iter().map(|(n, _)| *n));
+        assert_eq!(names, expected_names);
         // And the guard's list names each of them, and web search, and nothing else.
         let mut expected: Vec<String> = names.iter().map(|n| format!("mcp__coucou__{n}")).collect();
         expected.insert(0, "WebSearch".into());

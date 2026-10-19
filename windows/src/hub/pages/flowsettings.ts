@@ -36,7 +36,7 @@ export function modelsControl(ctx: HubContext, onReady?: () => void): HTMLElemen
         }, "", true),
       );
     } else {
-      const ok = h("button", { class: "hub-link", style: "color:var(--hub-green)", text: `✓ ${t("Installed")}`, title: t("Remove the models") });
+      const ok = h("button", { class: "hub-link", style: "color:var(--color-success-alt)", text: `✓ ${t("Installed")}`, title: t("Remove the models") });
       ok.addEventListener("click", () => {
         confirming = true;
         draw(ctx.status.models);

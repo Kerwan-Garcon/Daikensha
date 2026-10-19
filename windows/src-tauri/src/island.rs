@@ -17,6 +17,30 @@ use crate::platform::{self, cursor_physical, left_button_down};
 /// Logical size of the full window — the largest island view, like the macOS panel.
 pub const PANEL_W: f64 = 720.0;
 pub const PANEL_H: f64 = 320.0;
+/// The window while « Coucou Shell »'s panel is open (shell/): the panel is
+/// 880 wide; the window only grows while it shows, never otherwise.
+pub const SHELL_W: f64 = 920.0;
+pub const SHELL_H: f64 = 640.0;
+
+/// The Shell panel is open: the window takes SHELL_W × SHELL_H (or what the
+/// screen has room for) instead of the usual panel.
+static SHELL_OPEN: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+
+pub fn set_shell_open(open: bool) {
+    SHELL_OPEN.store(open, std::sync::atomic::Ordering::Relaxed);
+}
+
+/// The window's logical size: the wake strip, the panel, or the Shell panel
+/// fitted to a screen of `screen_w` × `screen_h` logical pixels.
+pub fn window_size(collapsed: bool, shell: bool, screen_w: f64, screen_h: f64) -> (f64, f64) {
+    if collapsed {
+        (STRIP_W, STRIP_H)
+    } else if shell {
+        (SHELL_W.min(screen_w).max(PANEL_W), SHELL_H.min(screen_h - 40.0).max(PANEL_H))
+    } else {
+        (PANEL_W, PANEL_H)
+    }
+}
 /// Logical size of the invisible strip that wakes the island when it is hidden.
 pub const STRIP_W: f64 = 240.0;
 pub const STRIP_H: f64 = 6.0;
@@ -296,6 +320,21 @@ pub fn calculate_zoom_correction(current_zoom: f64, scale: f64, dpr: f64) -> Opt
 }
 
 #[cfg(test)]
+mod shell_size_tests {
+    use super::*;
+
+    #[test]
+    fn the_window_grows_only_for_the_shell_panel_and_never_past_the_screen() {
+        assert_eq!(window_size(false, false, 1920.0, 1080.0), (PANEL_W, PANEL_H));
+        assert_eq!(window_size(true, true, 1920.0, 1080.0), (STRIP_W, STRIP_H));
+        assert_eq!(window_size(false, true, 1920.0, 1080.0), (SHELL_W, SHELL_H));
+        // 1366×768 at 125 %: 1093×614 logical.
+        let (w, h) = window_size(false, true, 1093.0, 614.0);
+        assert_eq!((w, h), (SHELL_W, 574.0));
+    }
+}
+
+#[cfg(test)]
 mod zoom_tests {
     use super::*;
 
@@ -359,7 +398,8 @@ pub fn apply_geometry(app: &AppHandle, pref: &str, collapsed: bool) {
     let mp = *m.position();
     let ms = *m.size();
 
-    let (lw, lh) = if collapsed { (STRIP_W, STRIP_H) } else { (PANEL_W, PANEL_H) };
+    let shell = SHELL_OPEN.load(std::sync::atomic::Ordering::Relaxed);
+    let (lw, lh) = window_size(collapsed, shell, ms.width as f64 / scale, ms.height as f64 / scale);
     let pw = (lw * scale).round().max(1.0) as u32;
     let ph = (lh * scale).round().max(1.0) as u32;
     let x = mp.x + (ms.width as i32 - pw as i32) / 2;

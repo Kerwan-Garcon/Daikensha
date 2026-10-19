@@ -3,8 +3,8 @@
 // disk is confirmed. The window's frame and the Flow pages live in ../hub; the
 // island's settings are drawn here, one Notch page at a time.
 
-import "./settings.css";
-import { Bridge, onEvent, type ClaudeCliStatus, type HookPreview, type HookStatus, type ShortcutsReport } from "../core/bridge";
+import { Bridge, onEvent, type ClaudeCliStatus, type HookPreview, type HookStatus, type ShellRoutine, type ShortcutsReport } from "../core/bridge";
+import { whenText } from "../core/shell";
 import { CUSTOM_SERVER_KEY, providerDef, urlExposure } from "../core/providers";
 import {
   ISLAND_SHORTCUTS, SHORTCUTS, SHORTCUT_TEXT, activeKeys, displayKeys, duplicates, effective,
@@ -24,8 +24,9 @@ import { phoneSection } from "./phone";
 import { colorDot } from "./colors";
 import { renderDiff, statusDot } from "./parts";
 import {
-  LANGUAGES, N_, isRtl, onLanguageChange, resolveLanguage, setLanguage, systemLanguages, t, tn,
+  LANGUAGES, N_, isRtl, language, onLanguageChange, resolveLanguage, setLanguage, systemLanguages, t, tn, weekdayShort,
 } from "../i18n/i18n";
+import { colorHex } from "../design/tokens";
 
 /** Where secrets.rs keeps the keys on this OS. */
 const KEY_STORE = navigator.userAgent.includes("Windows")
@@ -368,7 +369,7 @@ function apiSection(hasKey: boolean): HTMLElement {
   /** With the subscription on, a missing key is not a problem: no red dot, no "the chat needs one". */
   function drawKeyState() {
     const subscription = settings.claudeSubscription;
-    dot.style.background = present ? "#22c55e" : subscription ? "#8e939c" : "#f4505e";
+    dot.style.background = present ? colorHex("--color-success") : subscription ? colorHex("--color-text-subtle") : colorHex("--color-danger");
     state.textContent = present
       ? t("Key saved in the {store}.", { store: KEY_STORE })
       : subscription
@@ -636,7 +637,7 @@ function chatProvidersSection(
     const removeBtn = h("button", { class: "danger", text: CHAT_STRINGS.remove });
     const refresh = () => {
       input.placeholder = present[key] ? CHAT_STRINGS.stored : def.placeholder;
-      dotEl.style.background = present[key] ? "#22c55e" : "#f4505e";
+      dotEl.style.background = present[key] ? colorHex("--color-success") : colorHex("--color-danger");
       removeBtn.style.display = present[key] ? "" : "none";
     };
     saveBtn.addEventListener("click", async () => {
@@ -648,7 +649,7 @@ function chatProvidersSection(
         input.value = "";
         keyChanged(key, true);
       } catch {
-        dotEl.style.background = "#f5a524";
+        dotEl.style.background = colorHex("--color-warning");
         return;
       }
       refresh();
@@ -659,7 +660,7 @@ function chatProvidersSection(
         present[key] = false;
         keyChanged(key, false);
       } catch {
-        dotEl.style.background = "#f5a524";
+        dotEl.style.background = colorHex("--color-warning");
         return;
       }
       refresh();
@@ -928,9 +929,9 @@ function integrationsSection(present: Record<string, boolean>): HTMLElement {
           present[field.key] = value.length > 0;
           input.value = "";
           input.placeholder = value ? CHAT_STRINGS.stored : field.placeholder;
-          dotEl.style.background = value ? "#22c55e" : "#f4505e";
+          dotEl.style.background = value ? colorHex("--color-success") : colorHex("--color-danger");
         } catch {
-          dotEl.style.background = "#f5a524";
+          dotEl.style.background = colorHex("--color-warning");
         }
       });
       rows.append(
@@ -1004,6 +1005,17 @@ function generalSection(): HTMLElement {
     void save();
   });
 
+  const weatherCity = h("input", {
+    type: "text",
+    placeholder: t("e.g. Bordeaux"),
+    maxlength: "80",
+    spellcheck: "false",
+    value: settings.shellWeatherCity,
+  }) as HTMLInputElement;
+  weatherCity.addEventListener("change", () => {
+    settings.shellWeatherCity = weatherCity.value.trim();
+    void save();
+  });
   const screen = h("select", {}) as HTMLSelectElement;
   screen.append(
     h("option", { value: "primary", text: t("Main display") }),
@@ -1047,6 +1059,40 @@ function generalSection(): HTMLElement {
     ),
     h("div", { class: "hint", text: t("Hovering the island opens it; it folds again shortly after the pointer leaves. Click inside to keep it open.") }),
     h("div", { class: "row" },
+      h("label", { text: t("Coucou Shell panel") }),
+      toggle(settings.shellPanel, (v) => { settings.shellPanel = v; void save(); }),
+    ),
+    h("div", { class: "hint", text: t("Scroll down on the island to fold out controls, today, stats, the clipboard, apps, wallpapers, power and windows. Scroll up or press Esc to fold it back.") }),
+    h("div", { class: "row" },
+      h("label", { text: t("Clipboard history") }),
+      toggle(settings.shellClipboard, (v) => { settings.shellClipboard = v; void save(); }),
+    ),
+    h("div", { class: "hint", text: t("The panel keeps the last 25 texts you copy, in memory only: nothing is written to disk, and turning it off forgets them. Password managers are always skipped.") }),
+    h("div", { class: "row" },
+      h("label", { text: t("« OK Coucou » may read it") }),
+      toggle(settings.shellClipboardVoice, (v) => { settings.shellClipboardVoice = v; void save(); }),
+    ),
+    h("div", { class: "hint", text: t("Only the last 5 copies, cut to 500 characters, and only when you ask. They are sent to Claude with your question.") }),
+    ...(navigator.userAgent.includes("Windows")
+      ? [
+          h("div", { class: "row" },
+            h("label", { text: t("Use Coucou as the main bar") }),
+            toggle(settings.shellTopBar, (v) => { settings.shellTopBar = v; void save(); }),
+          ),
+          h("div", { class: "hint", text: t("Windows' taskbar hides itself (its own auto-hide setting) and the folded island keeps the time and date. It comes back as it was when you turn this off or quit Coucou; Ctrl+Alt+B shows it at once.") }),
+          h("div", { class: "row" },
+            h("label", { text: t("Reserve the top of the screen") }),
+            toggle(settings.shellReserveTop, (v) => { settings.shellReserveTop = v; void save(); }),
+          ),
+          h("div", { class: "hint", text: t("Maximised windows stop below the island instead of going under it.") }),
+        ]
+      : []),
+    h("div", { class: "row" },
+      h("label", { text: t("Weather city") }),
+      weatherCity,
+    ),
+    h("div", { class: "hint", text: t("Empty: no weather and no network call. With a city, the Today tab asks Open-Meteo at most every 30 minutes, only while it is open.") }),
+    h("div", { class: "row" },
       h("label", { text: t("Auto-close") }),
       autoClose,
       h("span", { class: "hint", text: t("seconds after you leave the island") }),
@@ -1060,6 +1106,7 @@ function generalSection(): HTMLElement {
       toggle(settings.autostart, (v) => { settings.autostart = v; void save(); }),
     ),
     ...recapRows(),
+    ...routineRows(),
     languageRow(),
   );
 }
@@ -1295,6 +1342,34 @@ function shortcutsSection(initial: ShortcutsReport | null): HTMLElement {
     h("div", { class: "subhead", text: SHORTCUTS_UI.island }),
     islandList,
   );
+}
+
+/** Coucou Shell's routines (shell/routines.rs): listed and deletable here, as promised on their card. */
+function routineRows(): HTMLElement[] {
+  const list = h("div", { class: "routine-list" });
+  const draw = (routines: ShellRoutine[]) => {
+    clear(list);
+    if (routines.length === 0) {
+      list.append(h("div", { class: "hint", text: t("No routine yet. With the panel on, ask « OK Coucou »: every Monday at 9, open Unity and Spotify.") }));
+      return;
+    }
+    for (const r of routines) {
+      const when = whenText(r.when, language(), weekdayShort, t("every day"));
+      list.append(
+        h("div", { class: "row" },
+          h("label", { text: r.name }),
+          h("span", { class: "hint", style: "flex:1 1 auto;min-width:0", text: `${when} — ${r.steps.join(" → ")}` }),
+          h("button", { class: "danger", text: t("Delete"), onclick: () => void Bridge.shellRoutineDelete(r.id).then(draw).catch(() => {}) }),
+        ),
+      );
+    }
+  };
+  void Bridge.shellRoutines().then(draw).catch(() => draw([]));
+  return [
+    h("div", { class: "row" }, h("label", { text: t("Routines") })),
+    list,
+    h("div", { class: "hint", text: t("A routine is a fixed list of steps you approved on its card. Coucou replays it as it is, without asking Claude, only while Coucou runs and the panel is on.") }),
+  ];
 }
 
 /** Settings → General → Weekly recap. The prefs live with the history in Rust. */

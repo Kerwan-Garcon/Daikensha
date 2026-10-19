@@ -11,6 +11,7 @@ import { internals } from "./tauri.mjs";
 registerHooks({
   resolve(specifier, context, nextResolve) {
     const ours = !context.parentURL?.includes("/node_modules/");
+    if (ours && specifier.endsWith("?raw")) return nextResolve(specifier, context);
     if (ours && specifier.startsWith(".") && !/\.(?:[cm]?[jt]s|json)$/.test(specifier)) {
       return nextResolve(`${specifier}.ts`, context);
     }
@@ -19,6 +20,11 @@ registerHooks({
   // Vite imports JSON (src/i18n/*.json) without `with { type: "json" }`;
   // Node would refuse it, so it is handed over as a module.
   load(url, context, nextLoad) {
+    // Vite's `?raw` (src/design/tokens.ts reads tokens.css): the file as a string.
+    if (url.startsWith("file:") && url.endsWith("?raw")) {
+      const source = readFileSync(fileURLToPath(url.slice(0, -"?raw".length)), "utf8");
+      return { format: "module", source: `export default ${JSON.stringify(source)};`, shortCircuit: true };
+    }
     if (url.startsWith("file:") && url.endsWith(".json") && !url.includes("/node_modules/")) {
       const source = readFileSync(fileURLToPath(url), "utf8");
       return { format: "module", source: `export default ${source};`, shortCircuit: true };

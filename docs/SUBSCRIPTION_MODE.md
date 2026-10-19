@@ -31,7 +31,7 @@ Le mode API reste celui par défaut. L'abonnement est un choix explicite : **Ré
 | Chat de l'island (fournisseur « Claude subscription ») | `Chat` | aucun | `--resume <session_id>` ; « Nouveau chat » (Ctrl+K dans la vue de saisie, il n'y a pas de bouton) et le lancement font `claude purge --yes` sur le dossier |
 | Chat du téléphone | `Phone` | aucun, ni contexte, quoi que dise la config | idem, dans son propre dossier |
 | `claude::complete()` : nettoyage de dictée, résumé du Notetaker | `Complete` | aucun | `--no-session-persistence` |
-| « OK Coucou » | `Voice` | `WebSearch` + les 5 outils de Coucou en MCP | un processus gardé, oublié après 90 s ; `--no-session-persistence` |
+| « OK Coucou » | `Voice` | `WebSearch` + les 5 outils de Coucou et les 14 de Coucou Shell en MCP | un processus gardé, oublié après 90 s ; `--no-session-persistence` |
 
 Les modèles sont les alias du CLI : `haiku`, `sonnet` (par défaut pour le chat), `opus`. Un id d'API (`claude-haiku-4-5`, `claude-opus-5`) est ramené à sa famille. La voix utilise `haiku`.
 
@@ -94,7 +94,7 @@ Il démarre seulement quand le mode abonnement et la voix sont actifs, au mot «
 - Un jeton bearer de 32 octets aléatoires (`ring::rand`), neuf à chaque démarrage et comparé en temps constant.
 - Le jeton arrive au CLI par son **environnement** (`COUCOU_MCP_TOKEN`, que Claude Code développe dans `--mcp-config` : mesuré). Il n'est jamais dans la ligne de commande, que d'autres utilisateurs peuvent lire (`/proc/<pid>/cmdline` sous Linux), ni dans un fichier.
 - Toute requête sans le bon jeton est refusée (401), ainsi que tout `Origin` et tout `Host` autre que `127.0.0.1:<port>` ou `localhost:<port>` (403, contre le DNS rebinding). Les en-têtes sont limités à 16 Ko, le corps à 1 Mo, et la lecture d'une requête à 10 s.
-- Il expose exactement les 5 outils de `voice/brain.rs::coucou_tools()`, avec les mêmes `input_schema` (test `the_mcp_server_serves_exactly_coucous_five_tools`), et appelle `voice::run_tool` existant. `prepare_email` ouvre l'app de mail et l'utilisateur clique Envoyer. Aucun outil n'envoie, n'approuve ou ne supprime quoi que ce soit.
+- Il expose exactement les outils de `voice/brain.rs::coucou_tools()` (les 5 de la voix, puis les 14 de Coucou Shell, `shell/voice_tools.rs`), avec les mêmes `input_schema` (test `the_mcp_server_serves_exactly_coucous_tools`), et appelle `voice::run_tool` existant. Les outils Shell refusent tant que le panneau est désactivé ; ceux de niveau 2 (`power_action`, `type_text`) ne font qu'afficher une carte que l'utilisateur clique. `prepare_email` ouvre l'app de mail et l'utilisateur clique Envoyer. Aucun outil n'envoie, n'approuve ou ne supprime quoi que ce soit.
 - Pas de crate `rmcp` : les quelques messages JSON-RPC (`initialize`, `notifications/initialized`, `ping`, `tools/list`, `tools/call`) sont traités à la main, et tout le reste reçoit « method not found ». Aucune nouvelle dépendance n'a été ajoutée : seule la feature `process` de tokio et la feature `Win32_System_JobObjects` de la crate `windows`, toutes deux déjà présentes.
 
 ## Mémoire et vitesse

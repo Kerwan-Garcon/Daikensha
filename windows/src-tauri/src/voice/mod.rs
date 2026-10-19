@@ -429,7 +429,7 @@ pub fn pick_voice(voices: &[Value], gender: &str) -> Option<String> {
     v["voice_id"].as_str().map(String::from)
 }
 
-fn base64(bytes: &[u8]) -> String {
+pub(crate) fn base64(bytes: &[u8]) -> String {
     const T: &[u8; 64] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
     let mut out = String::with_capacity(bytes.len().div_ceil(3) * 4);
     for chunk in bytes.chunks(3) {
@@ -489,7 +489,7 @@ pub fn run_tool(app: &AppHandle, name: &str, input: &Value) -> (String, bool) {
             crate::platform::open_url(&url);
             (format!("The mail app opened with the email to {to}. Nothing is sent until the user sends it."), true)
         }
-        _ => (format!("unknown tool {name}"), false),
+        _ => crate::shell::voice_tools::run(app, name, input).unwrap_or_else(|| (format!("unknown tool {name}"), false)),
     }
 }
 

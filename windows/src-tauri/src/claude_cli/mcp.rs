@@ -1,6 +1,6 @@
 // The MCP server « OK Coucou » hands to its `claude` process in the Claude
-// subscription mode, so that Claude Code can use the voice's five tools
-// (voice/brain.rs) and nothing else. It only runs while that process does.
+// subscription mode, so that Claude Code can use the voice's tools
+// (voice/brain.rs, and Coucou Shell's in shell/voice_tools.rs) and nothing else. It only runs while that process does.
 //
 // Streamable HTTP, answered with plain JSON: one POST per JSON-RPC message.
 // Locked down on every request:
@@ -10,8 +10,9 @@
 //     (COUCOU_MCP_TOKEN), never its command line, which other users can read;
 //   - a Host that is not this address and port, or any Origin at all (a page
 //     in a browser, DNS rebinding), is refused;
-//   - only the five tools' names are served; they run voice::run_tool, which
-//     never sends, approves or deletes anything.
+//   - only those tools' names are served; they run voice::run_tool, which
+//     never sends, approves or deletes anything (a level 2 Shell tool only
+//     puts a card up for the user to click).
 // No new dependency: the little HTTP it needs is read by hand, with limits.
 
 use std::sync::Arc;

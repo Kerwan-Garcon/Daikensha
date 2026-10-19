@@ -1,0 +1,142 @@
+/* ── Markdown in the answers ─────────────────────────────────────────────── */
+
+.md-p {
+  font: 400 12.5px var(--font-sans);
+  color: var(--gray-718);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.md-h {
+  font: 600 13px var(--font-sans);
+  color: var(--color-text-2);
+  overflow-wrap: anywhere;
+}
+
+.md-h1 {
+  font-weight: 700;
+  font-size: 14px;
+}
+
+.reply strong {
+  color: var(--gray-918);
+  font-weight: 600;
+}
+
+.md-code {
+  padding: 1px 4px;
+  border-radius: 4px;
+  background: rgb(var(--color-overlay-rgb) / 0.08);
+  font: 400 11.5px var(--font-mono);
+  color: var(--gray-808);
+}
+
+.md-link {
+  color: var(--color-accent);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.md-pre {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid rgb(var(--color-overlay-rgb) / 0.08);
+  border-radius: 8px;
+  background: var(--gray-061);
+}
+
+.md-pre pre {
+  flex: 1 1 auto;
+  min-width: 0;
+  font: 400 11px var(--font-mono);
+  color: var(--gray-808);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.md-copy {
+  flex: 0 0 22px;
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  background: rgb(var(--color-overlay-rgb) / 0.06);
+  color: var(--color-text-faint);
+  cursor: default;
+}
+
+.md-copy:hover {
+  color: var(--color-text-muted);
+}
+
+.md-copy.done {
+  color: var(--color-success);
+}
+
+.md-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+.md-bullet {
+  flex: 0 0 auto;
+  min-width: 10px;
+  font: 400 12.5px var(--font-sans);
+  color: var(--color-text-faint);
+}
+
+.md-quote {
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+}
+
+.md-quote i {
+  flex: 0 0 2px;
+  border-radius: 1px;
+  background: var(--color-text-ghost);
+}
+
+.md-quote .md-p {
+  color: var(--gray-569);
+}
+
+.md-rule {
+  width: 100%;
+  border: 0;
+  border-top: 1px solid rgb(var(--color-overlay-rgb) / 0.3);
+  opacity: 0.3;
+}
+
+.typing {
+  display: flex;
+  gap: 4px;
+  padding: 4px 2px;
+}
+
+.typing i {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--color-text-faint);
+  animation: typing 0.9s ease-in-out infinite;
+}
+
+.typing i:nth-child(2) {
+  animation-delay: 0.14s;
+}
+
+.typing i:nth-child(3) {
+  animation-delay: 0.28s;
+}
+
+@keyframes typing {
+  0%, 100% { transform: scale(0.6); }
+  50% { transform: scale(1.2); }
+}

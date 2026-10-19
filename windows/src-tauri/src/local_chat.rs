@@ -242,7 +242,8 @@ fn user_text(first: bool, context: Option<&ChatContext>, query: &str) -> String 
         Some(ChatContext::Window { app_name, title, url }) => {
             format!("{}\n\n{query}", chat::window_line(app_name, title, url.as_deref()))
         }
-        None => query.to_string(),
+        // chat::send keeps captures for Claude.
+        Some(ChatContext::Capture) | None => query.to_string(),
     }
 }
 

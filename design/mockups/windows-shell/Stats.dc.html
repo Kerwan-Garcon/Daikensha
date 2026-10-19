@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Panneau Stats</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0}
+a{color:#93c5fd}a:hover{color:#bfdbfe}
+</style>
+</helmet>
+<div style="position: relative; width: 1200px; height: 760px; overflow: hidden; background: {{p.desk}}; font-family: 'Segoe UI Variable Text', 'Segoe UI', system-ui, sans-serif;">
+  <div style="position: absolute; left: 160px; top: 0; width: 880px; box-sizing: border-box; padding: 14px 20px 14px; display: flex; flex-direction: column; gap: 16px; background: {{p.glass}}; backdrop-filter: blur(28px) saturate(1.4); border: 1px solid {{p.line}}; border-top: none; border-radius: 0 0 30px 30px; box-shadow: 0 30px 70px rgba(0,0,0,0.38); color: {{p.ink}};">
+
+    <div style="display: flex; align-items: center; gap: 12px; height: 40px;">
+      <svg width="40" height="31" viewBox="0 0 44 34" aria-hidden="true"><defs><linearGradient id="m2" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fbf7f2"></stop><stop offset="1" stop-color="{{accent}}"></stop></linearGradient></defs><rect x="2" y="3" width="40" height="29" rx="13" fill="url(#m2)"></rect><circle cx="17" cy="19" r="2.6" fill="#111"></circle><circle cx="29" cy="19" r="2.6" fill="#111"></circle><ellipse cx="10" cy="22" rx="3" ry="1.6" fill="#f9a8b8" opacity="0.7"></ellipse><ellipse cx="34" cy="22" rx="3" ry="1.6" fill="#f9a8b8" opacity="0.7"></ellipse></svg>
+      <nav aria-label="Onglets" style="display: flex; gap: 4px;">
+        <sc-for list="{{tabs}}" as="t" hint-placeholder-count="8">
+          <button aria-label="{{t.label}}" style="{{t.style}}">
+            <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path d="{{t.d}}" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+            <sc-if value="{{t.on}}" hint-placeholder-val="{{false}}"><span style="font-size: 13px; font-weight: 600;">{{t.label}}</span></sc-if>
+          </button>
+        </sc-for>
+      </nav>
+      <div style="flex-grow: 1;"></div>
+      <span style="font-family: 'Cascadia Mono', Consolas, ui-monospace, monospace; font-variant-numeric: tabular-nums; font-size: 15px;">14:32</span>
+      <span style="font-size: 13px; color: {{p.dim}};">sam. 18 oct.</span>
+    </div>
+
+    <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px;">
+      <sc-for list="{{gauges}}" as="g" hint-placeholder-count="3">
+        <div style="padding: 16px; border-radius: 20px; background: {{p.card}}; border: 1px solid {{p.line}}; display: flex; align-items: center; gap: 16px;">
+          <svg width="88" height="88" viewBox="0 0 88 88" role="img" aria-label="{{g.aria}}">
+            <circle cx="44" cy="44" r="34" fill="none" stroke="{{p.track}}" stroke-width="8"></circle>
+            <circle cx="44" cy="44" r="34" fill="none" stroke="{{g.color}}" stroke-width="8" stroke-linecap="round" stroke-dasharray="{{g.dash}}" transform="rotate(-90 44 44)"></circle>
+            <text x="44" y="50" text-anchor="middle" fill="{{p.ink}}" style="font-family: 'Cascadia Mono', Consolas, ui-monospace, monospace; font-size: 18px; font-variant-numeric: tabular-nums;">{{g.value}}</text>
+          </svg>
+          <div style="display: flex; flex-direction: column; gap: 4px;">
+            <span style="font-size: 15px; font-weight: 600;">{{g.name}}</span>
+            <span style="font-size: 13px; color: {{p.dim}};">{{g.detail}}</span>
+          </div>
+        </div>
+      </sc-for>
+
+      <div style="padding: 16px; border-radius: 20px; background: {{p.card}}; border: 1px solid {{p.line}}; display: flex; flex-direction: column; gap: 12px;">
+        <div style="display: flex; justify-content: space-between; align-items: baseline;">
+          <span style="font-size: 15px; font-weight: 600;">Réseau</span>
+          <span style="font-size: 13px; color: {{p.dim}};">60 s</span>
+        </div>
+        <svg width="100%" height="96" viewBox="0 0 240 96" preserveAspectRatio="none" role="img" aria-label="Débit des 60 dernières secondes">
+          <polyline points="{{down}}" fill="none" stroke="{{accent}}" stroke-width="2" stroke-linejoin="round" vector-effect="non-scaling-stroke"></polyline>
+          <polyline points="{{up}}" fill="none" stroke="{{p.dim}}" stroke-width="1.5" stroke-linejoin="round" vector-effect="non-scaling-stroke"></polyline>
+        </svg>
+        <div style="display: flex; gap: 16px; font-family: 'Cascadia Mono', Consolas, ui-monospace, monospace; font-variant-numeric: tabular-nums; font-size: 13px;">
+          <span style="color: {{accent}};">↓ 4,8 Mo/s</span>
+          <span style="color: {{p.dim}};">↑ 320 Ko/s</span>
+        </div>
+      </div>
+
+      <div style="grid-column: span 2; padding: 16px; border-radius: 20px; background: {{p.card}}; border: 1px solid {{p.line}}; display: flex; flex-direction: column; gap: 12px;">
+        <div style="display: flex; justify-content: space-between; align-items: baseline;">
+          <span style="font-size: 15px; font-weight: 600;">Les plus gourmandes</span>
+          <span style="font-size: 13px; color: {{p.dim}};">CPU · mémoire</span>
+        </div>
+        <sc-for list="{{top}}" as="a" hint-placeholder-count="5">
+          <div style="display: grid; grid-template-columns: 140px minmax(0, 1fr) 56px 72px; gap: 12px; align-items: center; font-size: 13px;">
+            <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{a.name}}</span>
+            <span style="height: 8px; border-radius: 4px; background: {{p.track}}; overflow: hidden; display: flex;"><span style="{{a.bar}}"></span></span>
+            <span style="text-align: right; font-family: 'Cascadia Mono', Consolas, ui-monospace, monospace; font-variant-numeric: tabular-nums;">{{a.cpu}}</span>
+            <span style="text-align: right; font-family: 'Cascadia Mono', Consolas, ui-monospace, monospace; font-variant-numeric: tabular-nums; color: {{p.dim}};">{{a.mem}}</span>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+
+    <div style="display: flex; justify-content: space-between; align-items: center; font-size: 13px; color: {{p.dim}};">
+      <span>Mis à jour chaque seconde, seulement quand ce panneau est ouvert</span>
+      <span style="width: 44px; height: 4px; border-radius: 2px; background: {{p.track}};"></span>
+      <span>Coucou : 0,4 % CPU · 38 Mo</span>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"theme":{"editor":"enum","options":["sombre","clair"],"default":"sombre"},"accent":{"editor":"color","default":"#60a5fa","options":["#60a5fa","#f472b6","#34d399","#f5a524"]},"$preview":{"width":1200,"height":760}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const light = (this.props.theme ?? 'sombre') === 'clair';
+    const accent = this.props.accent ?? '#60a5fa';
+    const n = parseInt(accent.slice(1), 16);
+    const rgb = ((n >> 16) & 255) + ',' + ((n >> 8) & 255) + ',' + (n & 255);
+    const p = light
+      ? { desk: 'radial-gradient(120% 90% at 20% 10%, #e8eef6 0%, #d6dde8 50%, #cfd3dc 100%)', glass: 'rgba(250,250,252,0.80)', card: 'rgba(255,255,255,0.70)', ink: '#15171b', dim: '#555b65', line: 'rgba(0,0,0,0.08)', track: 'rgba(0,0,0,0.10)', chip: 'rgba(0,0,0,0.05)' }
+      : { desk: 'radial-gradient(120% 90% at 20% 10%, #2b3550 0%, #1a1f2e 45%, #141418 100%)', glass: 'rgba(10,11,13,0.74)', card: 'rgba(255,255,255,0.045)', ink: '#f5f6f8', dim: '#9398a1', line: 'rgba(255,255,255,0.08)', track: 'rgba(255,255,255,0.10)', chip: 'rgba(255,255,255,0.06)' };
+    const icons = [
+      ['Contrôles', 'M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6'],
+      ["Aujourd'hui", 'M8 2v4M16 2v4M3 10h18M5 4h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z'],
+      ['Stats', 'M22 12h-4l-3 9L9 3l-3 9H2'],
+      ['Presse-papiers', 'M9 2h6a1 1 0 0 1 1 1v2a1 1 0 0 1-1 1H9a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1zM16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2'],
+      ['Apps', 'M3 3h7v7H3zM14 3h7v7h-7zM14 14h7v7h-7zM3 14h7v7H3z'],
+      ['Fonds', 'M5 3h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2zM21 15l-5-5L5 21M8.5 10a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3z'],
+      ['Alimentation', 'M12 2v10M18.4 6.6a9 9 0 1 1-12.8 0'],
+      ['Fenêtres', 'M3 3h18v18H3zM12 3v18M12 12h9']
+    ];
+    const active = 2;
+    const tabs = icons.map((ic, i) => ({
+      label: ic[0],
+      d: ic[1],
+      on: i === active,
+      style: 'height: 32px; padding: 0 ' + (i === active ? '12px 0 10px' : '8px') + '; border-radius: 16px; border: none; display: flex; align-items: center; gap: 6px; '
+        + (i === active ? 'background: rgba(' + rgb + ',0.22); color: ' + accent + ';' : 'background: transparent; color: ' + p.dim + ';')
+    }));
+    const C = 2 * Math.PI * 34;
+    const gauge = (name, pct, detail, color) => ({ name: name, value: pct + ' %', detail: detail, color: color, aria: name + ' ' + pct + ' %', dash: (C * pct / 100).toFixed(1) + ' ' + C.toFixed(1) });
+    const series = (vals) => vals.map((v, i) => (i * 240 / (vals.length - 1)).toFixed(1) + ',' + (92 - v * 0.86).toFixed(1)).join(' ');
+    const down = [12, 18, 15, 30, 42, 38, 55, 61, 48, 52, 70, 66, 58, 74, 80, 72, 64, 69, 76, 71];
+    const up = [4, 5, 4, 8, 9, 7, 11, 10, 9, 12, 14, 12, 10, 13, 15, 12, 11, 12, 14, 13];
+    const apps = [['Unity', 38, '2,1 Go'], ['Chrome', 21, '1,6 Go'], ['VS Code', 12, '940 Mo'], ['Spotify', 4, '310 Mo'], ['Discord', 3, '420 Mo']];
+    return {
+      p: p,
+      accent: accent,
+      tabs: tabs,
+      gauges: [
+        gauge('CPU', 34, 'Ryzen 7 · 8 cœurs', accent),
+        gauge('GPU', 57, 'RTX 4060', '#a78bfa'),
+        gauge('RAM', 68, '21,8 / 32 Go', '#34d399')
+      ],
+      down: series(down),
+      up: series(up),
+      top: apps.map((a) => ({ name: a[0], cpu: a[1] + ' %', mem: a[2], bar: 'width: ' + a[1] * 2.2 + '%; background: ' + accent + '; border-radius: 4px;' }))
+    };
+  }
+}
+</script>
+</body>
+</html>

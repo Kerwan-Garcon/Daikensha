@@ -81,6 +81,15 @@ pub(crate) fn user_content(first: bool, context: Option<&ChatContext>, query: &s
                 let line = chat::window_line(app_name, title, url.as_deref());
                 content.push(json!({ "type": "text", "text": line }));
             }
+            Some(ChatContext::Capture) => {
+                if let Some(png) = crate::shell::capture::peek() {
+                    content.push(json!({
+                        "type": "image",
+                        "source": { "type": "base64", "media_type": "image/png", "data": base64(&png) },
+                    }));
+                }
+                content.push(json!({ "type": "text", "text": chat::CAPTURE_LINE }));
+            }
             None => {}
         }
     }
