@@ -67,10 +67,10 @@ test("the grid shows 23 weeks, Sunday on top, gaps where a day is missing", () =
 });
 
 test("contribution levels map to GitHub's greens", () => {
-  assert.equal(contributionColor(0), "rgba(255,255,255,0.06)");
+  assert.equal(contributionColor(0), "rgb(var(--color-overlay-rgb) / 0.06)");
   assert.equal(contributionColor(1), "#0E4429");
   assert.equal(contributionColor(4), "#39D353");
-  assert.equal(contributionColor(9), "rgba(255,255,255,0.06)");
+  assert.equal(contributionColor(9), "rgb(var(--color-overlay-rgb) / 0.06)");
 });
 
 test("a picked day shows its date and count, otherwise the year", () => {
@@ -106,13 +106,13 @@ test("My PRs counts, then says how many fail or that some still run", () => {
 });
 
 test("default branch CI sums up the recent repos", () => {
-  assert.deepEqual(mainCISummary([]), { failing: false, color: "#6B7079", value: "no repos" });
-  assert.deepEqual(mainCISummary([repo("a/b", "unknown")]), { failing: false, color: "#6B7079", value: "unknown" });
-  assert.deepEqual(mainCISummary([repo("a/b", "success")]), { failing: false, color: "#22C55E", value: "all green" });
+  assert.deepEqual(mainCISummary([]), { failing: false, color: "#6b7079", value: "no repos" });
+  assert.deepEqual(mainCISummary([repo("a/b", "unknown")]), { failing: false, color: "#6b7079", value: "unknown" });
+  assert.deepEqual(mainCISummary([repo("a/b", "success")]), { failing: false, color: "#22c55e", value: "all green" });
   assert.deepEqual(mainCISummary([repo("a/b", "success"), repo("a/c", "pending")]),
-    { failing: false, color: "#F5A524", value: "running" });
+    { failing: false, color: "#f5a524", value: "running" });
   assert.deepEqual(mainCISummary([repo("a/b", "failure"), repo("a/c", "failure"), repo("a/d", "pending")]),
-    { failing: true, color: "#F4505E", value: "2 failing" });
+    { failing: true, color: "#f4505e", value: "2 failing" });
   assert.equal(ciWord("success"), "passing");
   assert.equal(ciWord("unknown"), null);
 });

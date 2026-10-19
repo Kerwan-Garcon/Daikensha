@@ -1,0 +1,45 @@
+{
+  "v": 3,
+  "createdOnFiles": {"v": 1, "at": "2026-10-18T12:20:00Z"},
+  "title": "Coucou Shell — maquettes",
+  "launch": {"view": "canvas"},
+  "pages": [],
+  "boards": {
+    "Main.dc.html": {"x": 0, "y": 0, "w": 1440, "h": 560, "title": "L'island : fermée, en mode barre du haut, en train de se déplier"},
+    "Controles.dc.html": {"x": 0, "y": 960, "w": 1200, "h": 760, "title": "Contrôles (sombre)"},
+    "Stats.dc.html": {"x": 1280, "y": 960, "w": 1200, "h": 760, "title": "Stats (sombre)"},
+    "Fenetres.dc.html": {"x": 2560, "y": 960, "w": 1200, "h": 760, "title": "Fenêtres (sombre)"},
+    "Apps.dc.html": {"x": 0, "y": 2120, "w": 1200, "h": 760, "title": "Apps (sombre)"},
+    "Aujourdhui.dc.html": {"x": 1280, "y": 2120, "w": 1200, "h": 760, "title": "Aujourd'hui (sombre)"},
+    "PressePapiers.dc.html": {"x": 2560, "y": 2120, "w": 1200, "h": 760, "title": "Presse-papiers (sombre)"},
+    "Fonds.dc.html": {"x": 0, "y": 3280, "w": 1200, "h": 760, "title": "Fonds d'écran (sombre)"},
+    "Alimentation.dc.html": {"x": 1280, "y": 3280, "w": 1200, "h": 760, "title": "Alimentation (sombre)"},
+    "Confirmation.dc.html": {"x": 2560, "y": 3280, "w": 1200, "h": 760, "title": "Carte de confirmation (niveau 2)"},
+    "Entoure.dc.html": {"x": 0, "y": 4440, "w": 1200, "h": 760, "title": "Entoure et demande"},
+    "ControlesClair.dc.html": {"x": 1280, "y": 4440, "w": 1200, "h": 760, "title": "Contrôles (clair)"},
+    "StatsClair.dc.html": {"x": 2560, "y": 4440, "w": 1200, "h": 760, "title": "Stats (clair)"}
+  },
+  "order": [
+    "Main.dc.html",
+    "Controles.dc.html",
+    "Stats.dc.html",
+    "Fenetres.dc.html",
+    "Apps.dc.html",
+    "Aujourdhui.dc.html",
+    "PressePapiers.dc.html",
+    "Fonds.dc.html",
+    "Alimentation.dc.html",
+    "Confirmation.dc.html",
+    "Entoure.dc.html",
+    "ControlesClair.dc.html",
+    "StatsClair.dc.html"
+  ],
+  "notes": {
+    "t1": {"x": 0, "y": -300, "text": "L'island", "kind": "title1", "maxW": 1440},
+    "t2": {"x": 0, "y": 660, "text": "Les onglets du panneau déplié", "kind": "title1", "maxW": 3760},
+    "t3": {"x": 0, "y": 1820, "text": "Les onglets (suite)", "kind": "title1", "maxW": 3760},
+    "t4": {"x": 0, "y": 2980, "text": "Fonds, alimentation, confirmation", "kind": "title1", "maxW": 3760},
+    "t5": {"x": 0, "y": 4140, "text": "Entoure et demande, et le thème clair", "kind": "title1", "maxW": 3760}
+  },
+  "designSystems": []
+}

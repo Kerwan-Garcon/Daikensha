@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Entoure et demande</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0}
+a{color:#93c5fd}a:hover{color:#bfdbfe}
+</style>
+</helmet>
+<div style="position: relative; width: 1200px; height: 760px; overflow: hidden; background: radial-gradient(120% 90% at 20% 10%, #2b3550 0%, #1a1f2e 45%, #141418 100%); font-family: 'Segoe UI Variable Text', 'Segoe UI', system-ui, sans-serif; color: #f5f6f8;">
+
+  <div style="position: absolute; left: 120px; top: 150px; width: 760px; height: 480px; border-radius: 12px; background: #f6f7f9; box-shadow: 0 20px 50px rgba(0,0,0,0.4); overflow: hidden; display: flex; flex-direction: column;">
+    <div style="height: 40px; background: #e9ebef; display: flex; align-items: center; padding: 0 16px; font-size: 13px; color: #444;">Graphique des ventes — Edge</div>
+    <div style="flex-grow: 1; padding: 32px; display: flex; flex-direction: column; gap: 16px;">
+      <div style="height: 20px; width: 320px; border-radius: 4px; background: #d5d9e0;"></div>
+      <div style="display: flex; align-items: flex-end; gap: 16px; height: 220px; padding: 0 24px; border-bottom: 2px solid #c9ced6;">
+        <span style="width: 48px; height: 40%; background: #93c5fd; border-radius: 6px 6px 0 0;"></span>
+        <span style="width: 48px; height: 65%; background: #93c5fd; border-radius: 6px 6px 0 0;"></span>
+        <span style="width: 48px; height: 52%; background: #93c5fd; border-radius: 6px 6px 0 0;"></span>
+        <span style="width: 48px; height: 88%; background: #3b82f6; border-radius: 6px 6px 0 0;"></span>
+        <span style="width: 48px; height: 30%; background: #93c5fd; border-radius: 6px 6px 0 0;"></span>
+        <span style="width: 48px; height: 58%; background: #93c5fd; border-radius: 6px 6px 0 0;"></span>
+      </div>
+      <div style="height: 14px; width: 520px; border-radius: 4px; background: #e1e4ea;"></div>
+      <div style="height: 14px; width: 440px; border-radius: 4px; background: #e1e4ea;"></div>
+    </div>
+  </div>
+
+  <div style="position: absolute; inset: 0; background: rgba(5,6,8,0.45);"></div>
+  <svg width="1200" height="760" viewBox="0 0 1200 760" style="position: absolute; inset: 0;" aria-hidden="true">
+    <path d="M300 300 C 290 250, 420 228, 520 236 S 700 262, 690 330 S 640 460, 520 470 S 300 450, 292 380 Z" fill="rgba(255,255,255,0.10)" stroke="{{accent}}" stroke-width="3" stroke-dasharray="10 8" stroke-linecap="round"></path>
+  </svg>
+
+  <div style="position: absolute; left: 280px; top: 0; width: 640px; box-sizing: border-box; padding: 14px; background: #000; border-radius: 0 0 30px 30px; display: flex; gap: 14px; align-items: stretch; box-shadow: 0 24px 60px rgba(0,0,0,0.45);">
+    <div style="width: 156px; height: 104px; flex-shrink: 0; border-radius: 14px; overflow: hidden; background: #f6f7f9; border: 2px solid {{accent}}; display: flex; align-items: flex-end; gap: 6px; padding: 12px 14px; box-sizing: border-box;">
+      <span style="width: 16px; height: 40%; background: #93c5fd; border-radius: 3px 3px 0 0;"></span>
+      <span style="width: 16px; height: 65%; background: #93c5fd; border-radius: 3px 3px 0 0;"></span>
+      <span style="width: 16px; height: 52%; background: #93c5fd; border-radius: 3px 3px 0 0;"></span>
+      <span style="width: 16px; height: 88%; background: #3b82f6; border-radius: 3px 3px 0 0;"></span>
+      <span style="width: 16px; height: 30%; background: #93c5fd; border-radius: 3px 3px 0 0;"></span>
+    </div>
+    <div style="flex-grow: 1; display: flex; flex-direction: column; gap: 10px;">
+      <label style="display: flex; align-items: center; gap: 10px; height: 44px; padding: 0 12px; border-radius: 14px; background: #141518; border: 1px solid rgba(255,255,255,0.08);">
+        <span style="position: absolute; left: -9999px;">Votre question sur la zone</span>
+        <input type="text" value="Pourquoi le 4e mois est si haut ?" style="flex-grow: 1; border: none; outline: none; background: transparent; color: #f5f6f8; font-size: 15px; font-family: inherit;">
+        <button aria-label="Dicter la question" style="width: 32px; height: 32px; border-radius: 16px; border: none; background: rgba(255,255,255,0.08); color: #f5f6f8; display: flex; align-items: center; justify-content: center;"><svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3zM19 10v2a7 7 0 0 1-14 0v-2M12 19v3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg></button>
+      </label>
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <span style="flex-grow: 1; font-size: 12px; color: #9398a1;">La capture reste en mémoire et part seulement si vous envoyez.</span>
+        <button style="height: 36px; padding: 0 16px; border-radius: 18px; border: none; background: #26282d; color: #f5f6f8; font-size: 14px;">Annuler</button>
+        <button style="height: 36px; padding: 0 16px; border-radius: 18px; border: none; background: #f5f6f8; color: #0b0c0e; font-size: 14px; font-weight: 600;">Demander</button>
+      </div>
+    </div>
+  </div>
+
+  <div style="position: absolute; left: 0; right: 0; bottom: 32px; display: flex; justify-content: center;">
+    <span style="padding: 10px 18px; border-radius: 20px; background: rgba(0,0,0,0.6); font-size: 13px; color: #e5e7eb;">Maintenir Ctrl + Maj + Espace, entourer, relâcher · Échap pour annuler</span>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"accent":{"editor":"color","default":"#60a5fa","options":["#60a5fa","#f472b6","#34d399","#f5a524"]},"$preview":{"width":1200,"height":760}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return { accent: this.props.accent ?? '#60a5fa' };
+  }
+}
+</script>
+</body>
+</html>

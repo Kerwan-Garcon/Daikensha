@@ -279,8 +279,11 @@ export function buildPrompt(onHeightChange: () => void): ViewHost {
     onHeightChange();
 
     const file = State.droppedFile;
+    const first = State.chatHistory.length === 1;
     const context: ChatContext | null =
-      State.chatHistory.length === 1 && file ? { kind: "file", name: file.name, path: file.path } : null;
+      first && State.capturePreview ? { kind: "capture" } : first && file ? { kind: "file", name: file.name, path: file.path } : null;
+    // A capture goes out once, with the first question (Rust drops it after that turn).
+    if (context?.kind === "capture") State.capturePreview = null;
 
     try {
       const reply = await Bridge.chatSend(query, context);
@@ -320,7 +323,7 @@ export function buildPrompt(onHeightChange: () => void): ViewHost {
     el,
     sync() {
       const file = State.droppedFile;
-      const wantChip = file?.name ?? "";
+      const wantChip = file?.name ?? (State.capturePreview ? t("Screen capture") : "");
       if (chipRow.dataset.label !== wantChip) {
         chipRow.dataset.label = wantChip;
         clear(chipRow);

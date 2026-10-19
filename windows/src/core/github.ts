@@ -7,6 +7,7 @@
 // reads what Rust sends and turns it into what the card shows.
 
 import { dayMonth, t, tn } from "../i18n/i18n";
+import { colorHex } from "../design/tokens";
 
 export type CIState = "pending" | "success" | "failure" | "unknown";
 export type ReviewState = "approved" | "changesRequested" | "pending" | "unknown";
@@ -96,10 +97,10 @@ export const GH_STRINGS = {
 };
 
 export const CI_COLORS: Record<CIState, string> = {
-  failure: "#F4505E",
-  pending: "#F5A524",
-  success: "#22C55E",
-  unknown: "#6B7079",
+  failure: colorHex("--color-danger"),
+  pending: colorHex("--color-warning"),
+  success: colorHex("--color-success"),
+  unknown: colorHex("--color-text-faint"),
 };
 
 /** contributionColor() — GitHub's dark-theme greens, empty days barely visible. */
@@ -109,7 +110,7 @@ export function contributionColor(level: number): string {
     case 2: return "#006D32";
     case 3: return "#26A641";
     case 4: return "#39D353";
-    default: return "rgba(255,255,255,0.06)";
+    default: return "rgb(var(--color-overlay-rgb) / 0.06)";
   }
 }
 

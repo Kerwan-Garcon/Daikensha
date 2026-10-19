@@ -1,9 +1,10 @@
 // Small pieces every settings section draws with.
 
 import { h } from "../views/dom";
+import { colorHex } from "../design/tokens";
 
 export function statusDot(ok: boolean): HTMLElement {
-  return h("i", { class: "dot", style: `background:${ok ? "#22c55e" : "#f4505e"}` });
+  return h("i", { class: "dot", style: `background:${ok ? colorHex("--color-success") : colorHex("--color-danger")}` });
 }
 
 export function renderDiff(text: string): HTMLElement {

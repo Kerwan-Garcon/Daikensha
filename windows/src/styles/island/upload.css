@@ -1,0 +1,68 @@
+/* ── Uploading ──────────────────────────────────────────────────────────── */
+
+.up-card {
+  background: radial-gradient(260px 260px at 50% 140%, rgb(var(--color-success-alt-rgb) / 0.14), transparent 70%),
+    var(--color-surface);
+}
+
+.up-card.done {
+  background: radial-gradient(260px 260px at 50% 140%, rgb(var(--color-success-alt-rgb) / 0.28), transparent 70%),
+    var(--color-surface);
+}
+
+.up-row {
+  position: absolute;
+  left: 26px;
+  top: 36px;
+  width: 526px;
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font: 400 12.5px var(--font-sans);
+  color: var(--gray-686);
+}
+
+.up-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.up-name.done {
+  color: var(--color-success-alt);
+  font-weight: 600;
+}
+
+.up-pct {
+  font-variant-numeric: tabular-nums;
+  font-weight: 500;
+  flex: 0 0 auto;
+}
+
+.up-track {
+  position: absolute;
+  left: 26px;
+  top: 58px;
+  width: 526px;
+  height: 6px;
+  border-radius: 3px;
+  background: rgb(var(--color-overlay-rgb) / 0.09);
+}
+
+.up-fill {
+  height: 6px;
+  border-radius: 3px;
+  background: linear-gradient(90deg, var(--emerald-39), var(--color-success-alt));
+}
+
+.up-glow {
+  position: absolute;
+  left: 0;
+  top: -3px;
+  width: 28px;
+  height: 12px;
+  border-radius: 50%;
+  background: rgb(var(--emerald-67-rgb) / 0.45);
+  filter: blur(5px);
+  pointer-events: none;
+}

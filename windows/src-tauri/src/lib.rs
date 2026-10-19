@@ -30,6 +30,7 @@ mod recap;
 mod secrets;
 mod session_window;
 mod settings;
+mod shell;
 mod shortcuts;
 mod sounds;
 mod speech;
@@ -90,8 +91,9 @@ fn boot(app: AppHandle, shared: State<Shared>) -> BootInfo {
 
 #[tauri::command]
 fn save_settings(app: AppHandle, shared: State<Shared>, settings: Settings) {
-    let (screen_changed, autostart_changed, shortcuts_changed, account_changed) = {
+    let (screen_changed, autostart_changed, shortcuts_changed, top_bar_changed, account_changed) = {
         let mut current = shared.settings.lock().unwrap();
+        let top_bar_changed = shell::appbar::wanted(&current) != shell::appbar::wanted(&settings);
         let screen_changed = current.screen != settings.screen;
         let autostart_changed = current.autostart != settings.autostart;
         let shortcuts_changed = current.shortcuts != settings.shortcuts;
@@ -112,7 +114,7 @@ fn save_settings(app: AppHandle, shared: State<Shared>, settings: Settings) {
         claude_cli::set_enabled(settings.claude_subscription);
         let account_changed = current.claude_subscription != settings.claude_subscription;
         *current = settings;
-        (screen_changed, autostart_changed, shortcuts_changed, account_changed)
+        (screen_changed, autostart_changed, shortcuts_changed, top_bar_changed, account_changed)
     };
     let settings = shared.settings.lock().unwrap().clone();
     if let Err(err) = settings::save(&settings) {
@@ -134,8 +136,9 @@ fn save_settings(app: AppHandle, shared: State<Shared>, settings: Settings) {
     }
     integrations::settings_saved(&app, &settings.active_integrations);
     spotify::sync(&app, &settings.active_integrations);
-    if shortcuts_changed {
-        shortcuts::apply(&app, &settings.shortcuts);
+    shell::settings_saved(&app, &settings);
+    if shortcuts_changed || top_bar_changed {
+        shortcuts::apply(&app, &shell::appbar::bindings(&settings));
     }
     // API key ⇄ subscription: « OK Coucou » may now be able to listen, or not any more.
     if account_changed {
@@ -177,6 +180,18 @@ fn set_collapsed(app: AppHandle, shared: State<Shared>, collapsed: bool) {
     island::refresh_click_through(&app, &shared.gate);
     shared.gate.set_active(!collapsed);
     platform::set_pointer_watch(!collapsed);
+}
+
+/// « Coucou Shell »'s panel opens or closes: the window grows for it, and goes
+/// back to the usual panel after (shell/).
+#[tauri::command]
+fn set_shell_open(app: AppHandle, shared: State<Shared>, open: bool) {
+    let open = open && shared.settings.lock().unwrap().shell_panel;
+    island::set_shell_open(open);
+    let pref = shared.settings.lock().unwrap().screen.clone();
+    let collapsed = shared.gate.collapsed.load(Ordering::Relaxed);
+    island::apply_geometry(&app, &pref, collapsed);
+    island::refresh_click_through(&app, &shared.gate);
 }
 
 /// The front end pushes the island shape; Rust decides click-through from it.
@@ -626,7 +641,7 @@ fn shortcuts_suspend(app: AppHandle, shared: State<Shared>, suspended: bool) {
     if suspended {
         shortcuts::suspend(&app);
     } else {
-        let stored = shared.settings.lock().unwrap().shortcuts.clone();
+        let stored = shell::appbar::bindings(&shared.settings.lock().unwrap());
         shortcuts::apply(&app, &stored);
     }
 }
@@ -768,7 +783,48 @@ pub fn run() {
             save_settings,
             set_system_languages,
             claude_cli_status,
+            shell::shell_capabilities,
+            shell::shell_stats,
+            shell::shell_stats_reset,
+            shell::shell_controls,
+            shell::shell_set_volume,
+            shell::shell_set_mute,
+            shell::shell_set_radio,
+            shell::shell_set_brightness,
+            shell::shell_open_settings,
+            shell::shell_windows,
+            shell::shell_window_action,
+            shell::shell_layouts,
+            shell::shell_layout_save,
+            shell::shell_layout_apply,
+            shell::shell_layout_delete,
+            shell::shell_apps,
+            shell::shell_app_launch,
+            shell::shell_todos,
+            shell::shell_todo_change,
+            shell::shell_weather,
+            shell::shell_clipboard,
+            shell::shell_clipboard_copy,
+            shell::shell_clipboard_remove,
+            shell::shell_clipboard_clear,
+            shell::shell_wallpapers,
+            shell::shell_wallpaper_add,
+            shell::shell_wallpaper_delete,
+            shell::shell_wallpaper_apply,
+            shell::shell_battery,
+            shell::shell_power_prepare,
+            shell::shell_confirm,
+            shell::shell_confirm_cancel,
+            shell::shell_routines,
+            shell::shell_routine_delete,
+            shell::shell_top_bar_off,
+            shell::capture::circle_start,
+            shell::capture::circle_capture,
+            shell::capture::circle_cancel,
+            shell::capture::circle_preview,
+            shell::capture::circle_discard,
             set_collapsed,
+            set_shell_open,
             set_island_rect,
             focus_window,
             reposition,
@@ -956,7 +1012,11 @@ pub fn run() {
             phone_link::start_if_enabled(&handle);
             integrations::start(handle.clone());
             spotify::sync(&handle, &loaded.active_integrations);
-            shortcuts::apply(&handle, &loaded.shortcuts);
+            // A taskbar left hidden by a crash comes back first; settings_saved hides it again if asked.
+            shell::appbar::recover();
+            shell::settings_saved(&handle, &loaded);
+            shell::routines::start(&handle);
+            shortcuts::apply(&handle, &shell::appbar::bindings(&loaded));
             if loaded.autostart && WRITES_LOGIN_ITEM {
                 // Login items written before 0.5 start Coucou without --autostart:
                 // writing it again adds it, so the window stays hidden at login.
@@ -975,6 +1035,7 @@ pub fn run() {
             if let tauri::RunEvent::Exit = event {
                 phone_link::stop_on_exit(app);
                 notes::shutdown(app);
+                shell::appbar::on_exit();
             }
         });
 }

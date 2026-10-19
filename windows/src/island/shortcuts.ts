@@ -32,6 +32,8 @@ export interface ShortcutHost {
   flyOutOrHome(): void;
   /** Hands Ctrl+O / Ctrl+E to the view on screen (the Mac posts notifications). */
   viewCommand(command: ViewCommand): void;
+  /** « Entoure et demande »'s overlay (Island.startCircle). */
+  startCircle(): void;
 }
 
 /** What the open view is asked to do: open the highlighted item, toggle the diff. */
@@ -132,6 +134,15 @@ export function runGlobalShortcut(host: ShortcutHost, action: string, resume: ()
       host.flyOutOrHome();
       break;
 
+    case "circleAsk":
+      host.startCircle();
+      break;
+
+    // Rust already put the taskbar back; this turns the « top bar » mode off for good.
+    case "taskbarRescue":
+      void Bridge.shellTopBarOff();
+      break;
+
     // wardrobeToggle never comes this way (Rust sends `open-wardrobe`), and
     // attachFrontWindow isn't in this version.
     default:
@@ -168,6 +179,8 @@ export function runIslandKey(host: ShortcutHost, action: IslandKeyAction) {
       State.chatHistory = [];
       State.droppedFile = null;
       State.promptContext = null;
+      if (State.capturePreview) void Bridge.circleDiscard();
+      State.capturePreview = null;
       void Bridge.chatReset();
       Sound.play("blip");
       host.setView("prompt");

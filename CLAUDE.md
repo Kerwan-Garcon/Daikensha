@@ -8,6 +8,7 @@ Coucou is a native macOS app (`NotchBuddy/`); `windows/` is the Tauri version fo
 - `docs/SPEC.md`, `docs/INTEGRATIONS.md` — behaviour, views, states, integrations (in French).
 - `design/prototype/notch-buddy.html` — original prototype, the visual source of truth. `design/captures/` — target screenshots.
 - `windows/` — the Tauri app for Windows and Linux: Rust in `src-tauri/`, TypeScript in `src/`, the `coucou-hook` relay in `hook/`. `windows/README.md` lists what differs from the Mac.
+- `windows/src/design/tokens.css` — the Windows/Linux design tokens: every colour and font, in one file. Stylesheets live in `windows/src/styles/` (one per window, the island's split by part) and use only these tokens; `windows/src/design/tokens.ts` reads the same file for TypeScript. Guide: `docs/DESIGN_SYSTEM.md`.
 - `docs/*.html` — the GitHub Pages site (privacy, terms, support, legal notice).
 - `relay/` — the Coucou relay, a stateless Cloudflare Worker that forwards the iPhone Live Activity pushes (it holds the APNs key, which must never ship in an app). See `relay/README.md`.
 
@@ -29,5 +30,6 @@ Windows and Linux: `cd windows && npm install && npm run tauri dev`
 - Keep the bundle identifier `fr.louisraille.NotchBuddy` (Keychain items, preferences and permissions depend on it).
 - Never restyle what already ships (pills, cards, Settings, chat…): existing views stay exactly as they are in `main`, which is the App Store build. Change the look of an existing view only when explicitly asked.
 - Pill IDs are stable contract values (Keychain, UserDefaults, hook routing): never rename an existing pill ID.
+- Windows/Linux: no colour or font written in a stylesheet or in view code — use a token from `windows/src/design/tokens.css` (add one there if needed); pages link their stylesheets, code never imports CSS (`tests/design-tokens.test.mjs` checks it).
 - New views follow the existing app style. `design/prototype/notch-buddy.html` and `design/captures/` are references for new work, not a reason to change existing views.
 - Every release adds its CHANGELOG.md section, a row in the README Versions table, and commits the regenerated Info.plist with the new version.

@@ -26,6 +26,10 @@ import { SPOTIFY_ID } from "../core/spotify";
 import type { Outfit, OutfitSelection } from "../mochi/wardrobe";
 import { language, t, tl, type Msg } from "../i18n/i18n";
 import type { ViewCommand } from "../island/shortcuts";
+import { buildShell } from "./shell";
+import { buildConfirm } from "./confirm";
+import { buildCircle } from "./circle";
+import { colorHex } from "../design/tokens";
 
 export interface ViewActions {
   setView(v: IslandViewName): void;
@@ -40,6 +44,12 @@ export interface ViewActions {
   openTarget(): void;
   openUrl(url: string): void;
   decide(d: "allow" | "deny"): void;
+  /** A level 2 card's buttons (views/confirm.ts): run it, or drop it. */
+  decideCard(ok: boolean): void;
+  /** The circled capture's preview: ask about it, or forget it. */
+  decideCapture(ask: boolean): void;
+  /** « Entoure et demande »'s overlay, the panel folded first. */
+  startCircle(): void;
   /** Answers the question Claude Code asked: question text → chosen label. */
   answer(answers: Record<string, string | string[]>): void;
   /** Hands the pending request back to the terminal. */
@@ -145,7 +155,7 @@ export function buildHeader(actions: ViewActions): ViewHost {
       clear(soundBtn);
       soundBtn.append(svg(State.settings.soundEnabled ? ICONS.speakerOn : ICONS.speakerOff, 14));
       syncPlanPills();
-      el.style.opacity = v === "confused" ? "0" : "1";
+      el.style.opacity = v === "confused" || v === "shell" ? "0" : "1";
     },
   };
 
@@ -448,7 +458,7 @@ function buildPill(task: AgentTask, actions: ViewActions): HTMLElement {
   });
 
   if (task.pillBadge) {
-    const colors = { approval: "#F5A524", finished: "#22C55E", error: "#F4505E" } as const;
+    const colors = { approval: colorHex("--color-warning"), finished: colorHex("--color-success"), error: colorHex("--color-danger") } as const;
     const icons = { approval: ICONS.bang, finished: ICONS.check, error: ICONS.xmark } as const;
     const inner = h("i", { style: `background:${colors[task.pillBadge]}` }, svg(icons[task.pillBadge], 6, { stroke: task.pillBadge === "finished" ? 3 : 0 }));
     const badge = h("div", { class: "pill-badge" }, inner);
@@ -636,7 +646,7 @@ function buildQuestion(actions: ViewActions): ViewHost {
       row.append(
         h("button", {
           class: "link-btn",
-          style: "color:#8e939c",
+          style: "color:var(--color-text-subtle)",
           text: tl("Answer in terminal"),
           onclick: () => actions.answerInTerminal(),
         }),
@@ -757,7 +767,7 @@ function buildSettings(actions: ViewActions): ViewHost {
       h("div", { class: "grow" }),
       h("button", {
         class: "link-btn",
-        style: "color:#8e939c;font-size:11.5px",
+        style: "color:var(--color-text-subtle);font-size:11.5px",
         text: tl("Settings…"),
         onclick: () => actions.openSettingsWindow(),
       }),
@@ -778,11 +788,11 @@ function buildSettings(actions: ViewActions): ViewHost {
       segButtons.forEach((b, i) => b.classList.toggle("on", s.autoCloseInterval === [10, 15, 30][i]));
       clear(claudeBadge);
       claudeBadge.append(
-        dot(s.hooksInstalled ? "#22C55E" : "#F4505E", 6),
+        dot(s.hooksInstalled ? colorHex("--color-success") : colorHex("--color-danger"), 6),
         h("span", { text: "Claude Code" }),
       );
       clear(apiBadge);
-      apiBadge.append(dot("#F4505E", 6), h("span", { text: "API" }));
+      apiBadge.append(dot(colorHex("--color-danger"), 6), h("span", { text: "API" }));
     },
   };
 }
@@ -821,6 +831,9 @@ export function buildViews(
   map.set("choose", buildChoose(actions));
   map.set("recap", buildRecap(actions));
   map.set("wardrobe", buildWardrobe(actions));
+  map.set("shell", buildShell(() => actions.startCircle()));
+  map.set("confirm", buildConfirm((ok) => actions.decideCard(ok)));
+  map.set("circle", buildCircle((ask) => actions.decideCapture(ask)));
   // Not in the Windows v1: sending a file by email, window attach + web result.
   map.set("mail", buildPlaceholder(tl("Sending by email isn't in this version."), ""));
   map.set("searching", buildPlaceholder(tl("Claude is searching…"), ""));

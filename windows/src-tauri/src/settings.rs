@@ -43,6 +43,23 @@ pub struct Settings {
     /// provider, the dictation clean-up and the Notetaker's summary. Off: the
     /// API, as it shipped. Only Settings → Claude turns it on.
     pub claude_subscription: bool,
+    /// « Coucou Shell »: the island folds down into a panel of tabs (shell/).
+    /// Off by default, so the island stays as it shipped.
+    pub shell_panel: bool,
+    /// The panel's clipboard history (shell/clipboard.rs): off by default,
+    /// held in memory only, never written anywhere.
+    pub shell_clipboard: bool,
+    /// « OK Coucou » may read the clipboard history's last five entries, cut
+    /// to 500 characters (shell/voice_tools.rs). Off by default.
+    pub shell_clipboard_voice: bool,
+    /// The city for the panel's weather (shell/today.rs, Open-Meteo). Empty:
+    /// no weather and no network call.
+    pub shell_weather_city: String,
+    /// « Top bar » mode (shell/appbar.rs): Windows' taskbar set to hide itself
+    /// while Coucou runs, put back as it was otherwise. Off by default.
+    pub shell_top_bar: bool,
+    /// With it, the island's band is reserved at the top of the screen (an AppBar).
+    pub shell_reserve_top: bool,
     /// Who the chat talks to: "anthropic", a cloud provider of
     /// openai_compat.rs ("openai", "google", "openrouter"), or a model server
     /// of local_chat.rs ("ollama", "lmstudio", "custom"). Picked in the chat view.
@@ -148,6 +165,12 @@ impl Default for Settings {
             plan_relay_installed: false,
             show_codex_plan_in_notch: false,
             claude_subscription: false,
+            shell_panel: false,
+            shell_clipboard: false,
+            shell_clipboard_voice: false,
+            shell_weather_city: String::new(),
+            shell_top_bar: false,
+            shell_reserve_top: false,
             chat_provider: crate::chat::ANTHROPIC.into(),
             chat_models: BTreeMap::new(),
             ollama_url: String::new(),
@@ -436,6 +459,12 @@ mod tests {
   "planRelayInstalled": true,
   "showCodexPlanInNotch": true,
   "claudeSubscription": true,
+  "shellPanel": true,
+  "shellClipboard": true,
+  "shellClipboardVoice": true,
+  "shellWeatherCity": "Bordeaux",
+  "shellTopBar": true,
+  "shellReserveTop": true,
   "chatProvider": "ollama",
   "chatModels": { "ollama": "llama3.2", "openai": "gpt-x" },
   "ollamaUrl": "http://127.0.0.1:11434",
@@ -944,6 +973,12 @@ mod tests {
                 "planRelayInstalled",
                 "showCodexPlanInNotch",
                 "claudeSubscription",
+                "shellPanel",
+                "shellClipboard",
+                "shellClipboardVoice",
+                "shellWeatherCity",
+                "shellTopBar",
+                "shellReserveTop",
                 "chatProvider",
                 "chatModels",
                 "ollamaUrl",

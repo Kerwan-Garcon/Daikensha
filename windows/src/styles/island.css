@@ -1,0 +1,32 @@
+/* The island window (index.html): same palette, sizes and type scale as the
+   macOS island; the sizes are copied from the Swift views, the colours come
+   from src/design/tokens.css (linked first by index.html).
+
+   One file per part of the island. The order below is the cascade order:
+   a later file wins over an earlier one at equal specificity, so add a new
+   file where it belongs rather than at the end by habit. */
+
+@import "./island/base.css";
+@import "./island/island.css";
+@import "./island/content.css";
+@import "./island/cards.css";
+@import "./island/buttons.css";
+@import "./island/overview.css";
+@import "./island/diff-card.css";
+@import "./island/agent-pills.css";
+@import "./island/text.css";
+@import "./island/settings-view.css";
+@import "./island/utility.css";
+@import "./island/chat.css";
+@import "./island/markdown.css";
+@import "./island/model-switcher.css";
+@import "./island/drop-zone.css";
+@import "./island/upload.css";
+@import "./island/integrations.css";
+@import "./island/plan-usage.css";
+@import "./island/github.css";
+@import "./island/recap.css";
+@import "./island/wardrobe.css";
+@import "./island/spotify.css";
+@import "./island/rtl.css";
+@import "./island/shell.css";

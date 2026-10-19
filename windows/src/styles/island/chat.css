@@ -1,0 +1,89 @@
+/* ── Chat (prompt view) ─────────────────────────────────────────────────── */
+
+.chat-card {
+  overflow: hidden;
+}
+
+.chat-body {
+  position: relative;
+  z-index: 1;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px 16px 14px 84px;
+}
+
+.chip-row:empty {
+  display: none;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgb(var(--color-overlay-rgb) / 0.1);
+  font: 400 11.5px var(--font-sans);
+  color: var(--color-text-2);
+  border: 1.5px solid rgb(var(--color-overlay-rgb) / 0.75);
+  transform: scale(1.06);
+  transition: border-color 0.3s ease-out 0.45s, transform 0.3s ease-out 0.45s;
+}
+
+.chip.settled {
+  border-color: rgb(var(--color-overlay-rgb) / 0);
+  transform: scale(1);
+}
+
+.chip-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--red-68), var(--amber-57), var(--emerald-50), var(--cyan-60), var(--violet-76));
+}
+
+.chat-log {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 2px 0;
+  scrollbar-width: thin;
+  scrollbar-color: rgb(var(--color-overlay-rgb) / 0.18) transparent;
+}
+
+.chat-row {
+  display: flex;
+}
+
+.chat-row.user {
+  justify-content: flex-end;
+  padding-left: 32px;
+}
+
+.bubble {
+  background: rgb(var(--color-overlay-rgb) / 0.13);
+  border-radius: 12px;
+  padding: 6px 10px;
+  font: 400 12.5px var(--font-sans);
+  color: var(--color-text-2);
+  white-space: pre-wrap;
+  user-select: text;
+}
+
+.reply {
+  font: 400 12.5px var(--font-sans);
+  color: var(--gray-718);
+  white-space: pre-wrap;
+  padding-right: 8px;
+  user-select: text;
+  /* Answers are Markdown blocks (views/markdown.ts), spaced as ChatMarkdownView. */
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}

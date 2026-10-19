@@ -2,7 +2,7 @@
 // Mirrors IslandRootView.swift + IslandWindowController.swift.
 
 import { Tracked, Spring, clamp } from "../core/anim";
-import { Bridge, IS_TAURI, onDragDrop } from "../core/bridge";
+import { Bridge, IS_TAURI, onDragDrop, onEvent, type ShellCard } from "../core/bridge";
 import {
   EXPANDED_CORNER, EXPANDED_W, NOTCH_W, PANEL_H, PANEL_W,
   ROUNDED_CORNER, VIEW_LAYOUTS, botGlowColor, botGlowOpacity, botPosition, chatPromptHeight,
@@ -22,6 +22,11 @@ import { USC, UploadSeq } from "../upload/sequence";
 import { closePlanCard, openPlanColor, planCardOpen } from "../views/usage";
 import { buildHeader, buildViews, type ViewActions, type ViewHost } from "../views/views";
 import { h } from "../views/dom";
+import type { ShellHost } from "../views/shell";
+import { clockText } from "../core/shell";
+import { language } from "../i18n/i18n";
+
+const IS_WINDOWS = typeof navigator !== "undefined" && navigator.userAgent.includes("Windows");
 import { IslandStateMachine } from "./fsm";
 import { refreshHookPills } from "./integrations";
 import { DesktopLink } from "./desktop";
@@ -41,6 +46,17 @@ const UPLOAD_VIEWS: ReadonlySet<IslandViewName> = new Set(["upload", "uploading"
 /** Seconds between the drop and the moment the progress bar starts filling. */
 const PRE_PROGRESS = USC.T_PROG_START - USC.T_DROP;
 
+/** True when the wheel would scroll something inside the island rather than reach it. */
+function scrollsWithin(target: EventTarget | null, stop: Element, deltaY: number): boolean {
+  for (let el = target instanceof Element ? target : null; el && el !== stop; el = el.parentElement) {
+    if (el.scrollHeight <= el.clientHeight + 1) continue;
+    const overflow = getComputedStyle(el).overflowY;
+    if (overflow !== "auto" && overflow !== "scroll") continue;
+    if (deltaY > 0 ? el.scrollTop + el.clientHeight < el.scrollHeight - 1 : el.scrollTop > 0) return true;
+  }
+  return false;
+}
+
 const modeOrder = (m: IslandMode) => (m === "hidden" ? 0 : m === "compact" ? 1 : 2);
 
 export class Island {
@@ -57,6 +73,10 @@ export class Island {
   private botGlow!: HTMLElement;
   private greetingCanvas!: HTMLCanvasElement;
   private miniGrid!: HTMLElement;
+  /** The time and short date in the folded island, in « top bar » mode only. */
+  private barClock!: HTMLElement;
+  private barClockTimer: number | null = null;
+  private barClockW = 0;
   private countdown!: HTMLElement;
   private wakeStrip!: HTMLElement;
 
@@ -83,6 +103,12 @@ export class Island {
 
   // Rust starts the window at full size so the launch greeting has room.
   private collapsed = false;
+  /** « Coucou Shell »'s panel is on screen (its tabs poll only then). */
+  private shellOn = false;
+  private shellTimer: number | null = null;
+  /** Wheel gestures on the island: one fold per flick, not one per notch. */
+  private wheelSum = 0;
+  private wheelQuietUntil = 0;
   private collapseTimer: number | null = null;
   private wasInIsland = false;
   /** Last shape handed to Rust for the click-through test. */
@@ -197,6 +223,9 @@ export class Island {
       openUrl: (url) => {
         if (url) void Bridge.openUrl(url);
       },
+      decideCard: (ok) => this.decideCard(ok),
+      decideCapture: (ask) => this.decideCapture(ask),
+      startCircle: () => this.startCircle(),
       decide: (d) => {
         const req = State.pendingApproval;
         void Bridge.log(`decide ${d} req=${req?.requestId ?? "none"}`);
@@ -258,6 +287,7 @@ export class Island {
     this.botCanvas = h("canvas", { id: "bot-canvas" });
     this.greetingCanvas = h("canvas", { id: "greeting-canvas" });
     this.miniGrid = h("div", { id: "mini-grid" });
+    this.barClock = h("div", { id: "bar-clock" }, h("span", { class: "t" }), h("span", { class: "d" }));
     this.countdown = h("div", { id: "countdown" });
 
     this.header = buildHeader(actions);
@@ -292,6 +322,7 @@ export class Island {
       this.botGlow,
       this.botCanvas,
       this.miniGrid,
+      this.barClock,
       this.countdown,
     );
 
@@ -440,6 +471,166 @@ export class Island {
     this.silentReveal = false;
   }
 
+  /**
+   * Folds the island down into « Coucou Shell »'s panel (Settings turns it on).
+   * The window grows first, so the panel opens to the height it will have.
+   */
+  async openShell() {
+    if (!State.settings.shellPanel || State.paused || State.pendingApproval) return;
+    if (this.shellTimer != null) window.clearTimeout(this.shellTimer);
+    this.shellTimer = null;
+    try {
+      await Bridge.setShellOpen(true);
+    } catch {
+      return;
+    }
+    // The panel's height follows the window's: let the new size land first.
+    await new Promise<void>((resolve) => {
+      const done = () => {
+        window.removeEventListener("resize", done);
+        resolve();
+      };
+      window.addEventListener("resize", done);
+      window.setTimeout(done, 150);
+    });
+    if (State.pendingApproval || !State.settings.shellPanel) {
+      if (!this.shellOn) void Bridge.setShellOpen(false);
+      return;
+    }
+    if (State.mode === "expanded") this.setView("shell");
+    else {
+      this.fsm.forceHome();
+      this.expand("shell");
+    }
+  }
+
+  /** « OK Coucou » asked for a level 2 action: its card, held open until it is decided. */
+  showCard(card: ShellCard) {
+    State.shellCard = card;
+    this.fsm.pinned = true;
+    this.alert("confirm");
+  }
+
+  /** The card's buttons. Only "yes" runs the action, through its one-time token. */
+  decideCard(ok: boolean) {
+    const card = State.shellCard;
+    State.shellCard = null;
+    this.fsm.pinned = State.isPinned;
+    if (!card) return;
+    if (!ok) {
+      void Bridge.shellConfirmCancel();
+      this.setView(State.defaultView());
+      return;
+    }
+    Sound.play("approve");
+    this.setView(State.defaultView());
+    Bridge.shellConfirm(card.token).catch((err) => {
+      State.noteMessage = String(err).replace(/^Error:\s*/, "");
+      this.setView("note");
+      window.setTimeout(() => this.setView(State.defaultView()), 3000);
+    });
+  }
+
+  /** « Entoure et demande »: the overlay, over the screen under the cursor (the panel folds first). */
+  startCircle() {
+    if (!State.settings.shellPanel) return;
+    if (State.view === "shell") this.closeShell();
+    void Bridge.circleStart();
+  }
+
+  /** The capture landed: a fresh chat, with its preview first. */
+  private async onCaptured() {
+    const url = await Bridge.circlePreview();
+    if (!url) return;
+    State.capturePreview = url;
+    State.droppedFile = null;
+    State.promptContext = null;
+    State.chatHistory = [];
+    void Bridge.chatReset();
+    Sound.play("pop");
+    this.alert("circle");
+  }
+
+  decideCapture(ask: boolean) {
+    if (ask && State.capturePreview) {
+      this.setView("prompt");
+      return;
+    }
+    State.capturePreview = null;
+    void Bridge.circleDiscard();
+    this.setView(State.defaultView());
+  }
+
+  /** The folded island's clock: drawn every 15 s while it shows, nothing otherwise. */
+  private syncBarClock(on: boolean) {
+    this.barClock.classList.toggle("on", on);
+    if (on === (this.barClockTimer != null)) return;
+    if (!on) {
+      window.clearInterval(this.barClockTimer!);
+      this.barClockTimer = null;
+      return;
+    }
+    const draw = () => {
+      const c = clockText(new Date(), language());
+      (this.barClock.firstElementChild as HTMLElement).textContent = c.time;
+      (this.barClock.lastElementChild as HTMLElement).textContent = c.short;
+      this.barClock.title = c.long;
+      const w = Math.ceil(this.barClock.getBoundingClientRect().width) + 12;
+      if (w !== this.barClockW) {
+        this.barClockW = w;
+        this.animateGeometry(false);
+      }
+    };
+    draw();
+    this.barClockTimer = window.setInterval(draw, 15_000);
+  }
+
+  /** Back from the panel to the usual view. */
+  closeShell() {
+    if (State.mode === "expanded" && State.view === "shell") this.setView(State.defaultView());
+  }
+
+  /** Starts or stops the panel's tabs, and gives the window its size back once it has folded. */
+  private syncShell(on: boolean) {
+    if (on === this.shellOn) return;
+    this.shellOn = on;
+    const shell = this.views.get("shell") as ShellHost | undefined;
+    shell?.shown(on);
+    if (this.shellTimer != null) window.clearTimeout(this.shellTimer);
+    this.shellTimer = null;
+    if (!on) {
+      this.shellTimer = window.setTimeout(() => {
+        this.shellTimer = null;
+        if (!this.shellOn) void Bridge.setShellOpen(false);
+      }, 450);
+    }
+  }
+
+  /** Wheel on the island: down opens the panel, up closes it. Lists that scroll keep their wheel. */
+  private onWheel(e: WheelEvent) {
+    if (e.ctrlKey || !State.settings.shellPanel) return;
+    const now = performance.now();
+    if (now < this.wheelQuietUntil) return;
+    const inShell = State.mode === "expanded" && State.view === "shell";
+    const homeView = State.mode === "compact" || (State.mode === "expanded" && (State.view === "overview" || State.view === "empty"));
+    if (!inShell && !homeView) return;
+    if (scrollsWithin(e.target, this.islandEl, e.deltaY)) {
+      this.wheelSum = 0;
+      return;
+    }
+    this.wheelSum = Math.sign(e.deltaY) === Math.sign(this.wheelSum) ? this.wheelSum + e.deltaY : e.deltaY;
+    if (Math.abs(this.wheelSum) < 60) return;
+    const down = this.wheelSum > 0;
+    this.wheelSum = 0;
+    if (inShell && !down) {
+      this.wheelQuietUntil = now + 600;
+      this.closeShell();
+    } else if (!inShell && down) {
+      this.wheelQuietUntil = now + 600;
+      void this.openShell();
+    }
+  }
+
   /** Right-click on Mochi: wardrobe open ↔ back to the usual view. */
   toggleWardrobe() {
     if (State.paused || State.mode === "hidden") return;
@@ -528,6 +719,12 @@ export class Island {
   private onDragDrop(e: { type: string; paths?: string[] }) {
     if (e.type !== "over") void Bridge.log(`drag ${e.type} ${e.paths?.length ?? 0} file(s)`);
     if (State.paused) return;
+    // The Wallpapers tab takes the drop itself: Mochi doesn't eat it.
+    const shell = this.views.get("shell") as ShellHost | undefined;
+    if (State.mode === "expanded" && State.view === "shell" && shell?.takesDrops()) {
+      if (e.type === "drop") shell.drop(e.paths ?? []);
+      return;
+    }
     switch (e.type) {
       case "enter":
       case "over": {
@@ -645,6 +842,8 @@ export class Island {
 
   private targetSize(): { w: number; h: number; r: number } {
     let { w, h } = islandSize(State.mode, State.view, State.chatHistory.length);
+    // « Top bar » mode: the folded island takes the width of its clock too.
+    if (State.mode === "compact" && this.fsm.stayCompact) w += this.barClockW;
     if (State.mode === "expanded" && State.view === "question" && State.pendingApproval?.questions) {
       h = QUESTION_PICKER_H;
     }
@@ -677,6 +876,7 @@ export class Island {
     // These follow the island as it resizes, so they belong here rather than in
     // the state-driven DOM sync.
     this.miniGrid.style.left = `${w - 40 - 14.5}px`;
+    this.barClock.style.top = `${hh / 2}px`;
     this.miniGrid.style.top = `${hh / 2 - 14.5}px`;
     this.greetingCanvas.style.left = `${(w - EXPANDED_W) / 2}px`;
     this.uploadCanvas.el.style.left = `${(w - EXPANDED_W) / 2}px`;
@@ -787,15 +987,31 @@ export class Island {
     // Only keys typed into the island itself land here, never Escape typed in
     // a terminal — so it may fold a waiting card away, as Escape in the notch
     // does on macOS.
+    this.islandEl.addEventListener("wheel", (e) => this.onWheel(e), { passive: true });
+
     window.addEventListener("keydown", (e) => {
       if (e.key === "Escape" && State.mode === "expanded") {
-        if (State.pendingApproval) this.foldApproval();
+        if (State.view === "shell") this.closeShell();
+        else if (State.view === "confirm") this.decideCard(false);
+        else if (State.view === "circle") this.decideCapture(false);
+        else if (State.pendingApproval) this.foldApproval();
         else if (!State.isPinned) this.collapse();
       }
       State.lastActivity = performance.now();
     });
 
     void onDragDrop((e) => this.onDragDrop(e));
+    void onEvent<ShellCard>("shell-confirm", (card) => this.showCard(card));
+    void onEvent<null>("circle-captured", () => void this.onCaptured());
+    // A routine ran (shell/routines.rs): say so for a moment, unless a card is waiting.
+    void onEvent<string>("shell-routine-ran", (message) => {
+      if (State.pendingApproval || State.shellCard) return;
+      State.noteMessage = message;
+      this.alert("note");
+      window.setTimeout(() => {
+        if (State.view === "note" && State.noteMessage === message) this.setView(State.defaultView());
+      }, 3500);
+    });
 
     // Outside Tauri (plain browser) drive the cursor from DOM events so the
     // island can be inspected with `npm run dev`.
@@ -1160,6 +1376,7 @@ export class Island {
       view.el.classList.toggle("on", on);
       if (on) view.sync();
     }
+    this.syncShell(expanded && State.view === "shell");
 
     // The chat is the only view with a text field, so it is the only time the
     // island is allowed to take keyboard focus.
@@ -1173,6 +1390,8 @@ export class Island {
         void Bridge.focusWindow(false);
       }
     }
+
+    this.syncBarClock(State.mode === "compact" && this.fsm.stayCompact);
 
     // Compact mini grid
     const showGrid = State.mode === "compact";
@@ -1200,6 +1419,13 @@ export class Island {
     Sound.setVolume(State.settings.soundVolume);
     this.fsm.homeToPetitDelay = State.settings.autoCloseInterval;
     this.fsm.openOnHover = State.settings.openOnHover;
+    if (!State.settings.shellPanel) this.closeShell();
+    const topBar = IS_WINDOWS && State.settings.shellPanel && State.settings.shellTopBar;
+    if (topBar !== this.fsm.stayCompact) {
+      this.fsm.stayCompact = topBar;
+      if (topBar && State.mode === "hidden") this.fsm.reveal();
+      this.animateGeometry(!topBar);
+    }
     State.notify();
   }
 

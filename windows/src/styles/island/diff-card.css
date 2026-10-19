@@ -1,0 +1,138 @@
+/* ── Diff card (overview, left card) — DiffCardView ─────────────────────── */
+
+.diff-card {
+  position: relative;
+  z-index: 1;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  padding: 4px 10px 4px 108px;
+}
+
+.diff-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 0 3px;
+  min-width: 0;
+}
+
+.diff-back {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  color: var(--color-text);
+  cursor: default;
+}
+
+.diff-back b {
+  font: 600 12px var(--font-sans);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.diff-head .grow {
+  flex: 1 1 auto;
+}
+
+.diff-head .tick-count {
+  flex: 0 0 auto;
+  font: 500 10px var(--font-mono);
+}
+
+.diff-head .plus {
+  color: var(--color-success);
+}
+
+.diff-head .minus {
+  color: var(--color-danger);
+}
+
+.diff-head .icon-btn {
+  width: 14px;
+  height: 14px;
+  flex: 0 0 auto;
+}
+
+.diff-note {
+  font: 400 10.5px var(--font-sans);
+  color: var(--color-text-faint);
+}
+
+.diff-lines {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-width: none;
+  user-select: text;
+}
+
+.diff-lines::-webkit-scrollbar {
+  display: none;
+}
+
+.diff-line {
+  display: flex;
+  min-height: 14px; /* an empty line still takes a row */
+  font: 400 10.5px/1.35 var(--font-mono);
+  color: var(--color-text-faint);
+}
+
+.diff-line .sym {
+  flex: 0 0 12px;
+  color: var(--gray-292);
+}
+
+.diff-line .txt {
+  flex: 1 1 auto;
+  min-width: 0;
+  white-space: pre;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.diff-line.added {
+  background: rgb(var(--color-success-rgb) / 0.12);
+  color: var(--emerald-73);
+}
+
+.diff-line.added .sym {
+  color: var(--color-success);
+}
+
+.diff-line.removed {
+  background: rgb(var(--color-danger-rgb) / 0.12);
+  color: var(--red-82);
+}
+
+.diff-line.removed .sym {
+  color: var(--color-danger);
+}
+
+/* Shimmer sweep, 2.2 s — same as TickerShimmerText / ShimmeringText */
+.shimmer {
+  background: linear-gradient(
+    90deg,
+    var(--gray-514) 0%,
+    var(--gray-955) 40%,
+    var(--gray-514) 70%
+  );
+  background-size: 260% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: shimmer 2.2s linear infinite;
+}
+
+@keyframes shimmer {
+  from {
+    background-position: 130% 0;
+  }
+  to {
+    background-position: -130% 0;
+  }
+}

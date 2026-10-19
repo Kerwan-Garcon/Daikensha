@@ -3,13 +3,13 @@
 // and Notch (every setting of the island), and the page on the right, under
 // its coloured band. Port of FlowHub.swift.
 
-import "./hub.css";
 import { h, clear } from "../views/dom";
 import { t } from "../i18n/i18n";
 import { onEvent } from "../core/bridge";
 import { FlowBridge, type FlowPrefs, type FlowStatus, type ModelsStatus } from "../core/flow";
 import { hero, liveMochi } from "./hero";
 import { icon, keyLabel } from "./ui";
+import { colorHex } from "../design/tokens";
 
 export type PageId =
   | "dictation" | "notes" | "insights" | "dictionary" | "snippets" | "styles" | "flowsettings"
@@ -114,18 +114,18 @@ export async function startHub(root: HTMLElement, opts: HubOptions) {
   function drawStatus() {
     clear(statusLine);
     const models = status.models.parakeet.state;
-    let color = "#6b7079";
+    let color = colorHex("--color-text-faint");
     let text: string;
     if (!status.prefs.enabled) {
       text = t("Dictation is off");
     } else if (models !== "ready") {
-      color = "#f7b32b";
+      color = colorHex("--amber-57");
       text = models === "downloading" ? t("Downloading the voice model…") : t("Download the voice model to dictate");
     } else if (status.keys !== "ok" && status.keys !== "wayland") {
-      color = "#f7b32b";
+      color = colorHex("--amber-57");
       text = t("Use the pill's microphone to dictate");
     } else {
-      color = "#34d399";
+      color = colorHex("--color-success-alt");
       text = t("Ready · hold {0}", { 0: keyLabel(status.keys === "wayland" ? "wayland" : status.prefs.key, status.platform) });
     }
     statusLine.append(h("i", { class: "dot", style: `background:${color}` }), h("span", { text }));

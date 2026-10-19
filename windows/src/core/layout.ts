@@ -1,3 +1,4 @@
+import { colorHex } from "../design/tokens";
 // Island geometry — ported from IslandTypes.swift + IslandWindowController.islandSize
 // + IslandRootView.botPosition. All values are logical pixels, identical to the
 // macOS app's points.
@@ -23,7 +24,10 @@ export type IslandViewName =
   | "settings"
   | "greeting"
   | "recap"
-  | "wardrobe";
+  | "wardrobe"
+  | "shell"
+  | "confirm"
+  | "circle";
 
 export type BotStateName =
   | "idle"
@@ -61,6 +65,10 @@ export const NOTCH_H = 32;
 export const COMPACT_W = 288; // NOTCH_W + 104
 export const EXPANDED_W = 640;
 
+/** « Coucou Shell »'s panel (views/shell.ts): wider than the other views, and as tall as the window lets it be. */
+export const SHELL_W = 880;
+export const SHELL_MAX_H = 600;
+
 export const ROUNDED_CORNER = 14; // hidden / compact
 export const EXPANDED_CORNER = 22;
 
@@ -93,7 +101,18 @@ export const VIEW_LAYOUTS: Record<IslandViewName, ViewLayout> = {
   // to the shared image.
   recap: { height: 184, botX: 62, botY: null, botDiameter: 58, agentMode: "column" },
   wardrobe: { height: 160, botX: 68, botY: null, botDiameter: 58, agentMode: "none" },
+  // Mochi lives in the panel's header, left of the tabs.
+  shell: { height: SHELL_MAX_H, botX: 40, botY: 34, botDiameter: 34, agentMode: "none" },
+  // A level 2 card (views/confirm.ts): the approval card's place, a line taller.
+  confirm: { height: 176, botX: 62, botY: null, botDiameter: 56, agentMode: "none" },
+  // « Entoure et demande »'s preview (views/circle.ts).
+  circle: { height: 176, botX: 62, botY: null, botDiameter: 56, agentMode: "none" },
 };
+
+/** The Shell panel's height: SHELL_MAX_H, or what the window has room for. */
+export function shellHeight(windowH: number): number {
+  return Math.max(300, Math.min(SHELL_MAX_H, (windowH > 0 ? windowH : SHELL_MAX_H) - 8));
+}
 
 // The upload views above are only the fallback geometry. Once a file is actually
 // dropped the whole sequence — Mochi included — is drawn by src/upload, which
@@ -120,6 +139,7 @@ export function islandSize(
     case "compact":
       return { w: COMPACT_W, h: NOTCH_H };
     case "expanded": {
+      if (view === "shell") return { w: SHELL_W, h: shellHeight(typeof window === "undefined" ? 0 : window.innerHeight) };
       const h = view === "prompt" ? chatPromptHeight(chatCount) : VIEW_LAYOUTS[view].height;
       return { w: EXPANDED_W, h };
     }
@@ -170,21 +190,21 @@ export function botPosition(
 export function botGlowColor(s: BotStateName): string {
   switch (s) {
     case "working":
-      return "#3B9EFF";
+      return colorHex("--blue-62");
     case "thinking":
-      return "#A78BFA";
+      return colorHex("--violet-76");
     case "searching":
-      return "#6366F1";
+      return colorHex("--color-indigo");
     case "approval":
-      return "#F5A524";
+      return colorHex("--color-warning");
     case "error":
-      return "#F4505E";
+      return colorHex("--color-danger");
     case "finished":
-      return "#34D399";
+      return colorHex("--color-success-alt");
     case "ratelimit":
-      return "#F59E0B";
+      return colorHex("--amber-50");
     default:
-      return "#FFFFFF";
+      return colorHex("--color-white");
   }
 }
 
@@ -234,20 +254,20 @@ export type Wash = "red" | "green" | "pink" | "amber" | "cyan" | "indigo" | "sof
 export function washRGBA(wash: Wash): string {
   switch (wash) {
     case "red":
-      return "rgba(244,80,94,0.55)";
+      return "rgb(var(--color-danger-rgb) / 0.55)";
     case "green":
-      return "rgba(52,211,153,0.5)";
+      return "rgb(var(--color-success-alt-rgb) / 0.5)";
     case "pink":
-      return "rgba(244,114,182,0.55)";
+      return "rgb(var(--color-pink-rgb) / 0.55)";
     case "amber":
-      return "rgba(245,165,36,0.42)";
+      return "rgb(var(--color-warning-rgb) / 0.42)";
     case "cyan":
-      return "rgba(34,211,238,0.38)";
+      return "rgb(var(--color-cyan-rgb) / 0.38)";
     case "indigo":
-      return "rgba(99,102,241,0.5)";
+      return "rgb(var(--color-indigo-rgb) / 0.5)";
     case "soft":
-      return "rgba(255,255,255,0.08)";
+      return "rgb(var(--color-overlay-rgb) / 0.08)";
     default:
-      return "rgba(0,0,0,0)";
+      return "rgb(var(--color-scrim-rgb) / 0)";
   }
 }

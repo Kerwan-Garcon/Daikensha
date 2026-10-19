@@ -133,7 +133,7 @@ pub enum Mode {
     Phone,
     /// One question, one answer: dictation clean-up, the Notetaker's summary.
     Complete,
-    /// « OK Coucou »: web search and the voice's five tools, through the
+    /// « OK Coucou »: web search and the voice's tools, through the
     /// local MCP server (mcp.rs), in a process kept for the conversation.
     Voice,
 }

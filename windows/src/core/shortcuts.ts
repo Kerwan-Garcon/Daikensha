@@ -29,6 +29,8 @@ export const SHORTCUT_TEXT = {
   muteToggle: N_("Mute or unmute Mochi"),
   desktopToggle: N_("Send Mochi to the desktop"),
   wardrobeToggle: N_("Open the wardrobe"),
+  circleAsk: N_("Circle something on the screen and ask about it"),
+  taskbarRescue: N_("Show the Windows taskbar again"),
   island: {
     nextPrev: N_("Next or previous pill"),
     byNumber: N_("Go to pill 1 to 9"),
@@ -56,7 +58,10 @@ export type ShortcutId =
   | "prevPill"
   | "muteToggle"
   | "desktopToggle"
-  | "wardrobeToggle";
+  | "wardrobeToggle"
+  // Windows and Linux only, after the Mac's: « Entoure et demande » (shell/capture.rs).
+  | "circleAsk"
+  | "taskbarRescue";
 
 export interface ShortcutDef {
   id: ShortcutId;
@@ -81,6 +86,10 @@ export const SHORTCUTS: readonly ShortcutDef[] = [
   def("muteToggle", "Ctrl+Alt+S", true, true),
   def("desktopToggle", "Ctrl+Alt+D", true, true),
   def("wardrobeToggle", "Ctrl+Alt+G", true, true),
+  // Off by default, like the panel it belongs to. X is free on the AltGr layers listed above.
+  def("circleAsk", "Ctrl+Alt+X", false, true),
+  // Brings the taskbar back from the « top bar » mode; Rust registers it only while that mode is on.
+  def("taskbarRescue", "Ctrl+Alt+B", false, true),
 ];
 
 export interface Binding {
