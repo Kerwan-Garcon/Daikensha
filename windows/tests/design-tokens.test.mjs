@@ -6,9 +6,11 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync, readdirSync, statSync } from "node:fs";
 import { join, relative } from "node:path";
+import { fileURLToPath } from "node:url";
 import { colorChannels, tokenNames, tokenValue } from "../src/design/tokens.ts";
 
-const ROOT = new URL("..", import.meta.url).pathname;
+// fileURLToPath, not .pathname: on Windows that gives "/D:/…", which no path API reads.
+const ROOT = fileURLToPath(new URL("..", import.meta.url));
 const SRC = join(ROOT, "src");
 const TOKENS = join(SRC, "design", "tokens.css");
 
