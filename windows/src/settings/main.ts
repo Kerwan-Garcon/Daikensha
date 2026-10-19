@@ -3,7 +3,6 @@
 // disk is confirmed. The window's frame and the Flow pages live in ../hub; the
 // island's settings are drawn here, one Notch page at a time.
 
-import "./settings.css";
 import { Bridge, onEvent, type ClaudeCliStatus, type HookPreview, type HookStatus, type ShellRoutine, type ShortcutsReport } from "../core/bridge";
 import { whenText } from "../core/shell";
 import { CUSTOM_SERVER_KEY, providerDef, urlExposure } from "../core/providers";
@@ -27,6 +26,7 @@ import { renderDiff, statusDot } from "./parts";
 import {
   LANGUAGES, N_, isRtl, language, onLanguageChange, resolveLanguage, setLanguage, systemLanguages, t, tn, weekdayShort,
 } from "../i18n/i18n";
+import { colorHex } from "../design/tokens";
 
 /** Where secrets.rs keeps the keys on this OS. */
 const KEY_STORE = navigator.userAgent.includes("Windows")
@@ -354,7 +354,7 @@ function apiSection(hasKey: boolean): HTMLElement {
   /** With the subscription on, a missing key is not a problem: no red dot, no "the chat needs one". */
   function drawKeyState() {
     const subscription = settings.claudeSubscription;
-    dot.style.background = present ? "#22c55e" : subscription ? "#8e939c" : "#f4505e";
+    dot.style.background = present ? colorHex("--color-success") : subscription ? colorHex("--color-text-subtle") : colorHex("--color-danger");
     state.textContent = present
       ? t("Key saved in the {store}.", { store: KEY_STORE })
       : subscription
@@ -622,7 +622,7 @@ function chatProvidersSection(
     const removeBtn = h("button", { class: "danger", text: CHAT_STRINGS.remove });
     const refresh = () => {
       input.placeholder = present[key] ? CHAT_STRINGS.stored : def.placeholder;
-      dotEl.style.background = present[key] ? "#22c55e" : "#f4505e";
+      dotEl.style.background = present[key] ? colorHex("--color-success") : colorHex("--color-danger");
       removeBtn.style.display = present[key] ? "" : "none";
     };
     saveBtn.addEventListener("click", async () => {
@@ -634,7 +634,7 @@ function chatProvidersSection(
         input.value = "";
         keyChanged(key, true);
       } catch {
-        dotEl.style.background = "#f5a524";
+        dotEl.style.background = colorHex("--color-warning");
         return;
       }
       refresh();
@@ -645,7 +645,7 @@ function chatProvidersSection(
         present[key] = false;
         keyChanged(key, false);
       } catch {
-        dotEl.style.background = "#f5a524";
+        dotEl.style.background = colorHex("--color-warning");
         return;
       }
       refresh();
@@ -914,9 +914,9 @@ function integrationsSection(present: Record<string, boolean>): HTMLElement {
           present[field.key] = value.length > 0;
           input.value = "";
           input.placeholder = value ? CHAT_STRINGS.stored : field.placeholder;
-          dotEl.style.background = value ? "#22c55e" : "#f4505e";
+          dotEl.style.background = value ? colorHex("--color-success") : colorHex("--color-danger");
         } catch {
-          dotEl.style.background = "#f5a524";
+          dotEl.style.background = colorHex("--color-warning");
         }
       });
       rows.append(

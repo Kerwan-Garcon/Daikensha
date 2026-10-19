@@ -29,6 +29,7 @@ import type { ViewCommand } from "../island/shortcuts";
 import { buildShell } from "./shell";
 import { buildConfirm } from "./confirm";
 import { buildCircle } from "./circle";
+import { colorHex } from "../design/tokens";
 
 export interface ViewActions {
   setView(v: IslandViewName): void;
@@ -457,7 +458,7 @@ function buildPill(task: AgentTask, actions: ViewActions): HTMLElement {
   });
 
   if (task.pillBadge) {
-    const colors = { approval: "#F5A524", finished: "#22C55E", error: "#F4505E" } as const;
+    const colors = { approval: colorHex("--color-warning"), finished: colorHex("--color-success"), error: colorHex("--color-danger") } as const;
     const icons = { approval: ICONS.bang, finished: ICONS.check, error: ICONS.xmark } as const;
     const inner = h("i", { style: `background:${colors[task.pillBadge]}` }, svg(icons[task.pillBadge], 6, { stroke: task.pillBadge === "finished" ? 3 : 0 }));
     const badge = h("div", { class: "pill-badge" }, inner);
@@ -645,7 +646,7 @@ function buildQuestion(actions: ViewActions): ViewHost {
       row.append(
         h("button", {
           class: "link-btn",
-          style: "color:#8e939c",
+          style: "color:var(--color-text-subtle)",
           text: tl("Answer in terminal"),
           onclick: () => actions.answerInTerminal(),
         }),
@@ -766,7 +767,7 @@ function buildSettings(actions: ViewActions): ViewHost {
       h("div", { class: "grow" }),
       h("button", {
         class: "link-btn",
-        style: "color:#8e939c;font-size:11.5px",
+        style: "color:var(--color-text-subtle);font-size:11.5px",
         text: tl("Settings…"),
         onclick: () => actions.openSettingsWindow(),
       }),
@@ -787,11 +788,11 @@ function buildSettings(actions: ViewActions): ViewHost {
       segButtons.forEach((b, i) => b.classList.toggle("on", s.autoCloseInterval === [10, 15, 30][i]));
       clear(claudeBadge);
       claudeBadge.append(
-        dot(s.hooksInstalled ? "#22C55E" : "#F4505E", 6),
+        dot(s.hooksInstalled ? colorHex("--color-success") : colorHex("--color-danger"), 6),
         h("span", { text: "Claude Code" }),
       );
       clear(apiBadge);
-      apiBadge.append(dot("#F4505E", 6), h("span", { text: "API" }));
+      apiBadge.append(dot(colorHex("--color-danger"), 6), h("span", { text: "API" }));
     },
   };
 }

@@ -145,10 +145,10 @@ Vérifiée par `cargo check` et `cargo clippy` pour `x86_64-pc-windows-msvc`, sa
 ### 2. Mica / Acrylic sur l'island (5 min, rien n'est committé)
 
 1. Dans `windows/src-tauri/tauri.conf.json`, fenêtre `island`, ajouter temporairement `"windowEffects": { "effects": ["mica"] }`, puis `["acrylic"]`.
-2. Dans `windows/src/style.css`, mettre temporairement `#island { background: rgba(0,0,0,0.55) }`.
+2. Dans `windows/src/styles/island/island.css`, mettre temporairement `#island { background: rgb(var(--color-scrim-rgb) / 0.55) }`.
 3. `npm run tauri dev`, ouvrir et fermer l'island, la déplacer, regarder le Gestionnaire des tâches (CPU de `coucou.exe` et de `msedgewebview2.exe`).
 4. Noter pour chaque effet et chaque version de Windows : le rendu (le flou se voit-il à travers le WebView ?), la saccade à l'ouverture, et le CPU au repos comme pendant l'animation.
-5. Annuler les deux changements (`git checkout -- windows/src-tauri/tauri.conf.json windows/src/style.css`).
+5. Annuler les deux changements (`git checkout -- windows/src-tauri/tauri.conf.json windows/src/styles/island/island.css`).
 
 ### 3. Passage d'image au CLI
 
@@ -167,7 +167,7 @@ Chaque onglet a deux réglages (bouton Tweaks) : le thème sombre/clair et la co
 
 Les sources sont dans `design/mockups/windows-shell/` (`*.dc.html`, avec l'index `canvas.json`). Elles s'affichent dans ce canevas : ouvertes seules dans un navigateur, il leur manque son moteur de rendu.
 
-Le style suit `windows/src/style.css` :
+Le style suit `windows/src/styles/` et ses couleurs `windows/src/design/tokens.css` (voir `docs/DESIGN_SYSTEM.md`) :
 - l'island noire, les cartes à coins de 20 px et les filets à faible opacité ;
 - Segoe UI Variable, et Cascadia Mono en chiffres tabulaires ;
 - une grille de 8 px ;

@@ -20,7 +20,7 @@ function elevenKey(): HTMLElement {
     clear(box);
     if (present) {
       box.append(
-        h("span", { class: "hub-note", style: "color:var(--hub-green)", text: `✓ ${t("Key saved in the {store}.", { store: KEY_STORE })}` }),
+        h("span", { class: "hub-note", style: "color:var(--color-success-alt)", text: `✓ ${t("Key saved in the {store}.", { store: KEY_STORE })}` }),
         button(t("Remove"), () => void Bridge.secretClear(ELEVEN).then(draw), "", true),
       );
       return;

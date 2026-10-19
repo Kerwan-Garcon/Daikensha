@@ -1,0 +1,151 @@
+/* Coucou's design tokens: the one place colours and fonts are decided.
+ *
+ * Every stylesheet in src/styles/ uses these variables and nothing else for
+ * colours and fonts (tests/design-tokens.test.mjs refuses a raw colour there).
+ * TypeScript reads the same values through src/design/tokens.ts.
+ *
+ * Three layers, from what you change most to what you change least:
+ *   1. Fonts.
+ *   2. Roles (--color-*): what a colour is for. Change these to restyle.
+ *      A colour that also appears see-through is given as R G B channels
+ *      (--color-*-rgb) and used as rgb(var(--color-x-rgb) / 0.12): one edit
+ *      moves the solid colour and all its transparent shades.
+ *   3. Palette: the remaining exact shades the views were drawn with, named by
+ *      hue and lightness (--gray-718 is a grey of 71.8 % lightness).
+ *
+ * A light theme is a second block that redefines layer 2 (start with
+ * --color-overlay-rgb: 0 0 0 and the text and surface roles).
+ * See docs/DESIGN_SYSTEM.md. */
+
+:root {
+  /* ── 1. Fonts ──────────────────────────────────────────────────────────── */
+
+  /* After the Latin fonts: the scripts of the other interface languages —
+     Devanagari and Bengali (Nirmala UI), Simplified Chinese (Microsoft YaHei)
+     on Windows, the Noto families on Linux. Arabic and Cyrillic are in Segoe UI. */
+  --font-sans: system-ui, "Segoe UI Variable Text", "Segoe UI", "Segoe UI Emoji", "Nirmala UI",
+    "Microsoft YaHei UI", "Microsoft YaHei", "Noto Sans", "Noto Sans Devanagari", "Noto Sans Bengali",
+    "Noto Sans Arabic", "Noto Sans CJK SC", "Noto Sans SC", "Droid Sans Fallback", sans-serif;
+  --font-mono: "Cascadia Mono", "Consolas", ui-monospace, monospace;
+
+  /* ── 2. Roles ──────────────────────────────────────────────────────────── */
+
+  /* Text, from the brightest to the faintest. */
+  --color-text: #f5f6f8;
+  --color-text-2: #f1f2f4;
+  --color-text-body: #e1e3e6;
+  --color-text-muted: #9398a1;
+  --color-text-subtle: #8e939c;
+  --color-text-faint: #6b7079;
+  --color-text-disabled: #5f646d;
+  --color-text-ghost: #4b5563;
+
+  /* Backgrounds, from the window to what sits on top of it. */
+  --color-bg: #0b0c0e;
+  --color-surface-sunken-rgb: 14 15 17;
+  --color-surface-sunken: rgb(var(--color-surface-sunken-rgb)); /* #0e0f11 */
+  --color-surface: #141518;
+  --color-surface-raised: #18191c;
+  --color-surface-selected: #1d1f23;
+  --color-field: #1f2024;
+
+  /* See-through layers over the dark UI: fills, lines and hovers use white,
+     shadows and scrims black. A light theme swaps them. */
+  --color-overlay-rgb: 255 255 255;
+  --color-scrim-rgb: 0 0 0;
+  --color-hairline: rgb(var(--color-overlay-rgb) / 0.035);
+  --color-line: rgb(var(--color-overlay-rgb) / 0.07);
+  --color-white: #ffffff;
+  --color-black: #000000;
+
+  /* The island's accent (Coucou Shell, links, selection). */
+  --color-accent-rgb: 96 165 250;
+  --color-accent: rgb(var(--color-accent-rgb)); /* #60a5fa */
+  /* Links in the island: lighter tints of the accent, change them with it. */
+  --color-link: #93c5fd;
+  --color-link-hover: #bfdbfe;
+
+  /* The Coucou window's accent (the hub's orange) and the text drawn on it. */
+  --color-brand-rgb: 251 146 60;
+  --color-brand: rgb(var(--color-brand-rgb)); /* #fb923c */
+  --color-on-brand: #170c04;
+
+  /* States. */
+  --color-danger-rgb: 244 80 94;
+  --color-danger: rgb(var(--color-danger-rgb)); /* #f4505e */
+  --color-danger-text: #ff8d97;
+  --color-danger-vivid-rgb: 255 69 58;
+  --color-danger-vivid: rgb(var(--color-danger-vivid-rgb)); /* #ff453a */
+  --color-success-rgb: 34 197 94;
+  --color-success: rgb(var(--color-success-rgb)); /* #22c55e */
+  --color-success-alt-rgb: 52 211 153;
+  --color-success-alt: rgb(var(--color-success-alt-rgb)); /* #34d399 */
+  --color-warning-rgb: 245 165 36;
+  --color-warning: rgb(var(--color-warning-rgb)); /* #f5a524 */
+
+  /* Card washes and categories. */
+  --color-cyan-rgb: 34 211 238;
+  --color-cyan: rgb(var(--color-cyan-rgb)); /* #22d3ee */
+  --color-indigo-rgb: 99 102 241;
+  --color-indigo: rgb(var(--color-indigo-rgb)); /* #6366f1 */
+  --color-pink-rgb: 244 114 182;
+  --color-pink: rgb(var(--color-pink-rgb)); /* #f472b6 */
+
+  /* ── 3. Palette ────────────────────────────────────────────────────────── */
+
+  --gray-037: #08090b;
+  --gray-061: #0d0e12;
+  --gray-096: #16171b;
+  --gray-114: #1a1c20;
+  --gray-167: #252830;
+  --gray-292: #454850;
+  --gray-325: #4d5159;
+  --gray-380: #5a5f68;
+  --gray-400: #5c6370;
+  --gray-510: #7b8089;
+  --gray-514: #7c818a;
+  --gray-569: #8a8f98;
+  --gray-631: #9a9ea8;
+  --gray-686: #a9adb5;
+  --gray-718: #b0b5be;
+  --gray-739: #b7bbc2;
+  --gray-747: #b9bdc4;
+  --gray-788: #c5c8cd;
+  --gray-798: #c7cad0;
+  --gray-808: #c8cdd4;
+  --gray-810: #c9cdd4;
+  --gray-847: #d5d7db;
+  --gray-918: #e8e9ec;
+  --gray-955: #f2f3f5;
+
+  --red-68: #ff6b5b;
+  --red-75: #ff8a80;
+  --red-82: #fca5a5;
+
+  --orange-60: #c9956a;
+  --orange-69: #fdab63;
+  --orange-70: #fbc06a;
+
+  --amber-50: #f59e0b;
+  --amber-57-rgb: 247 179 43;
+  --amber-57: rgb(var(--amber-57-rgb)); /* #f7b32b */
+  --amber-75: #f5d28a;
+
+  --emerald-39: #1fa87a;
+  --emerald-50: #2dd4a7;
+  --emerald-73: #86efac;
+
+  --cyan-60: #38bdf8;
+
+  --blue-62: #3b9eff;
+
+  --indigo-74: #818cf8;
+
+  --violet-76: #a78bfa;
+
+  /* Channels of shades that only appear see-through. */
+  --emerald-67-rgb: 110 231 183;
+  --gray-039-rgb: 8 9 12;
+  --orange-53-rgb: 249 115 22;
+  --violet-68-rgb: 124 92 255;
+}

@@ -3,9 +3,9 @@
 // this window and only then takes that part of the screen. Esc, a right click
 // or a tiny scribble cancels. The page never sees the pixels.
 
-import "./circle.css";
 import { Bridge } from "../core/bridge";
 import { resolveLanguage, setLanguage, systemLanguages, t } from "../i18n/i18n";
+import { colorAlpha, colorHex } from "../design/tokens";
 
 const canvas = document.getElementById("lasso") as HTMLCanvasElement;
 const hint = document.getElementById("hint")!;
@@ -31,11 +31,11 @@ function draw() {
   ctx.moveTo(points[0][0], points[0][1]);
   for (const [x, y] of points.slice(1)) ctx.lineTo(x, y);
   if (!drawing) ctx.closePath();
-  ctx.fillStyle = "rgba(96, 165, 250, 0.10)";
+  ctx.fillStyle = colorAlpha("--color-accent-rgb", 0.10);
   ctx.fill();
-  ctx.shadowColor = "rgba(96, 165, 250, 0.9)";
+  ctx.shadowColor = colorAlpha("--color-accent-rgb", 0.9);
   ctx.shadowBlur = 12;
-  ctx.strokeStyle = "#60a5fa";
+  ctx.strokeStyle = colorHex("--color-accent");
   ctx.lineWidth = 2.5;
   ctx.setLineDash([10, 7]);
   ctx.stroke();

@@ -19,6 +19,7 @@ import { clear, h, svg } from "./dom";
 import { card, cardTitle, chipRow, foot, linkButton, message, note, ring, switchButton, type Tab } from "./shell-parts";
 import { buildClipboard, buildPower, buildToday, buildWallpapers } from "./shell-tabs";
 import type { ViewHost } from "./views";
+import { colorHex } from "../design/tokens";
 
 const ICON: Record<ShellTab, string> = {
   controls: "M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6",
@@ -62,8 +63,8 @@ function gauge(name: Msg, color: string): { el: HTMLElement; set(pct: number | n
 
 function buildStats(): Tab {
   const cpu = gauge(tl("CPU"), "var(--shell-accent)");
-  const gpu = gauge(tl("GPU"), "#a78bfa");
-  const ram = gauge(tl("RAM"), "#34d399");
+  const gpu = gauge(tl("GPU"), colorHex("--violet-76"));
+  const ram = gauge(tl("RAM"), colorHex("--color-success-alt"));
   const ns = "http://www.w3.org/2000/svg";
   const chart = document.createElementNS(ns, "svg");
   chart.setAttribute("viewBox", "0 0 240 80");

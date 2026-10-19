@@ -18,6 +18,7 @@ import {
 import { createMiniBot } from "../mochi/minibots";
 import { pillDefinition } from "../core/pills";
 import { N_, t } from "../i18n/i18n";
+import { colorHex } from "../design/tokens";
 
 
 function lighter(hex: string, amount: number): string {
@@ -182,7 +183,7 @@ class NowPlayingBar {
     this.onCommit = onCommit;
     this.fill = h("i", { class: "np-fill" });
     this.knob = h("i", { class: "np-knob" });
-    this.fill.style.background = "#C5C8CD";
+    this.fill.style.background = colorHex("--gray-788");
     this.el = h("div", { class: "np-bar" }, h("i", { class: "np-track" }), this.fill, this.knob);
     this.el.addEventListener("mouseenter", () => {
       this.hovering = true;
@@ -236,7 +237,7 @@ class NowPlayingBar {
     this.el.classList.toggle("active", active);
     const pct = `${this.fraction * 100}%`;
     this.fill.style.width = pct;
-    this.fill.style.background = active ? SPOTIFY_GREEN : "#C5C8CD";
+    this.fill.style.background = active ? SPOTIFY_GREEN : colorHex("--gray-788");
     this.knob.style.left = `clamp(0px, calc(${pct} - 4.5px), calc(100% - 9px))`;
   }
 }
@@ -291,8 +292,8 @@ export function buildSpotifyCard(): SpotifyCardHost {
   const prev = iconButton(ICONS.backward, 11, 0, () => void Bridge.spotifyControl("previous"));
   const next = iconButton(ICONS.forward, 11, 0, () => void Bridge.spotifyControl("next"));
   const repeat = iconButton(ICONS.repeat, 10, 2.2, () => setFlag("repeat", !Spotify.state.repeat));
-  prev.style.color = "#C5C8CD";
-  next.style.color = "#C5C8CD";
+  prev.style.color = colorHex("--gray-788");
+  next.style.color = colorHex("--gray-788");
   const play = h("button", { class: "np-play", onclick: togglePlay });
   const volIcon = h("span", { class: "np-vol-icon" });
   const volume = new NowPlayingBar(
@@ -308,7 +309,7 @@ export function buildSpotifyCard(): SpotifyCardHost {
   const playingEl = h("div", { class: "np-card" }, head, progressRow, controls);
 
   // Idle: the same layout as the other idle cards.
-  const idleDot = dot("#22C55E", 5);
+  const idleDot = dot(colorHex("--color-success"), 5);
   const idleText = h("span");
   const idleAction = h("button", { class: "link-btn", style: `color:${green}d9` });
   idleAction.addEventListener("click", () => void Bridge.spotifyOpen());
@@ -379,9 +380,9 @@ export function buildSpotifyCard(): SpotifyCardHost {
     progress.enabled = !isAd(track) && track.duration > 0;
     paintProgress();
 
-    shuffle.style.color = s.shuffle ? green : "#6B7079";
+    shuffle.style.color = s.shuffle ? green : colorHex("--color-text-faint");
     shuffle.title = s.shuffle ? t("Shuffle on") : t("Shuffle off");
-    repeat.style.color = s.repeat ? green : "#6B7079";
+    repeat.style.color = s.repeat ? green : colorHex("--color-text-faint");
     repeat.title = s.repeat ? t("Repeat on") : t("Repeat off");
     prev.title = t("Previous");
     next.title = t("Next");
@@ -406,7 +407,7 @@ export function buildSpotifyCard(): SpotifyCardHost {
 
   function syncIdle() {
     const installed = Spotify.state.installed || Spotify.state.running;
-    idleDot.style.background = installed ? "#22C55E" : "#F4505E";
+    idleDot.style.background = installed ? colorHex("--color-success") : colorHex("--color-danger");
     idleText.textContent = installed ? t("Not playing") : t("Spotify not installed");
     idleAction.textContent = installed ? t("Open Spotify") : t("Get Spotify");
     idleSub.textContent = t(pillDefinition(SPOTIFY_ID)?.subtitle ?? N_("Integration"));

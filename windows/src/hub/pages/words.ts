@@ -7,6 +7,7 @@ import { FlowBridge, type Replacement, type Snippet } from "../../core/flow";
 import type { HubContext } from "../shell";
 import { emptyState } from "../hero";
 import { button, card, icon, iconButton, label } from "../ui";
+import { colorHex } from "../../design/tokens";
 
 function newId(): string {
   return `${Date.now().toString(16)}-${Math.random().toString(16).slice(2, 8)}`;
@@ -99,7 +100,7 @@ export async function snippetsPage(page: HTMLElement, ctx: HubContext) {
   page.append(ctx.hero("snippets", t("Snippets"), t("Say the trigger while dictating: Coucou pastes the whole text in its place.")));
 
   let editing: Snippet | null = null;
-  const formTitle = h("div", { style: "font:700 14px var(--font)" });
+  const formTitle = h("div", { style: "font:700 14px var(--font-sans)" });
   const trigger = h("input", { class: "hub-input", placeholder: t("What you say, e.g. my signature") }) as HTMLInputElement;
   const text = h("textarea", { class: "hub-textarea", placeholder: t("The text Coucou pastes") }) as HTMLTextAreaElement;
   const cancel = button(t("Cancel"), () => edit(null));
@@ -133,12 +134,12 @@ export async function snippetsPage(page: HTMLElement, ctx: HubContext) {
   const draw = () => {
     clear(list);
     if (snippets.length === 0) {
-      list.append(emptyState(t("No snippet yet. Your booking link, your signature, your address: say a few words, get the whole text."), "idle", "#F7B32B"));
+      list.append(emptyState(t("No snippet yet. Your booking link, your signature, your address: say a few words, get the whole text."), "idle", colorHex("--amber-57")));
       return;
     }
     for (const s of snippets) {
       list.append(h("div", { class: "hub-list-row" },
-        h("div", { class: "grow" }, h("div", { style: "font:600 13.5px var(--font)", text: `« ${s.trigger} »` }), h("div", { class: "hub-snippet-text", text: s.text })),
+        h("div", { class: "grow" }, h("div", { style: "font:600 13.5px var(--font-sans)", text: `« ${s.trigger} »` }), h("div", { class: "hub-snippet-text", text: s.text })),
         iconButton("pencil", t("Edit"), () => {
           edit(s);
           trigger.focus();

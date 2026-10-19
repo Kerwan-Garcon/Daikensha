@@ -1,6 +1,5 @@
 // Entry point: boot the bridge, wire the island, start the greeting.
 
-import "./style.css";
 import { Bridge, IS_TAURI, onEvent } from "./core/bridge";
 import { Sound } from "./core/sound";
 import { State, type Settings } from "./core/state";

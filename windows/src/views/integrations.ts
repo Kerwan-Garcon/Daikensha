@@ -13,6 +13,7 @@ import { refreshHookPills } from "../island/integrations";
 import { readActivity, readPulse, readStats } from "../core/github";
 import { githubDetail, githubPulseCard } from "./github";
 import { N_, language, t } from "../i18n/i18n";
+import { colorHex } from "../design/tokens";
 
 /** Same shape as the Swift `timeAgo` computed properties. */
 export function timeAgo(value: unknown): string {
@@ -64,12 +65,12 @@ export function idleStatus(
   info: { configured: boolean; error: string | null } | undefined,
   chatModel: string,
 ): { label: string; color: string } {
-  if (isComingSoon(id)) return { label: t("Coming soon"), color: "#6B7079" };
-  if (info?.error) return { label: info.error, color: "#F4505E" };
+  if (isComingSoon(id)) return { label: t("Coming soon"), color: colorHex("--color-text-faint") };
+  if (info?.error) return { label: info.error, color: colorHex("--color-danger") };
   const configured = info?.configured ?? false;
   const def = pillDefinition(id);
-  const ok = (label: string) => ({ label, color: "#22C55E" });
-  const missing = (label: string) => ({ label, color: "#F4505E" });
+  const ok = (label: string) => ({ label, color: colorHex("--color-success") });
+  const missing = (label: string) => ({ label, color: colorHex("--color-danger") });
   // Pills driven by hooks never have a key: they are connected once the hooks
   // are in place (Mac #183). A session replaces this card; nothing is loading.
   if (def?.connect.kind === "hooks") return configured ? ok(t("Hooks installed")) : missing(t("Hooks not installed"));
@@ -141,7 +142,7 @@ function idleCard(task: AgentTask, openSettings: () => void): HTMLElement {
     );
   } else if (!configured) {
     actions.append(
-      h("button", { class: "link-btn", style: "color:#8e939c", text: t("Settings…"), onclick: openSettings }),
+      h("button", { class: "link-btn", style: "color:var(--color-text-subtle)", text: t("Settings…"), onclick: openSettings }),
     );
   }
 
@@ -164,7 +165,7 @@ function vercelCard(onDetail: () => void): HTMLElement {
   const deployments = arr("integration_vercel", "deployments");
   const rows = h("div", { class: "int-rows" });
   deployments.slice(0, 3).forEach((d, i) => {
-    const accent = d.state === "READY" ? "#22C55E" : "#F4505E";
+    const accent = d.state === "READY" ? colorHex("--color-success") : colorHex("--color-danger");
     const name = h("span", { class: "int-name", text: String(d.projectName ?? "") });
     const ago = h("span", { class: "int-ago", text: timeAgo(d.createdAt) });
     if (i === 0) {
@@ -184,7 +185,7 @@ function vercelCard(onDetail: () => void): HTMLElement {
 function vercelDetail(onBack: () => void): HTMLElement {
   const d = arr("integration_vercel", "deployments")[0] ?? {};
   const success = d.state === "READY";
-  const accent = success ? "#22C55E" : "#F4505E";
+  const accent = success ? colorHex("--color-success") : colorHex("--color-danger");
   const status = success ? t("Ready") : d.state === "CANCELED" ? t("Canceled") : t("Error");
   const body = h("div", { class: "int-detail-body" });
   if (d.commitMessage) body.append(h("div", { class: "int-commit", text: String(d.commitMessage) }));
@@ -228,7 +229,7 @@ function resendCard(): HTMLElement {
   const rows = h("div", { class: "int-rows" });
   emails.slice(0, 3).forEach((e, i) => {
     const delivered = e.lastEvent === "delivered";
-    const accent = delivered ? "#22C55E" : "#F4505E";
+    const accent = delivered ? colorHex("--color-success") : colorHex("--color-danger");
     const to = Array.isArray(e.to) ? String(e.to[0] ?? "?") : "?";
     const short = to.split("@")[0];
     const cells: Node[] = [
@@ -265,8 +266,8 @@ function githubCard(): HTMLElement {
     h(
       "div",
       { class: "int-stats" },
-      statRow(ICONS.star, "#F5A524", t("Total stars"), fmt(stars)),
-      statRow(ICONS.stack, "#6B7079", t("Repositories"), String(repos)),
+      statRow(ICONS.star, colorHex("--color-warning"), t("Total stars"), fmt(stars)),
+      statRow(ICONS.stack, colorHex("--color-text-faint"), t("Repositories"), String(repos)),
     ),
   );
 }
@@ -280,7 +281,7 @@ function stripeCard(): HTMLElement {
   const rows = h("div", { class: "int-rows tight" });
   for (const p of arr("integration_stripe", "payments")) {
     const success = p.status === "succeeded";
-    const accent = success ? "#22C55E" : "#F4505E";
+    const accent = success ? colorHex("--color-success") : colorHex("--color-danger");
     rows.append(
       h(
         "div",
@@ -289,7 +290,7 @@ function stripeCard(): HTMLElement {
         h("span", { class: "int-name", text: String(p.description ?? t("Payment")) }),
         h("span", {
           class: "int-amount",
-          style: "color:#22c55e",
+          style: "color:var(--color-success)",
           text: `+${(Number(p.amount ?? 0) / 100).toFixed(2)}`,
         }),
         h("span", { class: "int-ago", text: timeAgo(p.createdAt) }),
@@ -363,7 +364,7 @@ function n8nCard(task: AgentTask, onDetail: () => void, openSettings: () => void
   const hasActivity = task.steps.length > 0 && (task.state === "finished" || task.state === "error");
   if (!hasActivity) return idleCard(task, openSettings);
   const success = task.state === "finished";
-  const accent = success ? "#22C55E" : "#F4505E";
+  const accent = success ? colorHex("--color-success") : colorHex("--color-danger");
   return h(
     "div",
     { class: "int-card" },
@@ -388,7 +389,7 @@ function n8nCard(task: AgentTask, onDetail: () => void, openSettings: () => void
 
 function n8nDetail(task: AgentTask, onBack: () => void): HTMLElement {
   const success = task.state === "finished";
-  const accent = success ? "#22C55E" : "#F4505E";
+  const accent = success ? colorHex("--color-success") : colorHex("--color-danger");
   const detail = task.steps[1];
   return h(
     "div",

@@ -32,6 +32,7 @@ export interface CodexPlanUsage extends PlanUsage {
 }
 
 import { dayMonth, t, weekdayShort } from "../i18n/i18n";
+import { colorHex } from "../design/tokens";
 
 const DAY_MS = 86_400_000;
 
@@ -138,10 +139,10 @@ export function dominantPct(u: PlanUsage | null | undefined, now = Date.now()): 
 
 /** Green below 50 %, orange up to 80 %, red above, grey without data. */
 export function planColor(pct: number | null): string {
-  if (pct == null) return "#6B7079";
-  if (pct < 50) return "#22C55E";
-  if (pct < 80) return "#F59E0B";
-  return "#F4505E";
+  if (pct == null) return colorHex("--color-text-faint");
+  if (pct < 50) return colorHex("--color-success");
+  if (pct < 80) return colorHex("--amber-50");
+  return colorHex("--color-danger");
 }
 
 /** "Claude 73%" / "Codex 12%" on the pill; "Claude —" while there are no numbers. */

@@ -12,6 +12,7 @@ import { State } from "../core/state";
 import { N_, language, t, tl, weekdayShort } from "../i18n/i18n";
 import { clear, h, svg } from "./dom";
 import { card, cardTitle, foot, linkButton, message, note, ring, switchButton, type Tab } from "./shell-parts";
+import { colorHex } from "../design/tokens";
 
 const settingsLink = (text = tl("Open Settings")) => linkButton(text, () => void Bridge.openSettingsWindow());
 
@@ -56,7 +57,7 @@ function buildToday(): Tab {
   const weatherBody = h("div", { class: "shell-stack" });
   const weatherCard = card("", weatherBody);
 
-  const focusRing = ring("#60a5fa", true);
+  const focusRing = ring(colorHex("--color-accent"), true);
   const focusTitle = h("span", { class: "shell-card-title", text: tl("Focus") });
   const startBtn = h("button", { class: "shell-pill", onclick: () => toggleFocus() });
   const resetBtn = h("button", { class: "shell-text-btn", text: tl("Reset"), onclick: () => resetFocus(focus.mode) });
@@ -113,7 +114,7 @@ function buildToday(): Tab {
       if (!w) return;
       const kind = weatherKey(w.code);
       const icon = svg(kind === "clear" ? SUN : CLOUD, 36, { stroke: 2 });
-      icon.style.color = "#f5a524";
+      icon.style.color = colorHex("--color-warning");
       weatherBody.append(
         h("div", { class: "shell-row" }, icon, h("span", { class: "shell-temp", text: `${Math.round(w.temperature)}°` })),
         h("span", { class: "shell-card-title", text: `${w.place} · ${t(WEATHER[kind])}` }),

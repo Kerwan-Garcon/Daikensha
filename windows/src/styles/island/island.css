@@ -1,0 +1,123 @@
+/* ── Island ─────────────────────────────────────────────────────────────── */
+
+#island {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  background: var(--color-black);
+  border-radius: 0 0 14px 14px;
+  overflow: visible;
+  will-change: width, height, transform;
+}
+
+#island-clip {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  border-radius: inherit;
+}
+
+#bot-canvas,
+#greeting-canvas {
+  position: absolute;
+  pointer-events: none;
+}
+
+/* The drop sequence. Sits under the header and takes over the island body; it
+   cross-fades in and out, so the last frame stays up while the views return. */
+#upload-layer {
+  position: absolute;
+  top: 0;
+  width: 640px;
+  height: 176px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.22s ease-in-out;
+}
+
+#upload-layer.on {
+  opacity: 1;
+}
+
+#upload-canvas {
+  position: absolute;
+  inset: 0;
+}
+
+#upload-overlay {
+  position: absolute;
+  inset: 0;
+  display: none;
+}
+
+/* Invisible hit areas over the buttons the canvas paints. */
+.upload-hit {
+  position: absolute;
+  padding: 0;
+  border: 0;
+  border-radius: 13px;
+  background: none;
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+/* The ordinary views step aside while the sequence owns the body. The active
+   view sets pointer-events back to auto, which beats the parent's none: it has
+   to be switched off too, or its invisible card swallows the canvas buttons. */
+#views.hidden-by-upload {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.22s ease-in-out;
+}
+
+#views.hidden-by-upload .view.on {
+  pointer-events: none;
+}
+
+#bot-glow {
+  position: absolute;
+  pointer-events: none;
+  border-radius: 50%;
+  filter: blur(6px);
+  transition: opacity 0.4s ease-in-out, background 0.4s ease-in-out;
+}
+
+#countdown {
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  height: 2px;
+  border-radius: 2px;
+  background: rgb(var(--color-overlay-rgb) / 0.35);
+  width: 0;
+}
+
+/* Compact 2×2 mini grid, to the right of the notch. */
+#mini-grid {
+  position: absolute;
+  width: 29px;
+  height: 29px;
+  display: grid;
+  grid-template-columns: 13px 13px;
+  grid-auto-rows: 13px;
+  gap: 3px;
+  pointer-events: none;
+  transition: opacity 0.25s ease-in-out;
+}
+
+/* A mini Mochi: the slot is the body, the canvas is larger and overflows it so
+   hands, badges and particles are not cut off. */
+.mini {
+  position: relative;
+  display: inline-block;
+  flex: 0 0 auto;
+}
+
+.mini canvas {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}

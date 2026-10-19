@@ -3,6 +3,7 @@
 import { gaugeDash } from "../core/shell";
 import type { Msg } from "../i18n/i18n";
 import { h, svg } from "./dom";
+import { colorAlpha } from "../design/tokens";
 
 const NS = "http://www.w3.org/2000/svg";
 
@@ -71,7 +72,7 @@ export function ring(color: string, withValue = false): { el: SVGSVGElement; set
     c.setAttribute("stroke-width", "8");
     return c;
   };
-  const track = circle("rgba(255,255,255,0.12)");
+  const track = circle(colorAlpha("--color-overlay-rgb", 0.12));
   const arc = circle(color);
   arc.setAttribute("stroke-linecap", "round");
   arc.setAttribute("transform", "rotate(-90 44 44)");
