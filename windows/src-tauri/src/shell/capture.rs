@@ -232,14 +232,18 @@ fn grab(rect: (i32, i32, i32, i32)) -> Result<Vec<u8>, String> {
     }
 }
 
+// Both are `async` on purpose: on Windows, creating or destroying a webview
+// window from a synchronous command (which runs on the main thread) deadlocks
+// the app, so the panel's lasso froze everything. Tauri's docs ask for async.
+
 #[tauri::command]
-pub fn circle_cancel(app: AppHandle) {
+pub async fn circle_cancel(app: AppHandle) {
     close(&app);
 }
 
 /// Opens the overlay from the island (the panel's lasso button).
 #[tauri::command]
-pub fn circle_start(app: AppHandle) {
+pub async fn circle_start(app: AppHandle) {
     start(&app);
 }
 
