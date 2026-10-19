@@ -478,8 +478,11 @@
   gap: 6px;
 }
 
-/* The level 2 card (views/confirm.ts). */
+/* The level 2 card (views/confirm.ts): one line more than a permission card, so a
+   1px tighter stack, and a hint that never shrinks (it lost its descenders). */
+.confirm-stack { gap: 4px; }
 .confirm-hint {
+  flex-shrink: 0;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;

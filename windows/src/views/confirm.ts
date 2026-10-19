@@ -39,7 +39,7 @@ export function buildConfirm(decide: (ok: boolean) => void): ViewHost {
   const yes = h("button", { class: "btn primary" }, h("span", {}));
   const no = h("button", { class: "btn secondary" }, h("span", { text: tl("Cancel") }));
   const row = h("div", { class: "actions" }, no, yes);
-  const stack = h("div", { class: "stack" }, who, title, code, hint, row);
+  const stack = h("div", { class: "stack confirm-stack" }, who, title, code, hint, row);
   stack.style.padding = "4px 16px 4px 116px";
   const body = h("div", { class: "card wash" }, stack);
   body.style.setProperty("--wash", washRGBA("amber"));
