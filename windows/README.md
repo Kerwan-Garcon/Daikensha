@@ -326,6 +326,12 @@ npm run tauri dev      # live-reloading development build
 npm run pack           # builds the installer and drops it in windows/release/
 ```
 
+`npm run tauri dev` first asks an open Coucou to quit (`coucou --quit`): Coucou
+runs as a single instance, so a new dev build would otherwise hand over to the
+old one and stop at once. A dev build loads its pages from Vite, so it never
+becomes the login item, even with **Launch at startup** on: install the build from
+`npm run pack` for that.
+
 `npm run dev` alone serves the front end in an ordinary browser, which is enough
 to work on the island's looks. It also serves `dev/upload-preview.html`, which
 replays the whole file-drop choreography on a loop — the one part of the UI that

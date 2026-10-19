@@ -118,7 +118,10 @@ fn save_settings(app: AppHandle, shared: State<Shared>, settings: Settings) {
     if let Err(err) = settings::save(&settings) {
         log::line(format!("could not save settings: {err}"));
     }
-    if autostart_changed {
+    if autostart_changed && !WRITES_LOGIN_ITEM {
+        log::line("autostart: a debug build never becomes the login item (the installed Coucou does)");
+    }
+    if autostart_changed && WRITES_LOGIN_ITEM {
         let manager = app.autolaunch();
         let result = if settings.autostart { manager.enable() } else { manager.disable() };
         if let Err(err) = result {
@@ -710,6 +713,15 @@ pub fn launched_at_login() -> bool {
     std::env::args().any(|a| a == AUTOSTART_ARG)
 }
 
+/// `coucou --quit`: the running Coucou quits (scripts/dev-stop.mjs, before
+/// `npm run tauri dev` starts a new one). Started alone, it quits at once.
+const QUIT_ARG: &str = "--quit";
+
+/// A debug build (`npm run tauri dev`) loads its pages from Vite, which only
+/// runs with the dev command: it must never become the login item, or the
+/// computer's next start opens it without Vite and it shows a browser error.
+const WRITES_LOGIN_ITEM: bool = !cfg!(debug_assertions);
+
 #[tauri::command]
 fn open_settings_window(app: AppHandle, page: Option<String>) {
     show_hub(&app, Some(page.as_deref().unwrap_or("general")));
@@ -724,6 +736,10 @@ pub fn run() {
 
     let mut builder = tauri::Builder::default()
         .plugin(tauri_plugin_single_instance::init(|app, argv, _cwd| {
+            if argv.iter().any(|a| a == QUIT_ARG) {
+                app.exit(0);
+                return;
+            }
             // `coucou --shortcut <action>`: what a desktop's own keyboard
             // settings run where we can't listen for keys ourselves (Wayland).
             match shortcuts::from_args(&argv) {
@@ -884,6 +900,19 @@ pub fn run() {
         ])
         .setup(move |app| {
             let handle = app.handle().clone();
+            if std::env::args().any(|a| a == QUIT_ARG) {
+                handle.exit(0);
+                return Ok(());
+            }
+            if !WRITES_LOGIN_ITEM && launched_at_login() {
+                // A dev build that an earlier version made the login item:
+                // remove it and quit. The installed Coucou writes it again at
+                // its next start.
+                let _ = handle.autolaunch().disable();
+                log::line("a debug build was started at login: login item removed");
+                handle.exit(0);
+                return Ok(());
+            }
             app.manage(phone_link::PhoneLink::new(handle.clone()));
             tray::build(&handle)?;
             // Before the island: see create_settings_window.
@@ -928,7 +957,7 @@ pub fn run() {
             integrations::start(handle.clone());
             spotify::sync(&handle, &loaded.active_integrations);
             shortcuts::apply(&handle, &loaded.shortcuts);
-            if loaded.autostart {
+            if loaded.autostart && WRITES_LOGIN_ITEM {
                 // Login items written before 0.5 start Coucou without --autostart:
                 // writing it again adds it, so the window stays hidden at login.
                 let _ = handle.autolaunch().enable();
