@@ -328,7 +328,8 @@ npm run pack           # builds the installer and drops it in windows/release/
 
 `npm run tauri dev` first asks an open Coucou to quit (`coucou --quit`): Coucou
 runs as a single instance, so a new dev build would otherwise hand over to the
-old one and stop at once. A dev build loads its pages from Vite, so it never
+old one and stop at once. It then waits for the port of another dev server
+(another `npm run tauri dev`) to free up before Tauri starts. A dev build loads its pages from Vite, so it never
 becomes the login item, even with **Launch at startup** on: install the build from
 `npm run pack` for that.
 
