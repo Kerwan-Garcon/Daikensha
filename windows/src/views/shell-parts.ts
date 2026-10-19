@@ -96,7 +96,7 @@ export function ring(color: string, withValue = false): { el: SVGSVGElement; set
   };
 }
 
-export function switchButton(label: string, on: boolean, onclick: () => void): HTMLElement {
+export function switchButton(label: string | Msg, on: boolean, onclick: () => void): HTMLElement {
   return h("button", { class: on ? "shell-switch on" : "shell-switch", "aria-label": label, "aria-pressed": String(on), onclick }, h("i", {}));
 }
 

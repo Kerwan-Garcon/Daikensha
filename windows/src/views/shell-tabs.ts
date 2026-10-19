@@ -72,7 +72,7 @@ function buildToday(): Tab {
     ),
   );
 
-  const todoInput = h("input", { type: "text", class: "shell-name-input", placeholder: t("Add a to-do"), "aria-label": t("Add a to-do"), maxlength: "200" }) as HTMLInputElement;
+  const todoInput = h("input", { type: "text", class: "shell-name-input", placeholder: tl("Add a to-do"), "aria-label": tl("Add a to-do"), maxlength: "200" }) as HTMLInputElement;
   const todoList = h("div", { class: "shell-todos" });
   const clearDone = h("button", { class: "shell-text-btn", text: tl("Clear done"), onclick: () => void change({ kind: "clearDone" }) });
   const todoCard = card(
@@ -259,7 +259,7 @@ function buildClipboard(): Tab {
   const count = h("span", { class: "shell-dim shell-mono" });
   const list = h("div", { class: "shell-clips" });
   const recent = card("shell-list", h("div", { class: "shell-card-head shell-pad" }, h("span", { class: "shell-card-title", text: tl("Recent") }), count), list);
-  const toggle = switchButton(t("Clipboard history"), false, () => void setOn(!State.settings.shellClipboard));
+  const toggle = switchButton(tl("Clipboard history"), false, () => void setOn(!State.settings.shellClipboard));
   const side = h(
     "div",
     { class: "shell-stack" },
@@ -476,7 +476,7 @@ function buildPower(): Tab {
     "div",
     { class: "shell-power-grid" },
     ...POWER.map(([action, label, icon]) =>
-      h("button", { class: action === "shutDown" ? "shell-power danger" : "shell-power", onclick: () => void ask(action) }, svg(icon, 24, { stroke: 2 }), h("span", { text: t(label) })),
+      h("button", { class: action === "shutDown" ? "shell-power danger" : "shell-power", onclick: () => void ask(action) }, svg(icon, 24, { stroke: 2 }), h("span", { text: tl(label) })),
     ),
   );
   const confirmBox = h("div", { class: "shell-confirm", style: "display:none" });

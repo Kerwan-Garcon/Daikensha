@@ -295,7 +295,7 @@ function tile(app: ShellApp, size: number): HTMLElement {
 
 function buildApps(): Tab {
   const info = note();
-  const input = h("input", { type: "text", class: "shell-search-input", placeholder: t("Search an app"), "aria-label": t("Search an app"), spellcheck: "false" }) as HTMLInputElement;
+  const input = h("input", { type: "text", class: "shell-search-input", placeholder: tl("Search an app"), "aria-label": tl("Search an app"), spellcheck: "false" }) as HTMLInputElement;
   const search = h("label", { class: "shell-search" }, svg("M11 19a8 8 0 1 0 0-16 8 8 0 0 0 0 16zM21 21l-4.3-4.3", 18, { stroke: 2 }), input);
   const results = h("div", { class: "shell-results" });
   const recentGrid = h("div", { class: "shell-tiles" });
@@ -567,7 +567,7 @@ export function buildShell(onCircle: () => void): ShellHost {
     power: buildPower(),
     windows: buildWindows(),
   };
-  const nav = h("nav", { class: "shell-tabs", "aria-label": t("Tabs") });
+  const nav = h("nav", { class: "shell-tabs", "aria-label": tl("Tabs") });
   const time = h("span", { class: "shell-mono shell-time" });
   const date = h("span", { class: "shell-dim" });
   const clock = h("span", { class: "shell-clock" }, time, date);
