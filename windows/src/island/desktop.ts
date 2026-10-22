@@ -13,6 +13,7 @@ import {
 } from "../mochi/desktop-logic";
 import { SeasonCache, parseOutfit } from "../mochi/wardrobe";
 import type { Looked } from "../core/look";
+import { parseLook } from "../mochi/look";
 
 /** Label of the desktop Mochi's window (desktop.rs LABEL). */
 const WINDOW = "mochi";
@@ -172,6 +173,7 @@ export class DesktopLink {
     const snapshot: DesktopSnapshot = {
       state: State.effectiveState,
       outfit: State.wardrobePreview ?? this.seasons.get(parseOutfit(State.settings.mochiOutfit)),
+      look: parseLook(State.settings.mochiLook),
       soundEnabled: State.settings.soundEnabled,
       soundVolume: State.settings.soundVolume,
       paused: State.paused,

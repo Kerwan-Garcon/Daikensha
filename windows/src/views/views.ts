@@ -63,6 +63,8 @@ export interface ViewActions {
   chooseOutfit(selection: OutfitSelection): void;
   /** Wardrobe hover: shows an outfit on Mochi without keeping it; null ends it. */
   previewOutfit(outfit: Outfit | null): void;
+  /** Wardrobe "Face" switch: Mochi's next face (src/mochi/look.ts). */
+  nextLook(): void;
 }
 
 export interface ViewHost {
