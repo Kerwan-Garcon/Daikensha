@@ -78,6 +78,8 @@ demande explicite (« cherche sur internet… », « search the web for… ») p
 avec les derniers échanges de la conversation, en mémoire seulement, oubliés après 90 s. Réponse courte lue à voix haute ;
 quand il y a plus à dire, elle finit par une question et Coucou réécoute : on peut continuer le sujet.
 
+**Agir dans le navigateur** (« va sur YouTube et lance… ») : plan et spike testé dans `docs/BROWSER_AGENT.md`.
+
 Bonus (après les 10) : Mochi et l'app à la voix (« mets-toi en pirate », « coupe les sons », « ne pas déranger »),
 routines (« mode focus » = playlist + ne pas déranger + pilules de travail).
 
