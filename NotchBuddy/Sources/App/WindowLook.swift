@@ -99,7 +99,7 @@ final class WindowLook {
     /// One of the chips: asked in the same conversation, with the window still attached.
     func ask(_ ask: Ask) {
         let state = AppState.shared
-        guard state.stateOverride == nil else { return }
+        guard state.stateOverride != .thinking else { return }
         state.chatHistory.append(ChatMessage(role: .user, content: ask.query))
         state.stateOverride = .thinking
         Task { @MainActor in
@@ -234,8 +234,8 @@ struct LookChips: View {
                         .clipShape(Capsule())
                 }
                 .buttonStyle(.plain)
-                .disabled(state.stateOverride != nil)
-                .opacity(state.stateOverride != nil ? 0.5 : 1)
+                .disabled(state.stateOverride == .thinking)
+                .opacity(state.stateOverride == .thinking ? 0.5 : 1)
             }
         }
     }

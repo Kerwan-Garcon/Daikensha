@@ -387,10 +387,10 @@ final class ClaudeService {
                 }
             }
         }
-        let userMessage: [String: Any] = if let imagePart {
-            ["role": "user", "content": [["type": "text", "text": userText], imagePart]]
-        } else {
-            ["role": "user", "content": userText]
+        var userMessage: [String: Any] = ["role": "user", "content": userText]
+        if let imagePart {
+            let parts: [[String: Any]] = [["type": "text", "text": userText], imagePart]
+            userMessage["content"] = parts
         }
         msgs.append(userMessage)
         conversationMessages.append(userMessage)
