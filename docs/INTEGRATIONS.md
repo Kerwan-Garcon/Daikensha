@@ -338,6 +338,21 @@ Pas d'API WhatsApp pour un compte perso : Coucou parle à une **passerelle local
 
 ---
 
+## 6ter. Linear
+
+**Plateforme** : macOS (les deux builds). Pill `integration_linear` (#5E6AD2), catégorie Services. Fichiers : `LinearController.swift` (API, modèles, réglages), `LinearViews.swift` (carte).
+
+- **Clé** : Réglages → Integrations → Linear. Clé d'API personnelle (`lin_api_…`, Linear → Settings → Security & access → Personal API keys), envoyée telle quelle dans `Authorization` ; tout autre jeton (OAuth) part en `Bearer`. Stockée dans le Trousseau (`linear-api-key`). Changer la clé repart de zéro.
+- **API** : GraphQL, `POST https://api.linear.app/graphql`. Le texte saisi passe toujours par les `variables`, jamais dans la requête.
+- **Lecture** : toutes les 2 min (et à l'ouverture de la carte si la dernière lecture a plus de 30 s), **seulement quand la pill est active** : rien sur le réseau sinon. Une requête : `viewer.assignedIssues` (20, triés par mise à jour, sans `completed` ni `canceled`) + `teams` avec leurs états.
+- **Carte** : mes tickets ouverts (pastille de l'état à sa couleur Linear, identifiant, titre, âge). Clic sur la ligne → le ticket dans le navigateur (`safeWebURL`). Bouton en bout de ligne → état suivant de l'équipe : `backlog`/`unstarted`/`triage` → premier `started` (« Démarrer »), `started` → premier `completed` (« Terminé », la ligne disparaît). Champ du bas → `issueCreate` dans l'équipe choisie (Réglages, sinon la première), assigné à moi ; Entrée crée, Échap vide. Un brouillon garde l'île ouverte.
+- **Écritures** : seulement `issueUpdate` (état) et `issueCreate`, chacune après un clic. Jamais de suppression.
+- **Erreurs** : 401 ou erreur d'authentification → « Invalid API key (401) » ; sinon le `userPresentableMessage` de Linear, affiché sous la carte.
+- **MCP** : l'app n'embarque pas de client MCP. Pour que Claude Code pilote aussi Linear, les Réglages montrent et copient `claude mcp add --transport http linear https://mcp.linear.app/mcp` (connexion OAuth dans le navigateur, gérée par Claude Code). Coucou n'écrit rien dans la config de Claude Code.
+- **Voix** : « ajoute Linear » / « enlève Linear » via `EntityResolver`.
+
+---
+
 ## 7. Permissions macOS demandées (récapitulatif pour Louis)
 
 | Permission | Pourquoi | Quand |

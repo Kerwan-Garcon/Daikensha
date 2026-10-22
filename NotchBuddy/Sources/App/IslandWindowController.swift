@@ -328,9 +328,10 @@ final class IslandWindowController: NSWindowController {
         #if !APPSTORE
         // A WhatsApp reply being typed holds the island open, like a voice mail draft.
         fsm.isHeldOpen = { AppState.shared.pendingApproval != nil || AppState.shared.voiceMailDraft != nil
-                           || WhatsAppController.shared.composing }
+                           || WhatsAppController.shared.composing || LinearController.shared.composing }
         #else
-        fsm.isHeldOpen = { AppState.shared.pendingApproval != nil || AppState.shared.voiceMailDraft != nil }
+        fsm.isHeldOpen = { AppState.shared.pendingApproval != nil || AppState.shared.voiceMailDraft != nil
+                           || LinearController.shared.composing }
         #endif
 
         // Voice: wake phrase detected → open listening island
