@@ -1349,8 +1349,8 @@ struct SettingsView: View {
                             .lineLimit(1).truncationMode(.middle)
                             .textSelection(.enabled)
                         Spacer(minLength: 4)
-                        Button(linearMCPCopied ? String(localized: "linear.mcp-copied")
-                                               : String(localized: "linear.mcp-copy")) {
+                        Button(linearMCPCopied ? String(localized: "notes.copied")
+                                               : String(localized: "hub.copy")) {
                             NSPasteboard.general.clearContents()
                             NSPasteboard.general.setString(LinearSettings.mcpCommand, forType: .string)
                             linearMCPCopied = true

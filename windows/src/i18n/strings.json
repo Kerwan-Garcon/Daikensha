@@ -2092,6 +2092,17 @@
    "ru": "Получает",
    "id": "Mengambil"
   },
+  "First team": {
+   "zh-Hans": "第一个团队",
+   "hi": "पहली टीम",
+   "es": "Primer equipo",
+   "ar": "الفريق الأول",
+   "fr": "Première équipe",
+   "bn": "প্রথম টিম",
+   "pt-BR": "Primeira equipe",
+   "ru": "Первая команда",
+   "id": "Tim pertama"
+  },
   "Fix the line": {
    "zh-Hans": "修改这一行",
    "hi": "पंक्ति ठीक करें",
@@ -2906,6 +2917,17 @@
    "ru": "Позволять iPhone отправлять инструкции в Claude Code",
    "id": "Biarkan iPhone saya mengirim instruksi ke Claude Code"
   },
+  "Linear → Settings → Security & access → Personal API keys. Coucou shows your open issues, moves them to the next state and creates new ones, only when you click.": {
+   "zh-Hans": "Linear → Settings → Security & access → Personal API keys。Coucou 显示你未完成的事项，将其推进到下一状态并新建事项，仅在你点击时执行。",
+   "hi": "Linear → Settings → Security & access → Personal API keys. Coucou आपके खुले इश्यू दिखाता है, उन्हें अगली स्थिति में ले जाता है और नए बनाता है, केवल जब आप क्लिक करें।",
+   "es": "Linear → Settings → Security & access → Personal API keys. Coucou muestra tus incidencias abiertas, las pasa al siguiente estado y crea nuevas, solo cuando haces clic.",
+   "ar": "Linear ← Settings ← Security & access ← Personal API keys. يعرض Coucou مهامك المفتوحة، وينقلها إلى الحالة التالية، وينشئ مهام جديدة، فقط عندما تنقر.",
+   "fr": "Linear → Settings → Security & access → Personal API keys. Coucou affiche tes tickets ouverts, les passe à l'état suivant et en crée, seulement quand tu cliques.",
+   "bn": "Linear → Settings → Security & access → Personal API keys। Coucou আপনার খোলা ইস্যু দেখায়, সেগুলো পরের অবস্থায় নেয় এবং নতুন তৈরি করে, শুধু আপনি ক্লিক করলে।",
+   "pt-BR": "Linear → Settings → Security & access → Personal API keys. O Coucou mostra suas issues abertas, passa-as para o próximo estado e cria novas, só quando você clica.",
+   "ru": "Linear → Settings → Security & access → Personal API keys. Coucou показывает ваши открытые задачи, переводит их в следующий статус и создаёт новые — только по вашему клику.",
+   "id": "Linear → Settings → Security & access → Personal API keys. Coucou menampilkan isu terbukamu, memindahkannya ke status berikutnya, dan membuat yang baru, hanya saat kamu mengeklik."
+  },
   "Listening…": {
    "zh-Hans": "我在听…",
    "hi": "सुन रहा हूँ…",
@@ -3368,6 +3390,17 @@
    "ru": "Мои PR",
    "id": "PR saya"
   },
+  "My issues": {
+   "zh-Hans": "我的事项",
+   "hi": "मेरे इश्यू",
+   "es": "Mis incidencias",
+   "ar": "مهامي",
+   "fr": "Mes tickets",
+   "bn": "আমার ইস্যু",
+   "pt-BR": "Minhas issues",
+   "ru": "Мои задачи",
+   "id": "Isu saya"
+  },
   "Name": {
    "zh-Hans": "名字",
    "hi": "नाम",
@@ -3444,6 +3477,17 @@
    "pt-BR": "Novo email",
    "ru": "Новое письмо",
    "id": "Email baru"
+  },
+  "New issue in {team}…": {
+   "zh-Hans": "在 {team} 中新建事项…",
+   "hi": "{team} में नया इश्यू…",
+   "es": "Nueva incidencia en {team}…",
+   "ar": "مهمة جديدة في {team}…",
+   "fr": "Nouveau ticket dans {team}…",
+   "bn": "{team}-এ নতুন ইস্যু…",
+   "pt-BR": "Nova issue em {team}…",
+   "ru": "Новая задача в {team}…",
+   "id": "Isu baru di {team}…"
   },
   "New snippet": {
    "zh-Hans": "新片段",
@@ -3631,6 +3675,17 @@
    "pt-BR": "Nenhuma mensagem nova",
    "ru": "Нет новых сообщений",
    "id": "Tidak ada pesan baru"
+  },
+  "No open issue assigned to you": {
+   "zh-Hans": "没有分配给你的未完成事项",
+   "hi": "आपको सौंपा गया कोई खुला इश्यू नहीं",
+   "es": "No tienes incidencias abiertas asignadas",
+   "ar": "لا توجد مهام مفتوحة مسندة إليك",
+   "fr": "Aucun ticket ouvert à ton nom",
+   "bn": "আপনাকে দেওয়া কোনো খোলা ইস্যু নেই",
+   "pt-BR": "Nenhuma issue aberta atribuída a você",
+   "ru": "Нет открытых задач, назначенных вам",
+   "id": "Tidak ada isu terbuka untukmu"
   },
   "No other open app": {
    "zh-Hans": "没有其他打开的 App",
@@ -5887,6 +5942,17 @@
    "ru": "Задачи",
    "id": "Tugas"
   },
+  "Team for new issues": {
+   "zh-Hans": "新事项所属团队",
+   "hi": "नए इश्यू के लिए टीम",
+   "es": "Equipo para nuevas incidencias",
+   "ar": "الفريق للمهام الجديدة",
+   "fr": "Équipe des nouveaux tickets",
+   "bn": "নতুন ইস্যুর টিম",
+   "pt-BR": "Equipe para novas issues",
+   "ru": "Команда для новых задач",
+   "id": "Tim untuk isu baru"
+  },
   "Test connection": {
    "zh-Hans": "测试连接",
    "hi": "कनेक्शन जाँचें",
@@ -6184,6 +6250,17 @@
    "ru": "Исправленные слова запоминаются для следующих звонков.",
    "id": "Kata yang kamu perbaiki diingat untuk panggilan berikutnya."
   },
+  "This key can't see any Linear team": {
+   "zh-Hans": "此密钥看不到任何 Linear 团队",
+   "hi": "इस कुंजी से कोई Linear टीम नहीं दिखती",
+   "es": "Esta clave no ve ningún equipo de Linear",
+   "ar": "هذا المفتاح لا يرى أي فريق في Linear",
+   "fr": "Cette clé ne voit aucune équipe Linear",
+   "bn": "এই কী দিয়ে কোনো Linear টিম দেখা যায় না",
+   "pt-BR": "Esta chave não vê nenhuma equipe do Linear",
+   "ru": "Этот ключ не видит ни одной команды Linear",
+   "id": "Kunci ini tidak bisa melihat tim Linear mana pun"
+  },
   "This model is not available.": {
    "zh-Hans": "此模型不可用。",
    "hi": "यह मॉडल उपलब्ध नहीं है।",
@@ -6227,6 +6304,17 @@
    "pt-BR": "A fazer",
    "ru": "Задачи",
    "id": "Tugas"
+  },
+  "To let Claude Code drive Linear too, run this command in a terminal: it adds Linear's MCP server (sign-in in the browser).": {
+   "zh-Hans": "若想让 Claude Code 也能操作 Linear，请在终端运行此命令：它会添加 Linear 的 MCP 服务器（在浏览器中登录）。",
+   "hi": "Claude Code से भी Linear चलाने के लिए, यह कमांड टर्मिनल में चलाएँ: यह Linear का MCP सर्वर जोड़ता है (ब्राउज़र में साइन-इन)।",
+   "es": "Para que Claude Code también maneje Linear, ejecuta este comando en una terminal: añade el servidor MCP de Linear (inicio de sesión en el navegador).",
+   "ar": "لكي يتحكم Claude Code في Linear أيضًا، شغّل هذا الأمر في الطرفية: يضيف خادم MCP الخاص بـ Linear (تسجيل الدخول في المتصفح).",
+   "fr": "Pour que Claude Code pilote aussi Linear, lance cette commande dans un terminal : elle ajoute le serveur MCP de Linear (connexion dans le navigateur).",
+   "bn": "Claude Code দিয়েও Linear চালাতে, টার্মিনালে এই কমান্ডটি চালান: এটি Linear-এর MCP সার্ভার যোগ করে (ব্রাউজারে সাইন-ইন)।",
+   "pt-BR": "Para o Claude Code também controlar o Linear, rode este comando em um terminal: ele adiciona o servidor MCP do Linear (login no navegador).",
+   "ru": "Чтобы Claude Code тоже управлял Linear, выполните эту команду в терминале: она добавит MCP-сервер Linear (вход в браузере).",
+   "id": "Agar Claude Code juga bisa mengendalikan Linear, jalankan perintah ini di terminal: perintah ini menambahkan server MCP Linear (masuk lewat browser)."
   },
   "To review": {
    "zh-Hans": "待审查",

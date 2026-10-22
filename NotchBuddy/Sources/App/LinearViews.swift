@@ -4,7 +4,7 @@ import AppKit
 // MARK: - Linear card
 
 /// My open Linear issues: state, identifier, title. A click on a row opens the issue; the
-/// button at its end moves it to its next state (Start, then Done). The field at the bottom
+/// button at its end moves it to its next state, named as the team names it. The field at the bottom
 /// creates an issue assigned to me in the team chosen in Settings.
 struct LinearCardView: View {
     @ObservedObject private var linear = LinearController.shared
@@ -174,17 +174,19 @@ private struct LinearIssueRow: View {
             .buttonStyle(.plain)
 
             if linear.updating.contains(issue.id) {
-                ProgressView().controlSize(.mini).frame(width: 44)
+                ProgressView().controlSize(.mini).frame(width: 20)
             } else if let next = linear.nextState(for: issue) {
+                // Named after the state it moves to, in the team's own words ("In Progress", "Done").
                 Button {
                     linear.advance(issue)
                 } label: {
-                    Text(next.type == "completed" ? LocalizedStringKey("linear.done") : LocalizedStringKey("linear.start"))
+                    Text(verbatim: next.name)
                         .font(.system(size: 9.5, weight: .medium))
                         .foregroundColor(Color(hex: next.color))
+                        .lineLimit(1)
                         .padding(.horizontal, 6).padding(.vertical, 2)
                         .background(Capsule().fill(Color(hex: next.color).opacity(0.14)))
-                        .frame(width: 44)
+                        .fixedSize()
                 }
                 .buttonStyle(.plain)
                 .help(next.name)

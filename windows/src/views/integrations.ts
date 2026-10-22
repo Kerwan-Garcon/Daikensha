@@ -14,6 +14,7 @@ import { readActivity, readPulse, readStats } from "../core/github";
 import { githubDetail, githubPulseCard } from "./github";
 import { N_, language, t } from "../i18n/i18n";
 import { colorHex } from "../design/tokens";
+import { Sound } from "../core/sound";
 
 /** Same shape as the Swift `timeAgo` computed properties. */
 export function timeAgo(value: unknown): string {
@@ -56,6 +57,7 @@ const OPEN_URLS: Record<string, string> = {
   integration_github: "https://github.com",
   integration_stripe: "https://dashboard.stripe.com/payments",
   integration_notion: "https://notion.so",
+  integration_linear: "https://linear.app",
   integration_calcom: "https://app.cal.com/bookings",
 };
 
@@ -331,6 +333,146 @@ function notionCard(): HTMLElement {
   return h("div", { class: "int-card" }, header("#E8E8E8", "Notion", t("Recent")), rows);
 }
 
+// ── Linear ────────────────────────────────────────────────────────────────────
+//
+// LinearCardView on macOS: my open issues, a button to each one's next state
+// (named as the team names it), and a field that creates an issue. A poll
+// rebuilds the card, so the draft lives here and the field takes the focus
+// back while it holds something.
+
+const LINEAR = "integration_linear";
+let linearDraft = "";
+let linearCreating = false;
+
+/** A state colour from Linear, or a neutral one if it isn't "#rrggbb". */
+function linearColor(v: unknown): string {
+  return typeof v === "string" && /^#[0-9a-fA-F]{6}$/.test(v) ? v : colorHex("--color-text-faint");
+}
+
+function linearCard(): HTMLElement {
+  const issues = arr(LINEAR, "issues");
+  const teams = arr(LINEAR, "teams");
+  const errorLine = h("div", { class: "linear-error" });
+  const fail = (err: unknown) => {
+    errorLine.textContent = String((err as Error)?.message ?? err);
+    Sound.play("error");
+  };
+
+  const rows = h("div", { class: "int-rows tight linear-rows" });
+  if (issues.length === 0) rows.append(h("div", { class: "int-empty", text: t("No open issue assigned to you") }));
+  for (const issue of issues) {
+    const state = (issue.state ?? {}) as Record<string, unknown>;
+    const ring = linearColor(state.color);
+    const open = h(
+      "button",
+      {
+        class: "int-page linear-issue",
+        title: String(state.name ?? ""),
+        onclick: () => {
+          if (typeof issue.url === "string") void Bridge.openUrl(issue.url);
+        },
+      },
+      h("i", {
+        class: "linear-state",
+        style: `border-color:${ring}` + (state.type === "started" ? `;background:${ring}80` : ""),
+      }),
+      h("span", { class: "linear-id", text: String(issue.identifier ?? "") }),
+      h("span", { class: "int-name", text: String(issue.title ?? "") }),
+      h("span", { class: "int-ago", text: timeAgo(issue.updatedAt) }),
+    );
+    const row = h("div", { class: "linear-row" }, open);
+    const next = issue.next as Record<string, unknown> | null | undefined;
+    if (next && typeof next.id === "string" && typeof issue.id === "string") {
+      const tint = linearColor(next.color);
+      const name = String(next.name ?? "");
+      const button = h("button", {
+        class: "linear-next",
+        style: `color:${tint};background:${tint}24`,
+        title: name,
+        text: name,
+      }) as HTMLButtonElement;
+      const issueId = issue.id;
+      const stateId = next.id;
+      button.addEventListener("click", async () => {
+        button.disabled = true;
+        button.textContent = "…";
+        try {
+          // Rust reads the list again once Linear says yes: the card follows.
+          await Bridge.linearAdvance(issueId, stateId);
+          Sound.play(next.type === "completed" ? "approve" : "tick");
+        } catch (err) {
+          button.disabled = false;
+          button.textContent = name;
+          fail(err);
+        }
+      });
+      row.append(button);
+    }
+    rows.append(row);
+  }
+
+  const card = h("div", { class: "int-card" },
+    header("#5E6AD2", "Linear", t("My issues"),
+      issues.length ? h("span", { class: "int-ago", text: String(issues.length) }) : undefined),
+    rows,
+  );
+
+  if (teams.length > 0) {
+    const picked = teams.find((x) => x.id === State.settings.linearTeam) ?? teams[0];
+    const input = h("input", {
+      class: "linear-input",
+      type: "text",
+      maxlength: "255",
+      spellcheck: "false",
+      autocomplete: "off",
+      placeholder: t("New issue in {team}…", { team: String(picked.key ?? "") }),
+    }) as HTMLInputElement;
+    input.value = linearDraft;
+    input.disabled = linearCreating;
+    const submit = async () => {
+      const title = input.value.trim();
+      if (!title || linearCreating) return;
+      linearCreating = true;
+      input.disabled = true;
+      errorLine.textContent = "";
+      try {
+        await Bridge.linearCreate(title);
+        linearDraft = "";
+        input.value = "";
+        Sound.play("approve");
+      } catch (err) {
+        fail(err);
+      } finally {
+        linearCreating = false;
+        input.disabled = false;
+      }
+    };
+    input.addEventListener("input", () => {
+      linearDraft = input.value;
+    });
+    input.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        void submit();
+      } else if (e.key === "Escape" && input.value) {
+        // Clears the draft; an empty field lets Escape close the island.
+        e.stopPropagation();
+        linearDraft = "";
+        input.value = "";
+      }
+    });
+    if (linearDraft) window.setTimeout(() => {
+      if (input.isConnected) {
+        input.focus();
+        input.setSelectionRange(input.value.length, input.value.length);
+      }
+    }, 0);
+    card.append(h("div", { class: "linear-new" }, svg(ICONS.plus, 9), input));
+  }
+  card.append(errorLine);
+  return card;
+}
+
 // ── Cal.com ───────────────────────────────────────────────────────────────────
 
 function calcomCard(): HTMLElement {
@@ -439,6 +581,8 @@ export function hasIntegrationData(id: string): boolean {
       return info.loaded;
     case "integration_notion":
       return arr(id, "pages").length > 0;
+    case LINEAR:
+      return info.loaded;
     case "integration_calcom":
       return info.loaded;
     default:
@@ -478,6 +622,8 @@ export function renderIntegrationCard(task: AgentTask, hooks: IntegrationCardHoo
       return stripeCard();
     case "integration_notion":
       return notionCard();
+    case LINEAR:
+      return linearCard();
     case "integration_calcom":
       return calcomCard();
     default:

@@ -317,7 +317,7 @@ On the Mac, open Coucou from the Dock or the menu bar: its window has every sett
 | **Active pills** *(macOS)* | choose which tools and agents appear in the island | Settings → Active pills |
 | **Flow dictation** *(macOS, GitHub build)* | hold a key, speak, the words are pasted | Coucou → Flow → Settings · the Accessibility and Microphone permissions |
 | **Parakeet** *(macOS, Apple silicon)* | offline dictation, more accurate | Coucou → Flow → Settings → Recognition → **Download** (about 650 MB) |
-| Stripe, n8n, GitHub, Vercel, Resend, Notion, Cal.com, Linear *(macOS)* | the service pills | Keychain / Windows Credential Manager / Secret Service, all optional |
+| Stripe, n8n, GitHub, Vercel, Resend, Notion, Cal.com, Linear | the service pills | Keychain / Windows Credential Manager / Secret Service, all optional |
 | **WhatsApp** *(macOS, GitHub build, experimental)* | your WhatsApp messages in the notch, and replies | Settings → Integrations → WhatsApp · a gateway on your Mac, see [WhatsApp (experimental)](#whatsapp-experimental) |
 
 If Coucou isn't running, the hook exits immediately: **Claude Code is never blocked.**
