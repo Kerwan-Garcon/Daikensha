@@ -6473,6 +6473,83 @@
    "pt-BR": "O relé do Coucou está desatualizado e não pôde proteger o Claude Code. Feche e abra o Coucou de novo para atualizá-lo.",
    "ru": "Ретранслятор Coucou устарел и не смог защитить Claude Code. Закройте и снова запустите Coucou, чтобы обновить его.",
    "id": "Relai Coucou sudah usang dan tidak bisa menjaga Claude Code. Tutup lalu buka lagi Coucou untuk memperbaruinya."
+  },
+  "Face · {look}": {
+   "zh-Hans": "脸 · {look}",
+   "hi": "चेहरा · {look}",
+   "es": "Cara · {look}",
+   "ar": "الوجه · {look}",
+   "fr": "Visage · {look}",
+   "bn": "মুখ · {look}",
+   "pt-BR": "Rosto · {look}",
+   "ru": "Лицо · {look}",
+   "id": "Wajah · {look}"
+  },
+  "Change Mochi's face": {
+   "zh-Hans": "更换 Mochi 的脸",
+   "hi": "Mochi का चेहरा बदलें",
+   "es": "Cambiar la cara de Mochi",
+   "ar": "تغيير وجه Mochi",
+   "fr": "Changer le visage de Mochi",
+   "bn": "Mochi-র মুখ বদলান",
+   "pt-BR": "Mudar o rosto do Mochi",
+   "ru": "Сменить лицо Mochi",
+   "id": "Ganti wajah Mochi"
+  },
+  "Signature": {
+   "zh-Hans": "招牌",
+   "hi": "सिग्नेचर",
+   "es": "Firma",
+   "ar": "مميّز",
+   "fr": "Signature",
+   "bn": "সিগনেচার",
+   "pt-BR": "Assinatura",
+   "ru": "Фирменное",
+   "id": "Khas"
+  },
+  "Portrait": {
+   "zh-Hans": "肖像",
+   "hi": "पोर्ट्रेट",
+   "es": "Retrato",
+   "ar": "صورة شخصية",
+   "fr": "Portrait",
+   "bn": "প্রতিকৃতি",
+   "pt-BR": "Retrato",
+   "ru": "Портрет",
+   "id": "Potret"
+  },
+  "Slime": {
+   "zh-Hans": "史莱姆",
+   "hi": "स्लाइम",
+   "es": "Slime",
+   "ar": "سلايم",
+   "fr": "Slime",
+   "bn": "স্লাইম",
+   "pt-BR": "Slime",
+   "ru": "Слайм",
+   "id": "Slime"
+  },
+  "Sage": {
+   "zh-Hans": "贤者",
+   "hi": "ऋषि",
+   "es": "Sabio",
+   "ar": "الحكيم",
+   "fr": "Sage",
+   "bn": "ঋষি",
+   "pt-BR": "Sábio",
+   "ru": "Мудрец",
+   "id": "Bijak"
+  },
+  "Classic": {
+   "zh-Hans": "经典",
+   "hi": "क्लासिक",
+   "es": "Clásico",
+   "ar": "كلاسيكي",
+   "fr": "Classique",
+   "bn": "ক্লাসিক",
+   "pt-BR": "Clássico",
+   "ru": "Классика",
+   "id": "Klasik"
   }
  }
 }

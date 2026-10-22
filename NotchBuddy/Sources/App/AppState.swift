@@ -73,6 +73,10 @@ final class AppState: ObservableObject {
     @Published var mochiOutfitSelection: Outfit = .auto {
         didSet { Outfit.stored = mochiOutfitSelection }
     }
+    // Mochi's face (portrait, signature or classic) — persisted
+    @Published var mochiLook: MochiLook = .portrait {
+        didSet { MochiLook.stored = mochiLook }
+    }
     // A colour of the user's own for each pill's Mochi (pill id → "#RRGGBB") — persisted.
     // Empty means the catalog's colours. PillDefinition.color reads the stored value, so
     // what is built from the catalog follows on its own; the tasks already on the island
@@ -523,6 +527,7 @@ final class AppState: ObservableObject {
         if let v = ud.object(forKey: "soundEnabled") as? Bool   { soundEnabled = v }
         if let v = ud.object(forKey: "soundVolume")  as? Double { soundVolume  = v }
         mochiOutfitSelection = Outfit.stored
+        mochiLook = MochiLook.stored
         pillColors = PillColors.stored
         if let v = ud.string(forKey: "claudeModel"),
            !v.trimmingCharacters(in: .whitespaces).isEmpty { claudeModel = v }

@@ -17,6 +17,7 @@ import { BotEngine, hexToRGB } from "../mochi/engine";
 import { Greeting } from "../mochi/greeting";
 import { createMiniBot, pruneMiniBots, syncMiniBotStates, tickMiniBots } from "../mochi/minibots";
 import { SeasonCache, parseOutfit } from "../mochi/wardrobe";
+import { nextLook, parseLook } from "../mochi/look";
 import { UploadCanvas } from "../upload/canvas";
 import { USC, UploadSeq } from "../upload/sequence";
 import { closePlanCard, openPlanColor, planCardOpen } from "../views/usage";
@@ -278,6 +279,12 @@ export class Island {
       },
       previewOutfit: (outfit) => {
         State.wardrobePreview = outfit;
+        State.notify();
+      },
+      nextLook: () => {
+        State.settings.mochiLook = nextLook(parseLook(State.settings.mochiLook));
+        void Bridge.saveSettings(State.settings);
+        Sound.play("pop");
         State.notify();
       },
     };
@@ -1305,6 +1312,8 @@ export class Island {
     const showOutfit = mainFocused || State.mode !== "expanded" || inWardrobe;
     const outfit = State.wardrobePreview ?? this.seasons.get(parseOutfit(State.settings.mochiOutfit));
     this.engine.setOutfit(showOutfit ? outfit : "none", !inWardrobe);
+    // Like the outfit: a focused integration pill's Mochi keeps its own plain face.
+    this.engine.look = showOutfit ? parseLook(State.settings.mochiLook) : "classic";
     // Dances while music plays: always in the compact island, expanded only on
     // the music pill's card (BotCanvasView, macOS). Asked every frame.
     this.engine.setDancing(islandDances({
