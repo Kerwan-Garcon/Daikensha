@@ -241,6 +241,18 @@ Priorité : failure > review demandée > success. Un seul badge/son par cycle.
 
 Permissions : Enregistrement de l'écran (capture) et Automatisation (navigateur). Si refusées : on continue sans capture ou sans URL, et on le dit en une ligne dans la vue.
 
+### Mochi regarde la fenêtre (`WindowLook`, hors App Store)
+
+Par défaut, lâcher Mochi sur une fenêtre ne fait pas qu'attacher : il **regarde** et commente.
+
+1. La fenêtre sous le point (numéro `kCGWindowNumber`, titre `kCGWindowName`) est capturée seule avec `screencapture -l<id> -x -o` (même recouverte), réduite à 1568 px de côté max, en JPEG, dans `$TMPDIR/CoucouLooks` (10 dernières gardées).
+2. Nouvelle conversation dans la vue `prompt` : bulle « Regarde cette fenêtre », émote `listening`, `gulp` quand l'image est prise, puis l'IA du chat reçoit la capture et la consigne : une phrase sur ce que c'est, un résumé, une analyse (ce qui ressort, ce qui cloche, quoi faire ensuite), dans la langue de l'app.
+3. Sous le chat, à gauche de la puce de modèle, quatre puces relancent dans la même conversation : **Résumé**, **Analyse**, **Points clés**, **Traduire**. On peut aussi écrire normalement.
+4. Images : Anthropic (bloc image), OpenAI et Google (`image_url` en data URL, gardée dans l'historique pour les relances). Les autres fournisseurs ne reçoivent que l'app, le titre et l'URL.
+5. Sans la permission Enregistrement de l'écran : macOS la demande, la vue `note` explique où l'accorder, rien n'est envoyé.
+
+**⌥ + lâcher** : l'ancien comportement, la fenêtre est seulement attachée au chat (pastille), sans capture ni question.
+
 ---
 
 ## 5. API Claude (recherche)

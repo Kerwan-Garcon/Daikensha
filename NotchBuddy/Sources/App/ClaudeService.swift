@@ -265,7 +265,10 @@ final class ClaudeService {
         // Add file/window context on first message only
         if conversationMessages.isEmpty, let context = context {
             switch context {
-            case .window(let app, let title, let url):
+            case .window(let app, let title, let url, let shot):
+                if let shot, let block = readFileAsBlock(url: shot) {
+                    userContent.append(block)
+                }
                 var text = "Context — App: \(app), Window: \(title)"
                 if let url = url { text += ", URL: \(url)" }
                 userContent.append(["type": "text", "text": text])
@@ -344,7 +347,10 @@ final class ClaudeService {
         var msgs: [[String: Any]] = [["role": "system", "content": systemPrompt]]
         for m in conversationMessages {
             var simplified = m
+            // Anthropic blocks become plain text; OpenAI parts with an image (a window Mochi
+            // looked at) stay as they are, so follow-ups still see it.
             if let content = m["content"] as? [[String: Any]],
+               !content.contains(where: { ($0["type"] as? String) == "image_url" }),
                let textBlock = content.first(where: { ($0["type"] as? String) == "text" }),
                let text = textBlock["text"] as? String {
                 simplified["content"] = text
@@ -352,12 +358,17 @@ final class ClaudeService {
             msgs.append(simplified)
         }
         var userText = query
+        var imagePart: [String: Any]? = nil
         if conversationMessages.isEmpty, let ctx = context {
             switch ctx {
-            case .window(let app, let title, let url):
+            case .window(let app, let title, let url, let shot):
                 var prefix = "Context — App: \(app), Window: \(title)"
                 if let u = url { prefix += ", URL: \(u)" }
                 userText = prefix + "\n\n" + query
+                if provider.seesImages, let shot, let data = try? Data(contentsOf: shot) {
+                    imagePart = ["type": "image_url",
+                                 "image_url": ["url": "data:image/jpeg;base64,\(data.base64EncodedString())"]]
+                }
             case .file(let name, let fileURL):
                 if provider.isLocal, let fileURL = fileURL {
                     let ext = fileURL.pathExtension.lowercased()
@@ -376,8 +387,13 @@ final class ClaudeService {
                 }
             }
         }
-        msgs.append(["role": "user", "content": userText])
-        conversationMessages.append(["role": "user", "content": userText])
+        let userMessage: [String: Any] = if let imagePart {
+            ["role": "user", "content": [["type": "text", "text": userText], imagePart]]
+        } else {
+            ["role": "user", "content": userText]
+        }
+        msgs.append(userMessage)
+        conversationMessages.append(userMessage)
 
         let useStream = provider.isLocal || provider == .deepseek || provider == .qwen || provider == .moonshot
         var body: [String: Any] = [
@@ -493,7 +509,7 @@ final class ClaudeService {
 
         var userContent: [[String: Any]] = []
         switch context {
-        case .window(let appName, let title, let url):
+        case .window(let appName, let title, let url, _):
             var text = "App: \(appName)\nWindow title: \(title)"
             if let url = url { text += "\nURL: \(url)" }
             text += "\n\nRequest: \(query)"
@@ -761,4 +777,10 @@ final class ClaudeService {
             return ["type": "text", "text": "File contents:\n\(text)"]
         }
     }
+}
+
+private extension ChatProvider {
+    /// Takes an image through the OpenAI-compatible API (a window Mochi looked at). The local
+    /// servers and the others only get the window's name.
+    var seesImages: Bool { self == .openai || self == .google }
 }
