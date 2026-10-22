@@ -189,8 +189,9 @@ final class BotEngine: ObservableObject {
     var hands:  CGFloat = 0
     var blush:  CGFloat = 0
     var outfit: Outfit = .none
-    /// Mouth, eye glints, pink cheeks and idle quirks (MochiLook.swift). Main Mochi only.
-    var signatureLook: Bool = MochiLook.stored == .signature
+    /// Classic face, signature traits (mouth, eye glints, pink cheeks, quirks) or the portrait
+    /// on top of them (MochiLook.swift). Main Mochi only.
+    var look: MochiLook = MochiLook.stored
     var nextQuirk: Double = CACurrentMediaTime() + 20 + Double.random(in: 0...20)
     var es:     CGFloat = 1          // eye scale
     var badgeS: CGFloat = 0          // badge scale
@@ -1137,12 +1138,20 @@ final class BotEngine: ObservableObject {
         // Body path (superellipse for Mochi, morph to rect for upload)
         let bodyPath = mochiPath(rx: rx, ry: ry, morph: morph, R: R)
 
+        // Portrait look: his braids hang behind the body
+        drawBraids(ctx: ctx, R: R, rx: rx, ry: ry)
+
         // Body fill
         drawBody(ctx: &ctx, path: bodyPath, R: R, rx: rx, ry: ry,
-                 pumpkinColors: outfit == .pumpkin && !isMini)
+                 pumpkinColors: outfit == .pumpkin && !isMini, skin: hasPortrait)
 
         // A warm Mac flushes him (MochiMood.swift).
         drawMoodTint(ctx: &ctx, path: bodyPath, rx: rx, ry: ry)
+
+        // Portrait look: beard, tee, hair, clip and the sunglasses on his head
+        drawBeardAndTee(ctx: ctx, path: bodyPath, R: R, rx: rx, ry: ry)
+        drawHair(ctx: ctx, path: bodyPath, R: R, rx: rx, ry: ry)
+        drawHeadShades(ctx: ctx, R: R, rx: rx, ry: ry)
 
         // Blush — always shows a floor proportional to tint (prototype behaviour)
         // Signature look: his rice-cake cheeks stay a little pink.
@@ -1158,6 +1167,9 @@ final class BotEngine: ObservableObject {
         if hasSignature && morph < 0.05 {
             drawMouth(ctx: &ctx, R: R, rx: rx, ry: ry)
         }
+
+        // Portrait look: eyebrows, one pose per state
+        drawBrows(ctx: ctx, R: R, rx: rx, ry: ry)
 
         // Mouth hole — dark pill cutout inside the box face
         // Spec: left/right margins 0.10R, top margin 0.08R from box top (-0.94R)
@@ -1449,21 +1461,23 @@ final class BotEngine: ObservableObject {
     }
 
     private func drawBody(ctx: inout GraphicsContext, path: Path, R: CGFloat, rx: CGFloat, ry: CGFloat,
-                          pumpkinColors: Bool = false) {
+                          pumpkinColors: Bool = false, skin: Bool = false) {
         if let bc = bodyColor, !pumpkinColors {
             // Mini bots: flat solid fill — no gradient, no reflection, no highlight
             ctx.fill(path, with: .color(Color(cgColor: bc)))
         } else {
             // Main bot: linear gradient body
-            let top: Color = pumpkinColors ? Color(hex: "#FFA94D") : Color(red: 0.929, green: 0.929, blue: 0.937)
-            let bot: Color = pumpkinColors ? Color(hex: "#E8590C") : Color(red: 0.769, green: 0.773, blue: 0.792)
+            let top: Color = pumpkinColors ? Color(hex: "#FFA94D")
+                : skin ? Portrait.skinTop : Color(red: 0.929, green: 0.929, blue: 0.937)
+            let bot: Color = pumpkinColors ? Color(hex: "#E8590C")
+                : skin ? Portrait.skinBottom : Color(red: 0.769, green: 0.773, blue: 0.792)
             ctx.fill(path, with: .linearGradient(
                 Gradient(colors: [top, bot]),
                 startPoint: CGPoint(x: rx*0.7, y: -ry*0.85),
                 endPoint: CGPoint(x: -rx*0.8, y: ry*0.9)
             ))
-            // State tint — fades out as morph increases (mailbox has no tint)
-            let effectiveTint = tint * (1 - morph)
+            // State tint — fades out as morph increases (mailbox has no tint); light on skin
+            let effectiveTint = tint * (1 - morph) * (skin ? 0.4 : 1)
             if effectiveTint > 0.01 {
                 let tc = colorFromTuple(col)
                 ctx.fill(path, with: .linearGradient(
@@ -1521,10 +1535,13 @@ final class BotEngine: ObservableObject {
             if isChewing { shape = .happy }
             else if slotHTarget > 0.05 || slotH > 0.10 { shape = .cup }
         }
+        // Portrait look: cross with his eyes open, the brows and teeth say it
+        if hasPortrait && shape == .flat { shape = .pill }
         return shape
     }
 
-    private var hasSignature: Bool { signatureLook && !isMini }
+    private var hasSignature: Bool { look != .classic && !isMini }
+    private var hasPortrait: Bool { look == .portrait && !isMini }
 
     private func drawEyes(ctx: inout GraphicsContext, path: Path, R: CGFloat, rx: CGFloat, ry: CGFloat) {
         let shape = shownEye
@@ -1693,7 +1710,9 @@ final class BotEngine: ObservableObject {
     /// hides when he rolls away and trembles with his eyes when the Mac is stressed.
     private func drawMouth(ctx: inout GraphicsContext, R: CGFloat, rx: CGFloat, ry: CGFloat) {
         let speaking = isInVoiceCompact && voiceSubState == .speaking
-        let mouth = MochiMouth.forEyes(shownEye, speaking: speaking)
+        let mouth = hasPortrait && state == .error && eyeOverride == nil && !speaking
+            ? .grit
+            : MochiMouth.forEyes(shownEye, speaking: speaking, portrait: hasPortrait)
         guard mouth != .none else { return }
 
         let rigidRoll = outfit != .none && outfitPresence > 0.05
@@ -1775,6 +1794,20 @@ final class BotEngine: ObservableObject {
             p.addQuadCurve(to: CGPoint(x: m * 0.6, y: -m * 0.1), control: CGPoint(x: 0, y: m * 0.7))
             mc.stroke(p, with: .color(ink), style: line)
 
+        case .grit:
+            // Lopsided open mouth, teeth showing
+            let g = m * 1.3
+            var p = Path()
+            p.move(to: CGPoint(x: -g * 1.15, y: g * 0.25))
+            p.addQuadCurve(to: CGPoint(x: g * 1.1, y: -g * 0.15), control: CGPoint(x: 0, y: -g * 0.8))
+            p.addQuadCurve(to: CGPoint(x: -g * 1.15, y: g * 0.25), control: CGPoint(x: -g * 0.1, y: g * 1.0))
+            p.closeSubpath()
+            mc.fill(p, with: .color(ink))
+            var teeth = mc
+            teeth.translateBy(x: 0, y: -g * 0.04)
+            teeth.scaleBy(x: 0.8, y: 0.62)
+            teeth.fill(p, with: .color(Portrait.teeth))
+
         case .talking:
             // Same 3.5 Hz rhythm as the speaking bounce
             let t = CGFloat(CACurrentMediaTime() - t0)
@@ -1782,6 +1815,179 @@ final class BotEngine: ObservableObject {
             var p = Path()
             p.addEllipse(in: CGRect(x: -m * 0.65, y: -h / 2, width: m * 1.3, height: h))
             mc.fill(p, with: .color(ink))
+        }
+    }
+
+    // MARK: - Portrait look (MochiLook.swift)
+
+    private enum Portrait {
+        static let skinTop    = Color(hex: "#EBBB93")
+        static let skinBottom = Color(hex: "#C98D62")
+        static let hair       = Color(hex: "#2A211D")
+        static let braidLine  = Color(hex: "#4A3B33")
+        static let parting    = Color(hex: "#6B4A38")
+        static let clip       = Color(hex: "#E2554B")
+        static let clipDark   = Color(hex: "#B83A33")
+        static let frame      = Color(hex: "#1B1716")
+        static let lensTop    = Color(hex: "#A3A6AC")
+        static let lensBottom = Color(hex: "#46484D")
+        static let tee        = Color(hex: "#1F1B1A")
+        static let teeRib     = Color(hex: "#3A3433")
+        static let teeth      = Color(hex: "#F6E6D3")
+    }
+
+    /// Where the front of his head is, along x: everything on his face turns with it.
+    private func faceX(_ rx: CGFloat, _ k: CGFloat) -> CGFloat { sin(yaw) * rx * k }
+
+    /// Two braids hanging from the sides, swinging a little behind his moves.
+    private func drawBraids(ctx: GraphicsContext, R: CGFloat, rx: CGFloat, ry: CGFloat) {
+        guard hasPortrait, morph < 0.05 else { return }
+        let sway = physDx * R * 0.14
+        for sd: CGFloat in [-1, 1] {
+            let baseX = sd * rx * 0.97 + faceX(rx, 0.25)
+            for i in 0..<5 {
+                let f = CGFloat(i) / 4
+                let x = baseX + sway * f * f + sd * R * 0.02 * f
+                let y = ry * 0.2 + f * R * 0.72
+                let r = R * (0.11 - 0.015 * f)
+                var bead = Path()
+                bead.addEllipse(in: CGRect(x: x - r, y: y - r * 1.15, width: r * 2, height: r * 2.3))
+                ctx.fill(bead, with: .color(Portrait.hair))
+                var cross = Path()
+                cross.move(to: CGPoint(x: x - r * 0.6, y: y - r * 0.5))
+                cross.addQuadCurve(to: CGPoint(x: x + r * 0.6, y: y - r * 0.2),
+                                   control: CGPoint(x: x, y: y + r * 0.3))
+                ctx.stroke(cross, with: .color(Portrait.braidLine), lineWidth: max(0.5, r * 0.25))
+            }
+        }
+    }
+
+    /// Cornrows over the top of his head, their partings meeting at the forehead, and a red clip.
+    private func drawHair(ctx: GraphicsContext, path: Path, R: CGFloat, rx: CGFloat, ry: CGFloat) {
+        guard hasPortrait, morph < 0.95 else { return }
+        var c = ctx
+        c.clip(to: path)
+        c.opacity = Double(1 - morph)
+        let x0 = faceX(rx, 0.85)
+
+        // Everything above the hairline; it comes down at the temples like a fade.
+        var cap = Path()
+        cap.move(to: CGPoint(x: -rx * 1.3, y: -ry * 1.3))
+        cap.addLine(to: CGPoint(x: rx * 1.3, y: -ry * 1.3))
+        cap.addLine(to: CGPoint(x: rx * 1.3, y: -R * 0.05))
+        cap.addQuadCurve(to: CGPoint(x: x0, y: -R * 0.48), control: CGPoint(x: x0 + rx * 0.55, y: -R * 0.56))
+        cap.addQuadCurve(to: CGPoint(x: -rx * 1.3, y: -R * 0.05), control: CGPoint(x: x0 - rx * 0.55, y: -R * 0.56))
+        cap.closeSubpath()
+        c.fill(cap, with: .color(Portrait.hair))
+
+        var rows = c
+        rows.clip(to: cap)
+        for i in -2...2 {
+            let fi = CGFloat(i)
+            var l = Path()
+            l.move(to: CGPoint(x: x0 + fi * R * 0.08, y: -R * 0.44))
+            l.addQuadCurve(to: CGPoint(x: x0 * 0.4 + fi * rx * 0.48, y: -ry * 1.05),
+                           control: CGPoint(x: x0 * 0.7 + fi * rx * 0.28, y: -ry * 0.72))
+            rows.stroke(l, with: .color(Portrait.parting),
+                        style: StrokeStyle(lineWidth: max(0.5, R * 0.03), lineCap: .round))
+        }
+
+        // The red clip, on his left temple (the viewer's right)
+        var bow = c
+        bow.translateBy(x: x0 + rx * 0.58, y: -R * 0.58)
+        for s: CGFloat in [-1, 1] {
+            var petal = bow
+            petal.rotate(by: .radians(Double(s) * 0.9 + 0.3))
+            var p = Path()
+            p.addEllipse(in: CGRect(x: -R * 0.045, y: -R * 0.14, width: R * 0.09, height: R * 0.13))
+            petal.fill(p, with: .color(Portrait.clip))
+        }
+        var knot = Path()
+        knot.addEllipse(in: CGRect(x: -R * 0.03, y: -R * 0.03, width: R * 0.06, height: R * 0.06))
+        bow.fill(knot, with: .color(Portrait.clipDark))
+    }
+
+    /// Sunglasses pushed up on his head. Off when he wears an outfit: a hat or glasses take their place.
+    private func drawHeadShades(ctx: GraphicsContext, R: CGFloat, rx: CGFloat, ry: CGFloat) {
+        guard hasPortrait, morph < 0.05, outfit == .none else { return }
+        var c = ctx
+        c.translateBy(x: faceX(rx, 0.8), y: -ry * 0.86 + physDy * R * 0.04)
+        c.rotate(by: .radians(Double(physDx * 0.06)))
+        c.scaleBy(x: max(0.5, cos(yaw)), y: 1)
+        let lw = R * 0.40, lh = R * 0.24, gap = R * 0.06, rim = R * 0.035
+
+        var bridge = Path()
+        bridge.move(to: CGPoint(x: -gap - rim, y: -lh * 0.1))
+        bridge.addQuadCurve(to: CGPoint(x: gap + rim, y: -lh * 0.1), control: CGPoint(x: 0, y: -lh * 0.4))
+        c.stroke(bridge, with: .color(Portrait.frame), style: StrokeStyle(lineWidth: R * 0.05, lineCap: .round))
+
+        for s: CGFloat in [-1, 1] {
+            let lens = CGRect(x: s < 0 ? -gap - lw : gap, y: -lh / 2, width: lw, height: lh)
+            var frame = Path()
+            frame.addRoundedRect(in: lens.insetBy(dx: -rim, dy: -rim),
+                                 cornerSize: CGSize(width: lh * 0.5 + rim, height: lh * 0.5 + rim))
+            c.fill(frame, with: .color(Portrait.frame))
+            var glass = Path()
+            glass.addRoundedRect(in: lens, cornerSize: CGSize(width: lh * 0.5, height: lh * 0.5))
+            c.fill(glass, with: .linearGradient(Gradient(colors: [Portrait.lensTop, Portrait.lensBottom]),
+                                                startPoint: CGPoint(x: 0, y: lens.minY),
+                                                endPoint: CGPoint(x: 0, y: lens.maxY)))
+            var glint = Path()
+            glint.move(to: CGPoint(x: lens.midX + lw * 0.05, y: lens.minY + lh * 0.3))
+            glint.addLine(to: CGPoint(x: lens.midX + lw * 0.25, y: lens.minY + lh * 0.3))
+            c.stroke(glint, with: .color(Color.white.opacity(0.6)),
+                     style: StrokeStyle(lineWidth: max(0.5, lh * 0.14), lineCap: .round))
+        }
+    }
+
+    /// A light beard shadow on his chin and the collar of a black tee.
+    private func drawBeardAndTee(ctx: GraphicsContext, path: Path, R: CGFloat, rx: CGFloat, ry: CGFloat) {
+        guard hasPortrait, morph < 0.05 else { return }
+        var c = ctx
+        c.clip(to: path)
+        let x0 = faceX(rx, 0.8)
+
+        var beard = Path()
+        beard.addEllipse(in: CGRect(x: x0 - R * 0.5, y: R * 0.34, width: R * 1.0, height: R * 0.32))
+        c.fill(beard, with: .radialGradient(
+            Gradient(colors: [Portrait.hair.opacity(0.28), Portrait.hair.opacity(0)]),
+            center: CGPoint(x: x0, y: R * 0.5), startRadius: 0, endRadius: R * 0.5))
+
+        let top = ry * 0.68
+        var neckline = Path()
+        neckline.move(to: CGPoint(x: -rx * 1.3, y: top - R * 0.04))
+        neckline.addQuadCurve(to: CGPoint(x: rx * 1.3, y: top - R * 0.04),
+                              control: CGPoint(x: faceX(rx, 0.5), y: top + R * 0.12))
+        var tee = neckline
+        tee.addLine(to: CGPoint(x: rx * 1.3, y: ry * 1.3))
+        tee.addLine(to: CGPoint(x: -rx * 1.3, y: ry * 1.3))
+        tee.closeSubpath()
+        c.fill(tee, with: .color(Portrait.tee))
+        c.stroke(neckline, with: .color(Portrait.teeRib), lineWidth: max(0.5, R * 0.035))
+    }
+
+    /// Thick eyebrows above each eye, posed by state and emote (MochiBrows in MochiLook.swift).
+    private func drawBrows(ctx: GraphicsContext, R: CGFloat, rx: CGFloat, ry: CGFloat) {
+        guard hasPortrait, morph < 0.05 else { return }
+        let pose = MochiBrows.pose(state: state, eye: shownEye, t: CACurrentMediaTime() - t0)
+        let rigidRoll = outfit != .none && outfitPresence > 0.05
+        let mH = MochiH(R: R, yaw: yaw, pitch: pitch)
+        for f in mEyeFrames(mH) {
+            var seenP = MochiConst.eyeP + pitch + (rigidRoll ? 0 : roll)
+            seenP = ((seenP + .pi).truncatingRemainder(dividingBy: .pi*2) + .pi*2).truncatingRemainder(dividingBy: .pi*2) - .pi
+            guard cos(f.sd * MochiConst.eyeSp + yaw) * cos(seenP) > 0.04 else { continue }
+
+            let lift = pose.lift + (f.sd > 0 ? pose.asym : 0)
+            var b = ctx
+            b.translateBy(x: f.x + stressTremble.x * R, y: f.y - R * (0.2 + lift) + stressTremble.y * R)
+            b.scaleBy(x: f.fx, y: f.fy)
+            // The inner end is the one towards his nose: + angle brings it down.
+            b.rotate(by: .radians(Double(-f.sd * pose.angle)))
+            let len = R * 0.3
+            var p = Path()
+            p.move(to: CGPoint(x: -len / 2, y: 0))
+            p.addQuadCurve(to: CGPoint(x: len / 2, y: 0), control: CGPoint(x: 0, y: -len * pose.arch))
+            b.stroke(p, with: .color(Portrait.hair), style: StrokeStyle(lineWidth: R * 0.075, lineCap: .round))
         }
     }
 
