@@ -73,8 +73,8 @@ final class AppState: ObservableObject {
     @Published var mochiOutfitSelection: Outfit = .auto {
         didSet { Outfit.stored = mochiOutfitSelection }
     }
-    // Mochi's face (signature or classic) — persisted
-    @Published var mochiLook: MochiLook = .signature {
+    // Mochi's face (portrait, signature or classic) — persisted
+    @Published var mochiLook: MochiLook = .portrait {
         didSet { MochiLook.stored = mochiLook }
     }
     // A colour of the user's own for each pill's Mochi (pill id → "#RRGGBB") — persisted.

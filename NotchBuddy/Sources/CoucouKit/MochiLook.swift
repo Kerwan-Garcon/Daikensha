@@ -25,11 +25,11 @@ enum MochiLook: String, CaseIterable {
         return all[(all.firstIndex(of: self)! + 1) % all.count]
     }
 
-    // UserDefaults key "mochiLook", default "signature", unknown value → .signature
+    // UserDefaults key "mochiLook", default "portrait", unknown value → .portrait
     static var stored: MochiLook {
         get {
-            let raw = UserDefaults.standard.string(forKey: "mochiLook") ?? "signature"
-            return MochiLook(rawValue: raw) ?? .signature
+            let raw = UserDefaults.standard.string(forKey: "mochiLook") ?? "portrait"
+            return MochiLook(rawValue: raw) ?? .portrait
         }
         set {
             UserDefaults.standard.set(newValue.rawValue, forKey: "mochiLook")
@@ -75,6 +75,14 @@ struct MochiBrows: Equatable {
     var angle: CGFloat   // + inner ends down (cross), − inner ends up (worried)
     var arch: CGFloat    // how much each brow bows upward
     var asym: CGFloat    // extra lift of the right brow alone (a raised eyebrow)
+
+    /// A step of the way from this pose to `target` (k: 0 stays, 1 arrives).
+    func easing(toward target: MochiBrows, by k: CGFloat) -> MochiBrows {
+        MochiBrows(lift:  lift  + (target.lift  - lift)  * k,
+                   angle: angle + (target.angle - angle) * k,
+                   arch:  arch  + (target.arch  - arch)  * k,
+                   asym:  asym  + (target.asym  - asym)  * k)
+    }
 
     static func pose(state: BotState, eye: EyeShape, t: Double) -> MochiBrows {
         // An emote's eyes win: they say what he feels right now.
