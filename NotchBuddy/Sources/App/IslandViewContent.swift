@@ -4486,6 +4486,17 @@ struct WardrobeView: View {
                 Text("Wardrobe")
                     .font(.system(size: 12, weight: .semibold))
                     .foregroundColor(Color(hex: "#F5F6F8"))
+                // Mochi's face: signature (mouth, eye glints, pink cheeks, quirks) or classic
+                Button {
+                    state.mochiLook = state.mochiLook == .signature ? .classic : .signature
+                    SoundEngine.shared.play("pop")
+                } label: {
+                    Text("Face · \(state.mochiLook.displayName)")
+                        .font(.system(size: 11))
+                        .foregroundColor(Color(hex: "#8E939C"))
+                }
+                .buttonStyle(.plain)
+                .help("Signature: a mouth, eye glints, pink cheeks and little quirks. Classic: the original face.")
                 Spacer(minLength: 4)
                 Text(headerRight)
                     .font(.system(size: 11))

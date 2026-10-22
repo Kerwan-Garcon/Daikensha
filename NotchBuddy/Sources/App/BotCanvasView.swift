@@ -80,6 +80,7 @@ struct BotCanvasView: View {
                 let showOutfit = isFocusMain || state.mode != .expanded || isWardrobe
                 engine.setOutfit(showOutfit ? state.resolvedOutfit : .none,
                                  animated: state.view != .wardrobe)
+                engine.signatureLook = state.mochiLook == .signature
 
                 #if !APPSTORE
                 if state.view == .listening {

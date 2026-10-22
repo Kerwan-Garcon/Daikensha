@@ -189,6 +189,9 @@ final class BotEngine: ObservableObject {
     var hands:  CGFloat = 0
     var blush:  CGFloat = 0
     var outfit: Outfit = .none
+    /// Mouth, eye glints, pink cheeks and idle quirks (MochiLook.swift). Main Mochi only.
+    var signatureLook: Bool = MochiLook.stored == .signature
+    var nextQuirk: Double = CACurrentMediaTime() + 20 + Double.random(in: 0...20)
     var es:     CGFloat = 1          // eye scale
     var badgeS: CGFloat = 0          // badge scale
     var outfitPresence: CGFloat = 0  // 0=hidden, 1=fully visible (animated)
@@ -1010,6 +1013,11 @@ final class BotEngine: ObservableObject {
             doMiniBehaviorLoop()
         }
 
+        // Signature look: now and then, a little quirk of his own while he rests.
+        if hasSignature && now > nextQuirk {
+            doQuirk(now: now)
+        }
+
         // The Mac's mood (sweat, puffed up, tired) adjusts the targets above.
         updateMood(dt: dt, now: now, t: t)
 
@@ -1137,13 +1145,19 @@ final class BotEngine: ObservableObject {
         drawMoodTint(ctx: &ctx, path: bodyPath, rx: rx, ry: ry)
 
         // Blush — always shows a floor proportional to tint (prototype behaviour)
-        let blushVal = max(blush, tint * 0.5, moodHot * 0.85) * (1 - morph)
+        // Signature look: his rice-cake cheeks stay a little pink.
+        let blushVal = max(blush, tint * 0.5, moodHot * 0.85, hasSignature ? 0.38 : 0) * (1 - morph)
         if blushVal > 0.01 {
             drawBlush(ctx: &ctx, path: bodyPath, rx: rx, ry: ry, R: R, blush: blushVal)
         }
 
         // Eyes
         drawEyes(ctx: &ctx, path: bodyPath, R: R, rx: rx, ry: ry)
+
+        // Signature mouth — under the eyes, gone as soon as he turns into the mailbox
+        if hasSignature && morph < 0.05 {
+            drawMouth(ctx: &ctx, R: R, rx: rx, ry: ry)
+        }
 
         // Mouth hole — dark pill cutout inside the box face
         // Spec: left/right margins 0.10R, top margin 0.08R from box top (-0.94R)
@@ -1495,7 +1509,8 @@ final class BotEngine: ObservableObject {
         }
     }
 
-    private func drawEyes(ctx: inout GraphicsContext, path: Path, R: CGFloat, rx: CGFloat, ry: CGFloat) {
+    /// The eyes Mochi shows this frame (state, emote, dance, mailbox). The mouth reads them too.
+    private var shownEye: EyeShape {
         var shape = eyeOverride ?? cfg.eye
         // Dance: happy eyes in calm states
         if isDancing && dancingLevel > 0.15 && !isMini && (state == .idle || state == .finished) {
@@ -1506,6 +1521,13 @@ final class BotEngine: ObservableObject {
             if isChewing { shape = .happy }
             else if slotHTarget > 0.05 || slotH > 0.10 { shape = .cup }
         }
+        return shape
+    }
+
+    private var hasSignature: Bool { signatureLook && !isMini }
+
+    private func drawEyes(ctx: inout GraphicsContext, path: Path, R: CGFloat, rx: CGFloat, ry: CGFloat) {
+        let shape = shownEye
         ctx.clip(to: path)
 
         // Build eye frames: use mEyeFrames for position/foreshortening, but keep roll in eyePitch
@@ -1552,6 +1574,7 @@ final class BotEngine: ObservableObject {
             p.addRoundedRect(in: CGRect(x: -w/2, y: -hh/2, width: w, height: hh),
                              cornerSize: CGSize(width: min(w/2, hh/2), height: min(w/2, hh/2)))
             ctx.fill(p, with: .color(ink))
+            drawCatchlights(ctx: &ctx, w: w, hh: hh)
 
         case .dot:
             var p = Path()
@@ -1623,6 +1646,7 @@ final class BotEngine: ObservableObject {
                 p.addRoundedRect(in: CGRect(x: -w/2, y: -hh/2, width: w, height: hh),
                                  cornerSize: CGSize(width: min(w/2,hh/2), height: min(w/2,hh/2)))
                 ctx.fill(p, with: .color(ink))
+                drawCatchlights(ctx: &ctx, w: w, hh: hh)
             } else {
                 var p = Path()
                 p.addArc(center: CGPoint(x: 0, y: h*0.18), radius: w*0.82,
@@ -1645,6 +1669,165 @@ final class BotEngine: ObservableObject {
                            control: CGPoint(x: -w/2, y: hh/2))
             p.closeSubpath()
             ctx.fill(p, with: .color(ink))
+        }
+    }
+
+    // MARK: - Signature face (MochiLook.swift)
+
+    /// Two glints in an open pill eye, lit from the upper right like the body's highlight.
+    /// They fade out as the eye closes, so a blink still reads as a blink.
+    private func drawCatchlights(ctx: inout GraphicsContext, w: CGFloat, hh: CGFloat) {
+        guard hasSignature, hh > w * 0.75 else { return }
+        let a = Double(min(1, (hh / w - 0.75) / 0.25))
+        let r1 = w * 0.2
+        var big = Path()
+        big.addEllipse(in: CGRect(x: w * 0.14 - r1, y: -hh * 0.2 - r1, width: r1 * 2, height: r1 * 2))
+        ctx.fill(big, with: .color(Color.white.opacity(0.92 * a)))
+        let r2 = w * 0.08
+        var small = Path()
+        small.addEllipse(in: CGRect(x: -w * 0.14 - r2, y: hh * 0.22 - r2, width: r2 * 2, height: r2 * 2))
+        ctx.fill(small, with: .color(Color.white.opacity(0.55 * a)))
+    }
+
+    /// A small mouth between and below the eyes, on the same sphere: it turns with his head,
+    /// hides when he rolls away and trembles with his eyes when the Mac is stressed.
+    private func drawMouth(ctx: inout GraphicsContext, R: CGFloat, rx: CGFloat, ry: CGFloat) {
+        let speaking = isInVoiceCompact && voiceSubState == .speaking
+        let mouth = MochiMouth.forEyes(shownEye, speaking: speaking)
+        guard mouth != .none else { return }
+
+        let rigidRoll = outfit != .none && outfitPresence > 0.05
+        let mouthP = MochiConst.eyeP - 0.22 + pitch
+        var seenP = mouthP + (rigidRoll ? 0 : roll)
+        seenP = ((seenP + .pi).truncatingRemainder(dividingBy: .pi*2) + .pi*2).truncatingRemainder(dividingBy: .pi*2) - .pi
+        guard cos(yaw) * cos(seenP) > 0.04 else { return }
+        let cp = cos(mouthP)
+        let mx = sin(yaw) * cp * rx
+        let my = -sin(mouthP) * ry
+
+        var mc = ctx
+        mc.translateBy(x: mx + stressTremble.x * R, y: my + stressTremble.y * R)
+        mc.scaleBy(x: max(0.18, cos(yaw)), y: max(0.18, cp))
+
+        let ink = Color(cgColor: MochiConst.ink)
+        let m = R * 0.11
+        let line = StrokeStyle(lineWidth: m * 0.42, lineCap: .round, lineJoin: .round)
+
+        switch mouth {
+        case .none:
+            return
+
+        case .cat:
+            var p = Path()
+            p.move(to: CGPoint(x: -m * 1.1, y: -m * 0.1))
+            p.addQuadCurve(to: CGPoint(x: 0, y: -m * 0.1), control: CGPoint(x: -m * 0.55, y: m * 0.95))
+            p.addQuadCurve(to: CGPoint(x: m * 1.1, y: -m * 0.1), control: CGPoint(x: m * 0.55, y: m * 0.95))
+            mc.stroke(p, with: .color(ink), style: line)
+
+        case .smile:
+            var p = Path()
+            p.move(to: CGPoint(x: -m * 1.15, y: -m * 0.35))
+            p.addLine(to: CGPoint(x: m * 1.15, y: -m * 0.35))
+            p.addQuadCurve(to: CGPoint(x: -m * 1.15, y: -m * 0.35), control: CGPoint(x: 0, y: m * 2.0))
+            p.closeSubpath()
+            mc.fill(p, with: .color(ink))
+            var tongueCtx = mc
+            tongueCtx.clip(to: p)
+            var tongue = Path()
+            tongue.addEllipse(in: CGRect(x: -m * 0.6, y: m * 0.25, width: m * 1.2, height: m * 0.9))
+            tongueCtx.fill(tongue, with: .color(Color(hex: "#FF7A93")))
+
+        case .oh:
+            var p = Path()
+            p.addEllipse(in: CGRect(x: -m * 0.42, y: -m * 0.5, width: m * 0.84, height: m * 1.0))
+            mc.fill(p, with: .color(ink))
+
+        case .gasp:
+            var p = Path()
+            p.addEllipse(in: CGRect(x: -m * 0.6, y: -m * 0.7, width: m * 1.2, height: m * 1.4))
+            mc.fill(p, with: .color(ink))
+
+        case .smirk:
+            var p = Path()
+            p.move(to: CGPoint(x: -m * 0.8, y: m * 0.1))
+            p.addQuadCurve(to: CGPoint(x: m * 1.0, y: -m * 0.35), control: CGPoint(x: m * 0.2, y: m * 0.8))
+            mc.stroke(p, with: .color(ink), style: line)
+
+        case .flat:
+            var p = Path()
+            p.move(to: CGPoint(x: -m * 0.8, y: 0))
+            p.addLine(to: CGPoint(x: m * 0.8, y: 0))
+            mc.stroke(p, with: .color(ink), style: line)
+
+        case .wavy:
+            var p = Path()
+            let steps = 16
+            for i in 0...steps {
+                let f = CGFloat(i) / CGFloat(steps)
+                let pt = CGPoint(x: -m * 1.1 + m * 2.2 * f, y: sin(f * .pi * 4) * m * 0.28)
+                if i == 0 { p.move(to: pt) } else { p.addLine(to: pt) }
+            }
+            mc.stroke(p, with: .color(ink), style: StrokeStyle(lineWidth: m * 0.36, lineCap: .round, lineJoin: .round))
+
+        case .content:
+            var p = Path()
+            p.move(to: CGPoint(x: -m * 0.6, y: -m * 0.1))
+            p.addQuadCurve(to: CGPoint(x: m * 0.6, y: -m * 0.1), control: CGPoint(x: 0, y: m * 0.7))
+            mc.stroke(p, with: .color(ink), style: line)
+
+        case .talking:
+            // Same 3.5 Hz rhythm as the speaking bounce
+            let t = CGFloat(CACurrentMediaTime() - t0)
+            let h = m * (0.3 + 0.9 * abs(sin(t * .pi * 3.5)))
+            var p = Path()
+            p.addEllipse(in: CGRect(x: -m * 0.65, y: -h / 2, width: m * 1.3, height: h))
+            mc.fill(p, with: .color(ink))
+        }
+    }
+
+    /// One of his quirks, at rest only: never over a state's own animation, a greeting,
+    /// a voice exchange, a dance or an emote.
+    private func doQuirk(now: Double) {
+        nextQuirk = now + 22 + Double.random(in: 0...26)
+        guard state == .idle, eyeOverride == nil, !isInListeningMode, !isInVoiceCompact,
+              !isDancing, hands < 0.01, morph < 0.01,
+              !locks.contains("sy"), !locks.contains("oy"), !locks.contains("yaw") else { return }
+
+        switch Int.random(in: 0..<3) {
+        case 0:
+            // Mochi stretch: pulled up like rice dough, then snaps back and wobbles
+            eyeOverride = .happy
+            eyeOverrideUntil = now + 1.0
+            anim("sy", keys: [
+                TweenKey(target: 1.14, duration: 380, ease: Ease.inOut),
+                TweenKey(target: 1.14, duration: 160, ease: Ease.lin),
+                TweenKey(target: 0.86, duration: 110, ease: Ease.out),
+                TweenKey(target: 1.04, duration: 160, ease: Ease.inOut),
+                TweenKey(target: 1,    duration: 200, ease: Ease.back),
+            ])
+            anim("sx", keys: [
+                TweenKey(target: 0.90, duration: 380, ease: Ease.inOut),
+                TweenKey(target: 0.90, duration: 160, ease: Ease.lin),
+                TweenKey(target: 1.12, duration: 110, ease: Ease.out),
+                TweenKey(target: 0.98, duration: 160, ease: Ease.inOut),
+                TweenKey(target: 1,    duration: 200, ease: Ease.back),
+            ])
+        case 1:
+            // Curious peek: glances aside, eyes a touch wider, then back to you
+            let side: CGFloat = Bool.random() ? 1 : -1
+            anim("yaw", keys: [
+                TweenKey(target: 0.5 * side, duration: 260, ease: Ease.out),
+                TweenKey(target: 0.5 * side, duration: 600, ease: Ease.lin),
+                TweenKey(target: 0,          duration: 320, ease: Ease.inOut),
+            ])
+            anim("es", keys: [
+                TweenKey(target: 1.1, duration: 240, ease: Ease.out),
+                TweenKey(target: 1.1, duration: 620, ease: Ease.lin),
+                TweenKey(target: 1,   duration: 320, ease: Ease.inOut),
+            ])
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) { [weak self] in self?.blink() }
+        default:
+            triggerEmote(.wink, duration: 0.9, silent: true)
         }
     }
 
