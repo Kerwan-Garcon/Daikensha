@@ -33,7 +33,10 @@ export const DESKTOP_EVENTS = {
   home: "desktop-mochi-home",
   wardrobe: "desktop-mochi-wardrobe",
   dizzy: "desktop-mochi-dizzy",
-  /** Rust → island: a drag ended, `{ from: "island" | "desktop", home }`. */
+  /**
+   * Rust → island: a drag ended, `{ from: "island" | "desktop", home, look }`.
+   * `look`: dropped on a window, he came home and looked at it (look.rs).
+   */
   dropped: "desktop-mochi-dropped",
   /** Rust → desktop window */
   cursor: "desktop-cursor",

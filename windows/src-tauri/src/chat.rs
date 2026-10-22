@@ -27,6 +27,9 @@ pub enum ChatContext {
     /// The part of the screen the user circled (shell/capture.rs): the image
     /// itself stays in Rust's memory, the page only names it. Claude only.
     Capture,
+    /// The window Mochi was dropped on (look.rs): its picture stays in Rust's
+    /// memory too. Every provider that takes images gets it, the others its name.
+    Look { app_name: String, title: String },
 }
 
 #[derive(Serialize)]
@@ -174,6 +177,7 @@ pub fn plain_question(first: bool, context: Option<&ChatContext>, query: &str) -
             format!("{}\n\n{query}", window_line(app_name, title, url.as_deref()))
         }
         Some(ChatContext::Capture) => format!("{CAPTURE_LINE}\n\n{query}"),
+        Some(ChatContext::Look { app_name, title }) => format!("{}\n\n{query}", window_line(app_name, title, None)),
         None => query.to_string(),
     }
 }
@@ -212,6 +216,7 @@ fn checked_context(context: ChatContext) -> Result<ChatContext, String> {
             Ok(ChatContext::File { name, path })
         }
         ChatContext::Capture if crate::shell::capture::peek().is_none() => Err(crate::i18n::t("That capture is gone: circle again.")),
+        ChatContext::Look { .. } if crate::look::peek().is_none() => Err(crate::i18n::t("Mochi couldn't see that window. Try again.")),
         other => Ok(other),
     }
 }
@@ -252,17 +257,36 @@ pub async fn send(
         crate::shell::capture::discard();
         return reply;
     }
+    let look = matches!(context, Some(ChatContext::Look { .. }));
+    let reply = dispatch(app, chat, settings, provider, &model, query, context).await;
+    // The window's picture lives until its question is answered: the
+    // conversation keeps it from there. A failed turn (no key yet…) may retry.
+    if look && reply.is_ok() {
+        crate::look::discard();
+    }
+    reply
+}
+
+async fn dispatch(
+    app: &AppHandle,
+    chat: &Chat,
+    settings: &Settings,
+    provider: &str,
+    model: &str,
+    query: String,
+    context: Option<ChatContext>,
+) -> Result<ChatReply, String> {
     if provider == ANTHROPIC || provider.is_empty() {
-        return claude::send(chat, &model, query, context).await;
+        return claude::send(chat, model, query, context).await;
     }
     if provider == ANTHROPIC_SUBSCRIPTION {
-        return claude_cli::chat(chat, &model, query, context, claude_cli::Mode::Chat).await;
+        return claude_cli::chat(chat, model, query, context, claude_cli::Mode::Chat).await;
     }
     if let Some(p) = openai_compat::provider(provider) {
-        return openai_compat::send(chat, p, &model, query, context).await;
+        return openai_compat::send(chat, p, model, query, context).await;
     }
     if let Some(server) = local_chat::server(settings, provider) {
-        return local_chat::send(app, chat, &server, &model, query, context).await;
+        return local_chat::send(app, chat, &server, model, query, context).await;
     }
     Err(format!("Unknown chat provider: {provider}"))
 }
@@ -406,6 +430,9 @@ mod tests {
         let win = ChatContext::Window { app_name: "Code".into(), title: "main.rs".into(), url: None };
         assert_eq!(plain_question(true, Some(&win), "q"), "Context — App: Code, Window: main.rs\n\nq");
         assert_eq!(window_line("Edge", "Docs", Some("https://x.dev")), "Context — App: Edge, Window: Docs, URL: https://x.dev");
+        let look = ChatContext::Look { app_name: "Edge".into(), title: "Docs".into() };
+        assert_eq!(plain_question(true, Some(&look), "q"), "Context — App: Edge, Window: Docs\n\nq");
+        assert_eq!(plain_question(false, Some(&look), "q"), "q");
     }
 
     #[test]

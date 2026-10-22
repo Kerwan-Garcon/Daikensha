@@ -253,6 +253,8 @@ Par défaut, lâcher Mochi sur une fenêtre ne fait pas qu'attacher : il **regar
 
 **⌥ + lâcher** : l'ancien comportement, la fenêtre est seulement attachée au chat (pastille), sans capture ni question.
 
+**Windows** (`windows/src-tauri/src/look.rs`, `windows/src/core/look.ts`) : Mochi sorti de l'île et lâché sur la fenêtre d'une autre app (pas le bureau ni la barre des tâches, même filtre que l'onglet Fenêtres du Shell) rentre dans l'île et la regarde. La fenêtre est dessinée seule avec `PrintWindow(PW_RENDERFULLCONTENT)`, lue à l'écran si elle sort noire, réduite à 1280 px, gardée **en mémoire** (jamais sur le disque) et envoyée avec la première question seulement, puis oubliée une fois la réponse arrivée. Claude (API et abonnement), OpenAI, Google et OpenRouter reçoivent l'image ; un serveur local ne reçoit que l'app et le titre. Mêmes puces sous le chat. **Alt + lâcher** : il se pose sur le bureau à cet endroit, comme avant. Linux : inchangé, pas de regard.
+
 ---
 
 ## 5. API Claude (recherche)

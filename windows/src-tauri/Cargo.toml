@@ -115,6 +115,9 @@ windows = { version = "0.61", features = [
   "Win32_System_Shutdown",
   # The « top bar » mode's reserved band (shell/appbar_win.rs): its height in pixels.
   "Win32_UI_HiDpi",
+  # Mochi dropped on a window looks at it (look.rs): PrintWindow draws that window
+  # alone, even under others.
+  "Win32_Storage_Xps",
 ] }
 # The clipboard for Flow dictation, kept out of the clipboard history. MIT/Apache-2.0.
 arboard = { version = "3.6", default-features = false }
