@@ -90,6 +90,16 @@ pub(crate) fn user_content(first: bool, context: Option<&ChatContext>, query: &s
                 }
                 content.push(json!({ "type": "text", "text": chat::CAPTURE_LINE }));
             }
+            Some(ChatContext::Look { app_name, title }) => {
+                if let Some(png) = crate::look::peek() {
+                    content.push(json!({
+                        "type": "image",
+                        "source": { "type": "base64", "media_type": "image/png", "data": base64(&png) },
+                    }));
+                }
+                let line = chat::window_line(app_name, title, None);
+                content.push(json!({ "type": "text", "text": format!("{line}\n{}", crate::look::LOOK_LINE) }));
+            }
             None => {}
         }
     }

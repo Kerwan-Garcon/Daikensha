@@ -1,5 +1,6 @@
 // App state — mirror of AppState.swift (the parts the island needs).
 
+import type { LookWindow } from "./look";
 import type { BotEmoteName, BotStateName, IslandMode, IslandViewName } from "./layout";
 import type { EyeShape } from "../mochi/engine";
 import {
@@ -255,6 +256,8 @@ class AppState {
   shellCard: ShellCard | null = null;
   /** The circled capture's preview (a data: URL) until its first question goes out. */
   capturePreview: string | null = null;
+  /** The window Mochi looked at (core/look.ts): the chat is about it, its chips show. */
+  lookWindow: LookWindow | null = null;
   searchResult: SearchResult | null = null;
   chatHistory: ChatMessage[] = [];
   pendingApproval: ApprovalInfo | null = null;

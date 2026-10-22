@@ -13,6 +13,7 @@ import { Bridge, onEvent, type ChatContext, type ModelInfo } from "../core/bridg
 import {
   activeModel, pickModel, providerDef, visibleProviders, withModel, type ProviderDef,
 } from "../core/providers";
+import { LOOK_ASKS, lookChipLabel } from "../core/look";
 import { Sound } from "../core/sound";
 import { State, type ChatMessage } from "../core/state";
 import type { ViewHost } from "./views";
@@ -30,6 +31,17 @@ const STRINGS = {
 };
 
 let nextId = 1;
+
+/** The chat view's way to ask, for the island (a window Mochi looked at). */
+let asker: ((query: string, shown: string) => void) | null = null;
+
+/**
+ * Asks `query` in the chat as if it had been typed, showing `shown` as the
+ * user's bubble. Nothing while an answer is on its way.
+ */
+export function askInChat(query: string, shown: string = query) {
+  asker?.(query, shown);
+}
 
 function bubble(message: ChatMessage): HTMLElement {
   if (message.role === "user") {
@@ -222,7 +234,17 @@ export function buildPrompt(onHeightChange: () => void): ViewHost {
     modelName,
     svg(ICONS.chevronUpDown, 9, { stroke: 2 }),
   );
-  const modelRow = h("div", { class: "model-row" }, modelBtn);
+  // Mochi looked at a window: summary, analysis… one click away (core/look.ts).
+  const lookRow = h("div", { class: "look-chips" });
+  for (const a of LOOK_ASKS) {
+    const chip = h("button", { class: "look-chip", text: tl(a.label) });
+    chip.addEventListener("click", () => {
+      const query = t(a.query);
+      void ask(query, query);
+    });
+    lookRow.append(chip);
+  }
+  const modelRow = h("div", { class: "model-row" }, lookRow, modelBtn);
 
   const body = h("div", { class: "chat-body" });
   const picker = buildPicker(() => {
@@ -264,24 +286,38 @@ export function buildPrompt(onHeightChange: () => void): ViewHost {
     log.scrollTop = log.scrollHeight;
   });
 
-  async function submit() {
+  function submit() {
     const query = input.value.trim();
     if (!query || sending) return;
-    if (picker.isOpen) picker.close();
     input.value = "";
+    void ask(query, query);
+  }
+
+  /** One question: `shown` is the user's bubble, `query` what the model gets. */
+  async function ask(query: string, shown: string) {
+    if (sending) return;
+    if (picker.isOpen) picker.close();
     sending = true;
     drawModelButton();
     Sound.play("send");
 
-    State.chatHistory.push({ id: nextId++, role: "user", content: query });
+    State.chatHistory.push({ id: nextId++, role: "user", content: shown });
     State.stateOverride = "thinking";
     State.notify();
     onHeightChange();
 
     const file = State.droppedFile;
+    const look = State.lookWindow;
     const first = State.chatHistory.length === 1;
-    const context: ChatContext | null =
-      first && State.capturePreview ? { kind: "capture" } : first && file ? { kind: "file", name: file.name, path: file.path } : null;
+    const context: ChatContext | null = !first
+      ? null
+      : State.capturePreview
+        ? { kind: "capture" }
+        : look
+          ? { kind: "look", appName: look.appName, title: look.title }
+          : file
+            ? { kind: "file", name: file.name, path: file.path }
+            : null;
     // A capture goes out once, with the first question (Rust drops it after that turn).
     if (context?.kind === "capture") State.capturePreview = null;
 
@@ -306,12 +342,14 @@ export function buildPrompt(onHeightChange: () => void): ViewHost {
     }
   }
 
-  send.addEventListener("click", () => void submit());
+  asker = (query, shown) => void ask(query, shown);
+
+  send.addEventListener("click", () => submit());
   input.addEventListener("keydown", (e) => {
     const key = (e as KeyboardEvent).key;
     if (key === "Enter") {
       e.preventDefault();
-      void submit();
+      submit();
     } else if (key === "Escape" && picker.isOpen) {
       e.preventDefault();
       picker.close();
@@ -323,7 +361,8 @@ export function buildPrompt(onHeightChange: () => void): ViewHost {
     el,
     sync() {
       const file = State.droppedFile;
-      const wantChip = file?.name ?? (State.capturePreview ? t("Screen capture") : "");
+      const look = State.lookWindow;
+      const wantChip = file?.name ?? (State.capturePreview ? t("Screen capture") : look ? lookChipLabel(look) : "");
       if (chipRow.dataset.label !== wantChip) {
         chipRow.dataset.label = wantChip;
         clear(chipRow);
@@ -339,6 +378,9 @@ export function buildPrompt(onHeightChange: () => void): ViewHost {
         if (thinking) log.append(typingDots());
         log.scrollTop = log.scrollHeight;
       }
+
+      lookRow.classList.toggle("on", State.lookWindow != null);
+      for (const chip of lookRow.children) (chip as HTMLButtonElement).disabled = sending;
 
       // Leaving the chat folds the picker away.
       if (State.view !== "prompt" && picker.isOpen) picker.close();

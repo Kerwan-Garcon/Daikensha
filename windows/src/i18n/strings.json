@@ -354,6 +354,17 @@
    "ru": "Разрешите Coucou в Системных настройках → Конфиденциальность и безопасность → Запись экрана и сделайте снимок снова.",
    "id": "Izinkan Coucou di Pengaturan Sistem → Privasi & Keamanan → Rekaman Layar, lalu tangkap lagi."
   },
+  "Allow Coucou in System Settings → Privacy & Security → Screen Recording, then drop Mochi on the window again.": {
+   "zh-Hans": "请在“系统设置 → 隐私与安全性 → 录屏”中允许 Coucou，然后再把 Mochi 拖到窗口上。",
+   "hi": "System Settings → Privacy & Security → Screen Recording में Coucou को अनुमति दें, फिर मोची को दोबारा विंडो पर छोड़ें।",
+   "es": "Permite Coucou en Ajustes del Sistema → Privacidad y seguridad → Grabación de pantalla y vuelve a soltar a Mochi sobre la ventana.",
+   "ar": "اسمح لـ Coucou في إعدادات النظام ← الخصوصية والأمن ← تسجيل الشاشة، ثم أفلت موتشي على النافذة مرة أخرى.",
+   "fr": "Autorise Coucou dans Réglages Système → Confidentialité et sécurité → Enregistrement de l'écran, puis relâche Mochi sur la fenêtre.",
+   "bn": "System Settings → Privacy & Security → Screen Recording-এ Coucou-কে অনুমতি দিন, তারপর মোচিকে আবার উইন্ডোর ওপর ছেড়ে দিন।",
+   "pt-BR": "Permita o Coucou em Ajustes do Sistema → Privacidade e Segurança → Gravação da Tela e solte o Mochi na janela de novo.",
+   "ru": "Разрешите Coucou в Системных настройках → Конфиденциальность и безопасность → Запись экрана и снова отпустите Мочи на окно.",
+   "id": "Izinkan Coucou di Pengaturan Sistem → Privasi & Keamanan → Rekaman Layar, lalu lepaskan Mochi di jendela itu lagi."
+  },
   "Allow Coucou to control Music": {
    "zh-Hans": "允许 Coucou 控制音乐",
    "hi": "Coucou को Music नियंत्रित करने दें",
@@ -430,6 +441,28 @@
    "pt-BR": "Uma instrução enviada pelo iPhone usa o modelo aberto no momento no chat. O prompt de sistema e o histórico de conversa se aplicam. Instruções enviadas enquanto o Coucou não está em execução ficam na fila e são executadas no próximo início.",
    "ru": "Инструкция, отправленная с iPhone, использует модель, открытую в чате. Системный промпт и история разговора применяются. Инструкции, отправленные пока Coucou не запущен, ставятся в очередь и выполняются при следующем запуске.",
    "id": "Instruksi yang dikirim dari iPhone menggunakan model yang sedang terbuka di chat. Prompt sistem dan riwayat percakapan berlaku. Instruksi yang dikirim saat Coucou tidak berjalan dimasukkan ke antrean dan dijalankan saat peluncuran berikutnya."
+  },
+  "Analysis": {
+   "zh-Hans": "分析",
+   "hi": "विश्लेषण",
+   "es": "Análisis",
+   "ar": "تحليل",
+   "fr": "Analyse",
+   "bn": "বিশ্লেষণ",
+   "pt-BR": "Análise",
+   "ru": "Анализ",
+   "id": "Analisis"
+  },
+  "Analyze what's in this window in depth: what's good, what's wrong, what to do.": {
+   "zh-Hans": "深入分析这个窗口里的内容：哪里好，哪里有问题，该怎么做。",
+   "hi": "इस विंडो में जो है उसका गहराई से विश्लेषण करो: क्या अच्छा है, क्या गलत है, क्या करना चाहिए।",
+   "es": "Analiza a fondo lo que hay en esta ventana: lo bueno, lo que falla y qué hacer.",
+   "ar": "حلّل ما في هذه النافذة بعمق: ما الجيد، وما الخطأ، وما الذي يجب فعله.",
+   "fr": "Analyse en détail ce qu'il y a dans cette fenêtre : ce qui va, ce qui ne va pas, quoi faire.",
+   "bn": "এই উইন্ডোতে যা আছে তা গভীরভাবে বিশ্লেষণ করো: কী ভালো, কী ভুল, কী করা উচিত।",
+   "pt-BR": "Analise a fundo o que tem nesta janela: o que está bom, o que está errado, o que fazer.",
+   "ru": "Подробно разбери, что в этом окне: что хорошо, что не так, что делать.",
+   "id": "Analisis isi jendela ini secara mendalam: apa yang bagus, apa yang salah, apa yang harus dilakukan."
   },
   "Annotate": {
    "zh-Hans": "标注",
@@ -2290,6 +2323,17 @@
    "ru": "Секунду — вернусь к работе через три секунды.",
    "id": "Satu detik — kembali bekerja dalam tiga detik."
   },
+  "Give me the key points as a list.": {
+   "zh-Hans": "用列表列出要点。",
+   "hi": "मुख्य बातें एक सूची में दो।",
+   "es": "Dame los puntos clave en una lista.",
+   "ar": "أعطني النقاط الرئيسية في قائمة.",
+   "fr": "Donne-moi les points clés sous forme de liste.",
+   "bn": "মূল বিষয়গুলো একটা তালিকায় দাও।",
+   "pt-BR": "Me dê os pontos-chave em uma lista.",
+   "ru": "Перечисли главное списком.",
+   "id": "Beri aku poin-poin pentingnya dalam daftar."
+  },
   "Global shortcuts — active from any app": {
    "zh-Hans": "全局快捷键 — 在任何应用中有效",
    "hi": "ग्लोबल शॉर्टकट — किसी भी ऐप से काम करते हैं",
@@ -3093,6 +3137,17 @@
    "ru": "Самая долгая сессия",
    "id": "Sesi terpanjang"
   },
+  "Look at this window": {
+   "zh-Hans": "看看这个窗口",
+   "hi": "इस विंडो को देखो",
+   "es": "Mira esta ventana",
+   "ar": "انظر إلى هذه النافذة",
+   "fr": "Regarde cette fenêtre",
+   "bn": "এই উইন্ডোটা দেখো",
+   "pt-BR": "Olha esta janela",
+   "ru": "Посмотри на это окно",
+   "id": "Lihat jendela ini"
+  },
   "Looking for the latest GOWA…": {
    "zh-Hans": "正在查找最新版 GOWA…",
    "hi": "GOWA का नया वर्शन ढूँढ रहा है…",
@@ -3290,6 +3345,17 @@
    "pt-BR": "Mochi e seu Mac",
    "ru": "Мочи и ваш Mac",
    "id": "Mochi dan Mac-mu"
+  },
+  "Mochi couldn't see that window. Try again.": {
+   "zh-Hans": "Mochi 没能看到这个窗口，请再试一次。",
+   "hi": "मोची वह विंडो नहीं देख पाया। फिर से कोशिश करें।",
+   "es": "Mochi no pudo ver esa ventana. Inténtalo de nuevo.",
+   "ar": "لم يتمكن موتشي من رؤية هذه النافذة. جرّب مرة أخرى.",
+   "fr": "Mochi n'a pas réussi à voir cette fenêtre. Réessaie.",
+   "bn": "মোচি এই উইন্ডোটা দেখতে পায়নি। আবার চেষ্টা করুন।",
+   "pt-BR": "O Mochi não conseguiu ver essa janela. Tente de novo.",
+   "ru": "Мочи не смог разглядеть это окно. Попробуйте ещё раз.",
+   "id": "Mochi tidak bisa melihat jendela itu. Coba lagi."
   },
   "Mochi reacts to your Mac": {
    "zh-Hans": "Mochi 会对你的 Mac 做出反应",
@@ -5865,6 +5931,17 @@
    "ru": "Краткие итоги",
    "id": "Ringkasan"
   },
+  "Summarize what's in this window for me.": {
+   "zh-Hans": "帮我总结一下这个窗口里的内容。",
+   "hi": "इस विंडो में जो है उसका सारांश दो।",
+   "es": "Resúmeme lo que hay en esta ventana.",
+   "ar": "لخّص لي ما في هذه النافذة.",
+   "fr": "Fais-moi un résumé de ce qu'il y a dans cette fenêtre.",
+   "bn": "এই উইন্ডোতে যা আছে তার সারাংশ দাও।",
+   "pt-BR": "Resuma para mim o que tem nesta janela.",
+   "ru": "Кратко перескажи, что в этом окне.",
+   "id": "Ringkas isi jendela ini untukku."
+  },
   "Summary": {
    "zh-Hans": "摘要",
    "hi": "सारांश",
@@ -6382,6 +6459,17 @@
    "ru": "Расшифровка",
    "id": "Transkrip"
   },
+  "Translate": {
+   "zh-Hans": "翻译",
+   "hi": "अनुवाद",
+   "es": "Traducir",
+   "ar": "ترجمة",
+   "fr": "Traduire",
+   "bn": "অনুবাদ",
+   "pt-BR": "Traduzir",
+   "ru": "Перевести",
+   "id": "Terjemahkan"
+  },
   "Translate into": {
    "zh-Hans": "翻译成",
    "hi": "अनुवाद करें",
@@ -6392,6 +6480,17 @@
    "pt-BR": "Traduzir para",
    "ru": "Переводить на",
    "id": "Terjemahkan ke"
+  },
+  "Translate the text in this window into English.": {
+   "zh-Hans": "把这个窗口里的文字翻译成中文。",
+   "hi": "इस विंडो के टेक्स्ट का हिंदी में अनुवाद करो।",
+   "es": "Traduce al español el texto de esta ventana.",
+   "ar": "ترجم نص هذه النافذة إلى العربية.",
+   "fr": "Traduis en français le texte de cette fenêtre.",
+   "bn": "এই উইন্ডোর লেখা বাংলায় অনুবাদ করো।",
+   "pt-BR": "Traduza para o português o texto desta janela.",
+   "ru": "Переведи текст этого окна на русский.",
+   "id": "Terjemahkan teks di jendela ini ke bahasa Indonesia."
   },
   "Try again": {
    "zh-Hans": "重试",

@@ -78,6 +78,9 @@ demande explicite (« cherche sur internet… », « search the web for… ») p
 avec les derniers échanges de la conversation, en mémoire seulement, oubliés après 90 s. Réponse courte lue à voix haute ;
 quand il y a plus à dire, elle finit par une question et Coucou réécoute : on peut continuer le sujet.
 
+**Agir dans les apps et le navigateur** (« va sur YouTube et lance… », « réponds à ce ticket Linear ») : la skill
+« Actions », plan et spike testé dans `docs/ACTIONS.md` (et `docs/BROWSER_AGENT.md` pour le navigateur).
+
 Bonus (après les 10) : Mochi et l'app à la voix (« mets-toi en pirate », « coupe les sons », « ne pas déranger »),
 routines (« mode focus » = playlist + ne pas déranger + pilules de travail).
 
