@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { decide, refsFrom, refOf, CARD_SHOWN } from "./gate.mjs";
+import { decide, decideApp, refsFrom, refOf, CARD_SHOWN } from "./gate.mjs";
 
 const snapshot = `
 - generic [ref=e1]:
@@ -73,4 +73,50 @@ test("Enter submits a search, never a message", () => {
   assert.ok(decide("browser_press_key", { key: "Enter" }, refs, state).card);
   // Other keys are fine.
   assert.deepEqual(decide("browser_press_key", { key: "ArrowDown" }, refs, state), { allow: true });
+});
+
+test("an app's tool runs only if its server says it only reads", () => {
+  const tools = new Map([
+    ["get_issue", { name: "get_issue", annotations: { readOnlyHint: true } }],
+    ["create_comment", { name: "create_comment", annotations: { readOnlyHint: false } }],
+    ["update_issue", { name: "update_issue" }],
+    ["odd", { name: "odd", annotations: { readOnlyHint: true, destructiveHint: true } }],
+  ]);
+  assert.deepEqual(decideApp("Linear", "get_issue", { id: "ENG-12" }, tools), { allow: true });
+  const d = decideApp("Linear", "create_comment", { issueId: "ENG-12", body: "On corrige demain" }, tools);
+  assert.equal(d.deny, CARD_SHOWN);
+  assert.equal(d.card, "Linear · create_comment (issueId: ENG-12, body: On corrige demain)");
+  assert.ok(decideApp("Linear", "update_issue", { id: "ENG-12" }, tools).card, "no annotation: a card");
+  assert.ok(decideApp("Linear", "odd", {}, tools).card, "read-only but destructive: a card");
+  assert.ok(decideApp("Linear", "delete_everything", {}, tools).deny, "not served: refused");
+});
+
+test("commenting or replying on a page is a card too", () => {
+  const r = refsFrom('- button "Commenter" [ref=e3]\n- button "Reply" [ref=e4]\n- button "Répondre" [ref=e5]');
+  for (const target of ["e3", "e4", "e5"]) assert.ok(decide("browser_click", { target }, r).card, target);
+});
+
+import { isOfficial, findAppTools } from "./apps/connectors.mjs";
+
+test("an app's official server is the one under its own domain", () => {
+  assert.ok(isOfficial("app.linear/linear", "linear.app"));
+  assert.ok(isOfficial("com.notion/mcp", "notion.com"));
+  assert.ok(isOfficial("com.figma.mcp/mcp", "figma.com"));
+  assert.ok(isOfficial("com.stripe/mcp", "stripe.com"));
+  assert.ok(!isOfficial("app.vercel.stripecheckup/stripecheckup", "stripe.com"));
+  // Anyone can publish under a hosting domain or their own GitHub account.
+  assert.ok(!isOfficial("app.vercel.someone/vercel", "vercel.com"));
+  assert.ok(!isOfficial("io.github.someone/notion-mcp", "notion.com"));
+  assert.ok(!isOfficial("com.notion-tools/mcp", "notion.com"));
+  assert.ok(!isOfficial("io.usefulapi/linear", "linear.app"));
+});
+
+test("which way to act: own tools, a card to connect, or the browser", () => {
+  const connected = new Set(["linear"]);
+  assert.match(findAppTools("Linear", connected).text, /connected/);
+  assert.equal(findAppTools("notion", connected).card, "connect Notion (mcp.notion.com)");
+  assert.match(findAppTools("YouTube", connected).text, /browser/);
+  assert.match(findAppTools("MiniTube", connected).text, /browser/);
+  assert.match(findAppTools("Slack", connected).text, /browser/);
+  assert.equal(findAppTools("Jira", connected).card, "connect Jira (mcp.atlassian.com)");
 });

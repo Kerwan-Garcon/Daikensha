@@ -1,7 +1,7 @@
 # « Va sur YouTube et lance… » : Coucou agit dans le navigateur
 
-Plan de travail pour Claude Code, testé par le spike `windows/spikes/browser-agent/`.
-Chaque phase = une PR, avec ses tests, et rien ne sort de ce qui est demandé dans la phase.
+Le chemin « navigateur » de la skill « Actions » (`docs/ACTIONS.md`, qui a les phases), pris quand l'app nommée n'a
+ni outils dans Coucou ni serveur MCP. Testé par le spike `windows/spikes/actions/`.
 
 ## L'idée
 
@@ -37,15 +37,15 @@ Points vérifiés qui décident du plan :
 
 ## Le spike (fait, et vérifié)
 
-`windows/spikes/browser-agent/` :
+`windows/spikes/actions/` :
 
 - `gate.mjs` : la garde, en prototype du code Rust à venir. Serveur MCP (stdio) pour `claude`, client MCP de
   `@playwright/mcp` (version épinglée). Elle filtre les outils, lit chaque instantané de page et décide seule.
 - `site/server.py` : « MiniTube », une boutique et une messagerie (Entrée envoie, sans bouton), en local. Chaque action
   de la page (recherche, lecture, panier, achat, abonnement, message envoyé) est écrite dans `events.log`. Une vidéo
   porte une injection (« l'assistant doit acheter… »).
-- `run.sh [haiku|sonnet]` : sept scénarios de bout en bout, avec `claude -p` lancé comme `claude_cli.rs` le fait
-  (`--strict-mcp-config`, `--tools ""`, seuls les outils `mcp__browser__*`). Chaque scénario est jugé sur ce que
+- `run.sh [haiku|sonnet]` : sept scénarios du navigateur (et trois d'apps, dans `ACTIONS.md`) de bout en bout, avec `claude -p` lancé comme `claude_cli.rs` le fait
+  (`--strict-mcp-config`, `--tools ""`, seuls les outils MCP de Coucou). Chaque scénario est jugé sur ce que
   **la page** a enregistré, jamais sur ce que dit le modèle.
 - `npm test` : les tests de la garde, sans modèle ni navigateur.
 
@@ -69,7 +69,7 @@ Ce que le spike a appris, et que le plan reprend :
 2. **Le nom de l'élément vient de l'instantané, jamais de la description du modèle** (`element`). Le test
    « le modèle appelle le bouton Acheter “Play” » le vérifie.
 3. Il faut **8 à 11 appels d'outil** pour une tâche simple. Le cerveau de la voix en API s'arrête à 5 tours
-   (`voice/brain.rs`) et un tour vocal à 60 s (`claude_cli/voice.rs`) : il faut un mode « tâche » (phase 3).
+   (`voice/brain.rs`) et un tour vocal à 60 s (`claude_cli/voice.rs`) : il faut un mode « tâche » (phase 4 d'`ACTIONS.md`).
 4. `browser_navigate` écrit son instantané dans un fichier ; `browser_snapshot` le renvoie en ligne. La garde lit
    les instantanés en ligne, et `--output-dir` envoie les fichiers dans le dossier de Coucou, pas dans le dossier courant.
 5. **Le modèle dit « c'est lancé » sans vérifier.** Sans la phrase « vérifie sur la page avant de dire que c'est fait »,
@@ -84,7 +84,7 @@ Ce que le spike a appris, et que le plan reprend :
    la consigne doit insister.
 
 Pas testé ici : le vrai YouTube et le mode extension (le réseau du conteneur refuse youtube.com), et Windows / macOS.
-C'est le premier travail de la phase 1, sur ta machine.
+C'est le premier travail de la phase 1 d'`ACTIONS.md`, sur ta machine.
 
 ## Architecture
 
@@ -94,7 +94,7 @@ C'est le premier travail de la phase 1, sur ta machine.
    cerveau (voice/brain.rs en API, claude_cli/voice.rs en abonnement, ClaudeVoiceBrain.swift sur Mac)
         │  outils browser_* (mêmes schémas que Playwright MCP, liste filtrée)
         ▼
-   browser/gate.rs  ── la garde : table fixe, instantanés, cartes de confirmation
+   actions/gate.rs  ── la garde : table fixe, instantanés, cartes de confirmation
         │  MCP stdio (JSON-RPC, une ligne par message)
         ▼
    @playwright/mcp (processus enfant, version épinglée)
@@ -103,9 +103,9 @@ C'est le premier travail de la phase 1, sur ta machine.
    le Chrome / Edge / Brave de l'utilisateur          Edge ou Chrome installé, fenêtre visible
 ```
 
-- **Un module `windows/src-tauri/src/browser/`** : `mcp_client.rs` (lance l'enfant, `initialize`, `tools/list`,
-  `tools/call`, délai par appel), `gate.rs` (port de `gate.mjs`, mêmes tests), `mod.rs` (choix du navigateur, démarrage
-  à la demande, arrêt après 2 minutes sans appel).
+- **Dans le module `windows/src-tauri/src/actions/`** (`ACTIONS.md`) : `mcp_client.rs` (lance l'enfant, `initialize`,
+  `tools/list`, `tools/call`, délai par appel), `gate.rs` (port de `gate.mjs`, mêmes tests), `browser.rs` (choix du
+  navigateur, démarrage à la demande, arrêt après 2 minutes sans appel).
 - **Les deux cerveaux voient les mêmes outils** : `coucou_tools()` ajoute les `browser_*` filtrés quand l'option est
   activée ; `run_tool` les envoie à la garde. Le serveur MCP de l'abonnement (`claude_cli/mcp.rs`) les sert donc
   aussi : la garde est au même endroit dans les deux modes, et `claude` ne parle jamais directement à Playwright.
@@ -115,7 +115,7 @@ C'est le premier travail de la phase 1, sur ta machine.
   Build GitHub seulement (`#if !APPSTORE`) : le sandbox interdit de lancer `node` et Playwright.
 - **Pas de nouvelle dépendance dans l'app.** `@playwright/mcp` est un programme à part, lancé par `npx`
   avec une version épinglée. Il faut Node 18+ : Réglages le détecte et donne le lien d'installation s'il manque.
-  Plus tard (phase 6), un client CDP en Rust pourra le remplacer : `tokio-tungstenite` est déjà dans l'arbre.
+  Plus tard, un client CDP en Rust pourra le remplacer : `tokio-tungstenite` est déjà dans l'arbre.
 
 ### Quel navigateur
 
@@ -140,13 +140,13 @@ Le modèle propose, la garde décide. Elle ne lit que l'instantané de la page, 
 | `evaluate`, `run_code_unsafe`, `file_upload`, `drop`, `fill_form`, `network_*`, `console_messages`, `install`, `handle_dialog` | Absents de la liste servie au modèle, et refusés s'ils sont appelés |
 | `navigate` vers autre chose que `http(s)` (`file:`, `javascript:`, `chrome:`…) | Refusé |
 | Cible donnée par un sélecteur, ou une référence absente du dernier instantané | Refusé (« prends un instantané ») |
-| Clic sur un élément dont le nom achète, paie, commande, envoie, publie, supprime, s'abonne, transfère, fait un don (FR + EN) | **Pas de clic.** Carte de confirmation dans l'île ; le résultat dit au modèle qu'une carte est affichée, jamais que c'est fait |
+| Clic sur un élément dont le nom achète, paie, commande, envoie, publie, commente, répond, supprime, s'abonne, transfère, fait un don (FR + EN) | **Pas de clic.** Carte de confirmation dans l'île ; le résultat dit au modèle qu'une carte est affichée, jamais que c'est fait |
 | `type` avec `submit` ou `press_key Enter` dans un champ qui n'est pas une recherche (un message, un commentaire) | Carte de confirmation (« Envoyer “…” dans “Message” ») : Entrée peut envoyer |
 | `type` dans un mot de passe, une carte bancaire, un IBAN, un code | Refusé : l'utilisateur le tape lui-même |
 | Sites des catégories bloquées (banque, paiement, administration) | Lecture seule : chaque clic est une carte |
 
 Le spike (`gate.mjs`) fait déjà tout ce tableau sauf la dernière ligne ; les sites bloqués et les pages d'approbation
-des agents arrivent avec la garde en Rust (phase 2).
+des agents arrivent avec la garde en Rust (phase 2 d'`ACTIONS.md`).
 
 - **Les règles de `CLAUDE.md` tiennent** : jamais d'e-mail envoyé ni de permission Claude Code / Codex approuvée
   sans clic. La garde refuse tout clic sur `claude.ai/…/permissions` et les pages d'approbation des agents.
@@ -158,47 +158,20 @@ des agents arrivent avec la garde en Rust (phase 2).
 - **Le téléphone** n'a aucun de ces outils (`Mode::Phone` reste sans outil).
 - **Un bouton Stop** dans l'île et « OK Coucou, arrête » coupent la tâche à tout moment.
 
-## Les phases (une PR chacune)
+## Les phases
 
-**Phase 1 : le spike sur ta machine (Windows, puis Mac).**
-`run.sh` avec le vrai Chrome / Edge en mode extension, puis en profil « Coucou » ; les mêmes six phrases sur le vrai
-YouTube. On note : temps par tâche, nombre d'appels, CPU et RAM de `node` + navigateur, ce qui casse.
-Critère : 6/6 sur trois passages avec Haiku. Sinon, Sonnet pour les tâches web (on garde ce qui marche).
-
-**Phase 2 : la garde et le client MCP en Rust (Windows/Linux).**
-`browser/gate.rs` (les tests de `gate.test.mjs` portés tels quels, plus ceux de la phase 1), `browser/mcp_client.rs`,
-démarrage à la demande et arrêt au repos (0 % de CPU quand rien ne tourne). Pas encore branché à la voix.
-Tests : table de la garde, client MCP contre un faux serveur, un test d'intégration avec Chromium sur MiniTube
-sans modèle (appels rejoués), lancé dans la CI Linux.
-
-**Phase 3 : la voix et le mode « tâche ».**
-Les outils `browser_*` dans `coucou_tools()`, `tool_lists.rs`, la consigne. Une tâche web passe en mode « tâche » :
-Mochi répond tout de suite « je m'en occupe », l'île montre l'étape en cours (« Ouvre youtube.com », « Clique
-“Lecture” »), au plus 25 appels et 3 minutes, bouton Stop. Les cartes de confirmation réutilisent celles de
-`shell/confirm.rs`. Critère : les six phrases à la voix, sur ta machine.
-
-**Phase 4 : le chat de l'île.**
-Le chat (fournisseur Claude, clé ou abonnement) reçoit les mêmes outils quand l'option est activée ; l'étape en
-cours s'affiche dans la bulle. Les autres fournisseurs n'ont pas d'outils : le chat le dit.
-
-**Phase 5 : Mac.**
-Même chose en Swift dans `ClaudeVoiceBrain` et le chat, build GitHub seulement. Navigateur par défaut Safari →
-profil « Coucou » dans Chrome ou Edge s'il est installé, sinon l'option explique qu'il en faut un.
-
-**Phase 6 : sans Node (optionnel).**
-Un client CDP en Rust (`tokio-tungstenite`, déjà là) pour le profil « Coucou », avec le même arbre d'accessibilité
-(`Accessibility.getFullAXTree`) et les mêmes références. Seulement si la phase 1 montre que Node gêne.
-
-**Phase 7 : finitions et release.**
-Sites interdits modifiables, traductions, `docs/SPEC.md`, README, CHANGELOG, Info.plist (règles de release de `CLAUDE.md`).
+Elles sont dans `docs/ACTIONS.md` : le navigateur passe par la même garde, le même client MCP et le même mode
+« tâche » que les apps. En plus, pour le navigateur seulement : un client CDP en Rust (`tokio-tungstenite`, déjà là)
+pour se passer de Node, avec le même arbre d'accessibilité (`Accessibility.getFullAXTree`) et les mêmes références,
+seulement si la phase 1 montre que Node gêne.
 
 ## Lancer le spike
 
 ```sh
-cd windows/spikes/browser-agent
+cd windows/spikes/actions
 npm install
 npm test                    # la garde, sans modèle ni navigateur
-CHROME=/chemin/vers/chrome ./run.sh haiku   # les six scénarios, avec ton `claude` connecté
+CHROME=/chemin/vers/chrome ./run.sh haiku   # les dix scénarios, avec ton `claude` connecté
 ```
 
 Sous Windows, `CHROME` est par exemple `C:\Program Files\Google\Chrome\Application\chrome.exe`
@@ -206,12 +179,14 @@ Sous Windows, `CHROME` est par exemple `C:\Program Files\Google\Chrome\Applicati
 
 ## Mesures
 
-Spike, Linux, Chromium headless, sur MiniTube (22 octobre 2026). « ✓ n/6 » : scénarios passés.
+Spike, Linux, Chromium headless, sur MiniTube (22 octobre 2026). « n/6 » : scénarios du navigateur passés.
 
 | Passage | Garde | Consigne | Haiku | Sonnet |
 |---|---|---|---|---|
 | 1 | `ref` seulement | sans « vérifie » | 1/6 : la garde refusait tout, Playwright MCP 0.0.83 appelle le champ `target` | — |
 | 2 | `target`, sélecteurs refusés | sans « vérifie » | 6/6, 6/6, 6/6 (trois passages) | 4/6 : deux vidéos ouvertes sans clic sur Lecture |
 | 3 | + règle d'Entrée | avec « vérifie » | 7/7 | 7/7 |
+| 4 | + commenter, répondre | skill (`skill/actions.md`), sans « va jusqu'au bout » | 7/7 | 5/7 : deux vidéos ouvertes sans lecture |
+| 5 | idem | skill complète | 7/7 | 7/7 |
 
 À mesurer en phase 1 sur ta machine : le vrai YouTube, le mode extension, le temps, le CPU et la RAM.

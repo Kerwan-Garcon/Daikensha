@@ -1,8 +1,12 @@
-// The browser gate, as a prototype of what Coucou will do in Rust
-// (docs/BROWSER_AGENT.md). It sits between Claude and Playwright MCP: a stdio
-// MCP server for Claude, a stdio MCP client of `@playwright/mcp`.
+// The gate, as a prototype of what Coucou will do in Rust (docs/ACTIONS.md, docs/BROWSER_AGENT.md).
+// It sits between Claude and one MCP server: a stdio MCP server for Claude, a
+// stdio MCP client of the real one. Two kinds:
+//   --kind browser   Playwright MCP, with the rules below;
+//   --kind app       an app's own MCP server (Linear, Notion…): a tool the server
+//                    marks read-only (annotations.readOnlyHint) runs; any other
+//                    one (comment, create, update, delete) only puts a card up.
 //
-// The model never decides what is risky. This file does:
+// The model never decides what is risky. This file does, for the browser:
 //   - only the tools in ALLOWED reach the browser (no evaluate, no code, no
 //     file upload, no install);
 //   - navigate: http(s) only;
@@ -18,7 +22,7 @@
 // Every decision is appended to GATE_LOG (one JSON line each).
 //
 // Usage (as an MCP server for `claude --mcp-config`):
-//   node gate.mjs -- <playwright mcp command and args>
+//   node gate.mjs [--kind browser|app] [--name Linear] -- <server command and args>
 
 import { spawn } from "node:child_process";
 import { appendFileSync } from "node:fs";
@@ -38,7 +42,7 @@ export const ALLOWED = new Set([
 ]);
 
 // Names that commit the user to something. French and English, as the user speaks.
-export const SENSITIVE = /\b(achet|acheter|buy|commander|commande|order|pay|payer|paiement|checkout|valider la commande|place order|envoyer|send|publier|post|tweet|supprimer|delete|remove account|s'abonner|subscribe|souscrire|transf[ée]rer|transfer|virement|confirmer le paiement|donate|faire un don)/i;
+export const SENSITIVE = /\b(achet|acheter|buy|commander|commande|order|pay|payer|paiement|checkout|valider la commande|place order|envoyer|send|publier|post|tweet|comment|commenter|r[ée]pondre|reply|soumettre|submit|supprimer|delete|remove account|s'abonner|subscribe|souscrire|transf[ée]rer|transfer|virement|confirmer le paiement|donate|faire un don)/i;
 const SECRET_FIELD = /(password|mot de passe|passcode|carte|card number|cvv|cvc|iban|code secret|pin\b)/i;
 
 const SEARCH_FIELD = /(search|recherch|cherch|query|find|trouver)/i;
@@ -91,10 +95,24 @@ export function decide(tool, args, refs, state = {}) {
   return { allow: true };
 }
 
+/** An app's tool: runs if its server marks it read-only, else a card. `tools`: name → MCP tool definition. */
+export function decideApp(app, tool, args, tools) {
+  const def = tools.get(tool);
+  if (!def) return { deny: `${app} has no tool ${tool}.` };
+  if (def.annotations?.readOnlyHint === true && def.annotations?.destructiveHint !== true) return { allow: true };
+  const shown = Object.entries(args).map(([k, v]) => `${k}: ${String(typeof v === "object" ? JSON.stringify(v) : v).slice(0, 80)}`).join(", ");
+  return { deny: CARD_SHOWN, card: `${app} · ${tool} (${shown})` };
+}
+
 function main() {
   const sep = process.argv.indexOf("--");
+  const own = process.argv.slice(2, sep);
+  const opt = (flag, fallback) => (own.includes(flag) ? own[own.indexOf(flag) + 1] : fallback);
+  const kind = opt("--kind", "browser");
+  const app = opt("--name", kind === "browser" ? "browser" : "app");
   const [cmd, ...cmdArgs] = process.argv.slice(sep + 1);
-  const log = (e) => process.env.GATE_LOG && appendFileSync(process.env.GATE_LOG, JSON.stringify({ t: Date.now(), ...e }) + "\n");
+  const log = (e) => process.env.GATE_LOG && appendFileSync(process.env.GATE_LOG, JSON.stringify({ t: Date.now(), server: app, ...e }) + "\n");
+  let appTools = new Map();
   const child = spawn(cmd, cmdArgs, { stdio: ["pipe", "pipe", "inherit"] });
   const out = (msg) => process.stdout.write(JSON.stringify(msg) + "\n");
   const pending = new Map(); // id → method, for the answers we rewrite
@@ -106,7 +124,7 @@ function main() {
     try { msg = JSON.parse(line); } catch { return; }
     if (msg.method === "tools/call") {
       const { name, arguments: args = {} } = msg.params ?? {};
-      const d = decide(name, args, refs, state);
+      const d = kind === "app" ? decideApp(app, name, args, appTools) : decide(name, args, refs, state);
       log({ tool: name, args, ...(d.allow ? { allowed: true } : { denied: d.deny.slice(0, 60), card: d.card }) });
       if (!d.allow) return out({ jsonrpc: "2.0", id: msg.id, result: { content: [{ type: "text", text: d.deny }], isError: !d.card } });
     }
@@ -120,7 +138,8 @@ function main() {
     const method = pending.get(msg.id);
     if (method) pending.delete(msg.id);
     if (method === "tools/list" && msg.result?.tools) {
-      msg.result.tools = msg.result.tools.filter((t) => ALLOWED.has(t.name));
+      if (kind === "app") appTools = new Map(msg.result.tools.map((t) => [t.name, t]));
+      else msg.result.tools = msg.result.tools.filter((t) => ALLOWED.has(t.name));
     }
     if (method === "tools/call" && Array.isArray(msg.result?.content)) {
       const text = msg.result.content.filter((c) => c.type === "text").map((c) => c.text).join("\n");

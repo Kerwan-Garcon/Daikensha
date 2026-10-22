@@ -57,6 +57,12 @@ class H(BaseHTTPRequestHandler):
             # A message box with no button: Enter sends, as on most chat sites.
             return self.send(page("Messages — Léa", """<h1>Léa</h1><ul id="log"><li>Léa : on se voit demain ?</li></ul>
 <input id="msg" aria-label="Écrire un message à Léa" onkeydown="if(event.key==='Enter'){fetch('/event?kind=send&text='+encodeURIComponent(this.value));this.value=''}">"""))
+        if u.path == "/linear":
+            # Linear's web app, to see that its MCP server is picked over it.
+            return self.send(page("ENG-12 — Linear", """<h1>ENG-12 · Le lecteur plante au démarrage</h1><p>État : En cours</p>
+<p>Léa : Ça arrive aussi sur Windows 10 ?</p>
+<textarea aria-label="Laisser un commentaire" id="c"></textarea>
+<button onclick="fetch('/event?kind=linear_comment&body='+encodeURIComponent(document.getElementById('c').value))">Commenter</button>"""))
         if u.path == "/event":
             self.event(**{k: v[0] for k, v in q.items()}); return self.send("ok")
         self.send("not found", 404)
