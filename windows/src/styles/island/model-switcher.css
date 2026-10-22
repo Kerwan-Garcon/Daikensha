@@ -6,6 +6,40 @@
   padding: 0 10px;
 }
 
+/* Mochi looked at a window: Summary, Analysis, Key points, Translate (core/look.ts). */
+.look-chips {
+  display: none;
+  gap: 5px;
+  min-width: 0;
+  margin-right: auto;
+  padding-right: 8px;
+  overflow: hidden;
+}
+
+.look-chips.on {
+  display: flex;
+}
+
+.look-chip {
+  flex: 0 0 auto;
+  padding: 4px 8px;
+  border: 0;
+  border-radius: 999px;
+  background: rgb(var(--color-overlay-rgb) / 0.06);
+  font: 500 10.5px var(--font-sans);
+  color: var(--gray-810);
+  white-space: nowrap;
+  cursor: default;
+}
+
+.look-chip:hover:not(:disabled) {
+  background: rgb(var(--color-overlay-rgb) / 0.1);
+}
+
+.look-chip:disabled {
+  opacity: 0.5;
+}
+
 .model-btn {
   display: inline-flex;
   align-items: center;

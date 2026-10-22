@@ -763,8 +763,14 @@ final class AppState: ObservableObject {
 // MARK: - Supporting types
 
 enum PromptContext {
-    case window(appName: String, title: String, url: String?)
+    /// `shot`: the window's screenshot, when Mochi was dropped on it to look at it (WindowLook).
+    case window(appName: String, title: String, url: String?, shot: URL? = nil)
     case file(name: String, fileURL: URL?)
+
+    var shot: URL? {
+        if case .window(_, _, _, let shot) = self { return shot }
+        return nil
+    }
 }
 
 struct VoiceMailDraft: Equatable {

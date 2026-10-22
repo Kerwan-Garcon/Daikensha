@@ -25,7 +25,9 @@ import { buildHeader, buildViews, type ViewActions, type ViewHost } from "../vie
 import { h } from "../views/dom";
 import type { ShellHost } from "../views/shell";
 import { clockText } from "../core/shell";
-import { language } from "../i18n/i18n";
+import { language, t } from "../i18n/i18n";
+import { LOOK_BUBBLE, lookPrompt, type Looked } from "../core/look";
+import { askInChat } from "../views/chat";
 
 const IS_WINDOWS = typeof navigator !== "undefined" && navigator.userAgent.includes("Windows");
 import { IslandStateMachine } from "./fsm";
@@ -146,6 +148,7 @@ export class Island {
       reveal: () => this.reveal(),
       wardrobeFromDesktop: () => this.wardrobeFromDesktop(),
       dizzyFromDesktop: () => this.handleDizzy(),
+      looked: (look) => this.onLooked(look),
     });
     this.build();
     this.wireFsm();
@@ -553,10 +556,34 @@ export class Island {
     State.capturePreview = url;
     State.droppedFile = null;
     State.promptContext = null;
+    State.lookWindow = null;
     State.chatHistory = [];
     void Bridge.chatReset();
     Sound.play("pop");
     this.alert("circle");
+  }
+
+  /**
+   * Mochi was dropped on a window and is back: a fresh chat about it, asked at
+   * once (the Mac's WindowLook). Rust holds the picture until it is answered.
+   */
+  private onLooked(look: Looked) {
+    if (look.error) {
+      State.noteMessage = look.error;
+      Sound.play("error");
+      this.alert("note");
+      return;
+    }
+    State.capturePreview = null;
+    State.droppedFile = null;
+    State.promptContext = null;
+    State.lookWindow = { appName: look.appName, title: look.title };
+    State.chatHistory = [];
+    void Bridge.chatReset();
+    this.engine.gulp();
+    Sound.play("gulp");
+    this.alert("prompt");
+    askInChat(lookPrompt(language()), t(LOOK_BUBBLE));
   }
 
   decideCapture(ask: boolean) {
@@ -777,6 +804,7 @@ export class Island {
     const name = path.split(/[\\/]/).pop() || "file";
     State.droppedFile = { name, path };
     State.promptContext = { kind: "file", name, path };
+    State.lookWindow = null;
     State.chatHistory = [];
     void Bridge.chatReset();
 

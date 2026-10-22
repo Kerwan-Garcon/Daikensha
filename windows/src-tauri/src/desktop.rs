@@ -246,6 +246,9 @@ impl Desktop {
 struct Dropped {
     from: Source,
     home: bool,
+    /// Dropped on another app's window: he went back to the island and looked
+    /// at it (look.rs). Set only on Windows.
+    look: Option<crate::look::Looked>,
 }
 
 #[derive(Serialize, Clone)]
@@ -598,6 +601,20 @@ async fn finish_drop(app: &AppHandle, d: &Desktop, pos: (f64, f64), from: Source
     let home = island_anchor(app, d)
         .map(|(cx, top, scale)| logic::home_zone(cx, top, scale).contains(center))
         .unwrap_or(false);
+    // Out of the island onto another app's window: he looks at it, then he is
+    // back in the island, where the chat shows what he saw. Alt: he lands there.
+    let target = (from == Source::Island && !home && !platform::alt_down())
+        .then(|| crate::look::window_at(platform::cursor_physical().unwrap_or(center)))
+        .flatten();
+    if let Some(target) = target {
+        hide(app, d);
+        // Let the compositor repaint without him, in case the window has to be
+        // read from the screen.
+        tokio::time::sleep(Duration::from_millis(120)).await;
+        let looked = tauri::async_runtime::spawn_blocking(move || crate::look::take(target)).await.ok();
+        let _ = app.emit_to(island::WINDOW_LABEL, "desktop-mochi-dropped", Dropped { from, home: true, look: looked });
+        return;
+    }
     {
         let mut i = d.inner.lock().unwrap();
         i.carry = None;
@@ -619,7 +636,7 @@ async fn finish_drop(app: &AppHandle, d: &Desktop, pos: (f64, f64), from: Source
         }
         remember_spot(app, d, spot, true);
     }
-    let _ = app.emit_to(island::WINDOW_LABEL, "desktop-mochi-dropped", Dropped { from, home });
+    let _ = app.emit_to(island::WINDOW_LABEL, "desktop-mochi-dropped", Dropped { from, home, look: None });
 }
 
 // ── Poll (Windows) ────────────────────────────────────────────────────────────

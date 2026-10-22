@@ -514,7 +514,9 @@ export interface IntegrationUpdate {
 export type ChatContext =
   | { kind: "file"; name: string; path: string }
   | { kind: "window"; appName: string; title: string; url?: string }
-  | { kind: "capture" };
+  | { kind: "capture" }
+  /** The window Mochi was dropped on: its picture stays in Rust (look.rs). */
+  | { kind: "look"; appName: string; title: string };
 
 export interface ModelInfo {
   id: string;

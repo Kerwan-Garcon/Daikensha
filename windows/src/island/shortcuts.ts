@@ -179,6 +179,7 @@ export function runIslandKey(host: ShortcutHost, action: IslandKeyAction) {
       State.chatHistory = [];
       State.droppedFile = null;
       State.promptContext = null;
+      State.lookWindow = null;
       if (State.capturePreview) void Bridge.circleDiscard();
       State.capturePreview = null;
       void Bridge.chatReset();
