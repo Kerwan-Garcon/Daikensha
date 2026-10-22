@@ -1843,8 +1843,7 @@ final class BotEngine: ObservableObject {
         static let skinBottom = Color(hex: "#C98D62")
         static let hair       = Color(hex: "#2A211D")
         static let braidLine  = Color(hex: "#4A3B33")
-        static let braidShadow = Color(hex: "#17110E")
-        static let parting    = Color(hex: "#8A5E44")
+        static let parting    = Color(hex: "#6B4A38")
         static let clip       = Color(hex: "#E2554B")
         static let clipDark   = Color(hex: "#B83A33")
         static let frame      = Color(hex: "#1B1716")
@@ -1866,9 +1865,6 @@ final class BotEngine: ObservableObject {
         let ya = a + yaw, pa = p + pitch
         return (CGPoint(x: sin(ya) * cos(pa) * rx, y: -sin(pa) * ry), cos(ya) * cos(pa))
     }
-
-    /// Where the hairline sits at `a`: high on the forehead, down at the temples.
-    private func hairlineP(_ a: CGFloat) -> CGFloat { 0.6 - 0.5 * min(1, (a / 1.6) * (a / 1.6)) }
 
     /// Two braids hanging from the sides. Each bead lags the one above it, they hang with
     /// gravity when he tilts, bounce when he hops and drift a little at rest.
@@ -1899,74 +1895,39 @@ final class BotEngine: ObservableObject {
         }
     }
 
-    /// Cornrows laid on the sphere of his head: when he turns or looks up and down they
-    /// slide, spread and bunch up like the eyes do, and a sheen glides the other way.
+    /// Cornrows over the top of his head, their partings meeting at the forehead, and a red clip.
     private func drawHair(ctx: GraphicsContext, path: Path, R: CGFloat, rx: CGFloat, ry: CGFloat) {
         guard hasPortrait, morph < 0.95 else { return }
         var c = ctx
         c.clip(to: path)
         c.opacity = Double(1 - morph)
+        let x0 = faceX(rx, 0.85)
 
-        // The cap: everything above the hairline (points past the side of the head are pinned
-        // to its outline, so the hair wraps round instead of ending in mid-air).
+        // Everything above the hairline; it comes down at the temples like a fade.
         var cap = Path()
-        let steps = 24
-        for i in 0...steps {
-            let a = -1.7 + 3.4 * CGFloat(i) / CGFloat(steps)
-            let ya = max(-CGFloat.pi / 2, min(CGFloat.pi / 2, a + yaw))
-            let pa = hairlineP(a) + pitch
-            let pt = CGPoint(x: sin(ya) * cos(pa) * rx, y: -sin(pa) * ry)
-            if i == 0 { cap.move(to: pt) } else { cap.addLine(to: pt) }
-        }
-        cap.addLine(to: CGPoint(x: rx * 1.4, y: -ry * 1.5))
-        cap.addLine(to: CGPoint(x: -rx * 1.4, y: -ry * 1.5))
+        cap.move(to: CGPoint(x: -rx * 1.3, y: -ry * 1.3))
+        cap.addLine(to: CGPoint(x: rx * 1.3, y: -ry * 1.3))
+        cap.addLine(to: CGPoint(x: rx * 1.3, y: -R * 0.05))
+        cap.addQuadCurve(to: CGPoint(x: x0, y: -R * 0.48), control: CGPoint(x: x0 + rx * 0.55, y: -R * 0.56))
+        cap.addQuadCurve(to: CGPoint(x: -rx * 1.3, y: -R * 0.05), control: CGPoint(x: x0 - rx * 0.55, y: -R * 0.56))
         cap.closeSubpath()
         c.fill(cap, with: .color(Portrait.hair))
 
-        // The rows, from the hairline back over the crown: a thin parting between each pair,
-        // and each row raised by a lit edge and a shadowed one.
         var rows = c
         rows.clip(to: cap)
-        func row(at a: CGFloat) -> Path? {
-            var line = Path()
-            var started = false
-            for j in 0...10 {
-                let p = hairlineP(a) - 0.08 + (CGFloat.pi / 2 + 0.2 - hairlineP(a)) * CGFloat(j) / 10
-                let hp = headPoint(a, p, rx: rx, ry: ry)
-                guard hp.facing > 0.02 else { break }
-                if started { line.addLine(to: hp.pt) } else { line.move(to: hp.pt); started = true }
-            }
-            return started ? line : nil
-        }
-        let thin = StrokeStyle(lineWidth: max(0.5, R * 0.03), lineCap: .round, lineJoin: .round)
-        let edge = StrokeStyle(lineWidth: max(0.5, R * 0.045), lineCap: .round, lineJoin: .round)
-        for i in -4...4 {
-            let a = CGFloat(i) * 0.34
-            if let parting = row(at: a + 0.17) {
-                rows.stroke(parting, with: .color(Portrait.parting), style: thin)
-            }
-            guard let band = row(at: a) else { continue }
-            var dark = rows
-            dark.translateBy(x: -R * 0.03, y: R * 0.02)
-            dark.stroke(band, with: .color(Portrait.braidShadow), style: edge)
-            var lit = rows
-            lit.translateBy(x: R * 0.03, y: -R * 0.02)
-            lit.stroke(band, with: .color(Portrait.braidLine), style: edge)
+        for i in -2...2 {
+            let fi = CGFloat(i)
+            var l = Path()
+            l.move(to: CGPoint(x: x0 + fi * R * 0.08, y: -R * 0.44))
+            l.addQuadCurve(to: CGPoint(x: x0 * 0.4 + fi * rx * 0.48, y: -ry * 1.05),
+                           control: CGPoint(x: x0 * 0.7 + fi * rx * 0.28, y: -ry * 0.72))
+            rows.stroke(l, with: .color(Portrait.parting),
+                        style: StrokeStyle(lineWidth: max(0.5, R * 0.03), lineCap: .round))
         }
 
-        // Sheen, opposite to where he looks
-        let sheen = CGPoint(x: rx * 0.3 - faceX(rx, 0.5), y: -ry * 0.72 + pitch * ry * 0.3)
-        rows.fill(cap, with: .radialGradient(
-            Gradient(colors: [Color.white.opacity(0.16), Color.white.opacity(0)]),
-            center: sheen, startRadius: 0, endRadius: R * 0.55))
-
-        // The red clip, on his left temple (the viewer's right), riding the same sphere
-        let clipAt = headPoint(0.75, 0.86, rx: rx, ry: ry)
-        guard clipAt.facing > 0.05 else { return }
+        // The red clip, on his left temple (the viewer's right)
         var bow = c
-        bow.translateBy(x: clipAt.pt.x, y: clipAt.pt.y)
-        bow.scaleBy(x: max(0.3, cos(0.75 + yaw)), y: 1)
-        bow.rotate(by: .radians(Double(physDx * 0.25)))   // a little flick as he turns
+        bow.translateBy(x: x0 + rx * 0.58, y: -R * 0.58)
         for s: CGFloat in [-1, 1] {
             var petal = bow
             petal.rotate(by: .radians(Double(s) * 0.9 + 0.3))
