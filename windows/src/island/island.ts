@@ -13,6 +13,7 @@ import {
 import { Sound } from "../core/sound";
 import { State } from "../core/state";
 import { SPOTIFY_ID, islandDances } from "../core/spotify";
+import { YOUTUBE_MUSIC_ID } from "../core/youtube-music";
 import { BotEngine, hexToRGB } from "../mochi/engine";
 import { Greeting } from "../mochi/greeting";
 import { createMiniBot, pruneMiniBots, syncMiniBotStates, tickMiniBots } from "../mochi/minibots";
@@ -33,6 +34,11 @@ import { refreshHookPills } from "./integrations";
 import { DesktopLink } from "./desktop";
 import type { ViewCommand } from "./shortcuts";
 import { DRAG_THRESHOLD } from "../mochi/desktop-logic";
+
+// The music pills Mochi dances on when in front, without a new array each frame.
+const SPOTIFY_PILL = [SPOTIFY_ID];
+const YOUTUBE_MUSIC_PILL = [YOUTUBE_MUSIC_ID];
+const BOTH_MUSIC_PILLS = [SPOTIFY_ID, YOUTUBE_MUSIC_ID];
 
 const BOT_OVERHANG = 40;
 const CLAUDE_DESKTOP_ID = "agent_claude-desktop";
@@ -219,6 +225,7 @@ export class Island {
           void Bridge.openSession(task.sessionId ?? null, task.sessionCwd ?? null);
         } else if (task.id === "integration_n8n") void Bridge.openN8n();
         else if (task.id === SPOTIFY_ID) void Bridge.spotifyOpen();
+        else if (task.id === YOUTUBE_MUSIC_ID) void Bridge.youTubeMusicOpen();
         else if (urls[task.id]) void Bridge.openUrl(urls[task.id]);
       },
       openUrl: (url) => {
@@ -1316,12 +1323,15 @@ export class Island {
     this.engine.look = showOutfit ? parseLook(State.settings.mochiLook) : "classic";
     // Dances while music plays: always in the compact island, expanded only on
     // the music pill's card (BotCanvasView, macOS). Asked every frame.
+    const spotify = State.spotifyPlaying;
+    const youTubeMusic = State.youTubeMusicPlaying;
     this.engine.setDancing(islandDances({
-      music: State.spotifyPlaying,
+      music: spotify || youTubeMusic,
       state: State.effectiveState,
       mode: State.mode,
       view: State.view,
       focusId: State.focusTask?.id,
+      musicPills: spotify && youTubeMusic ? BOTH_MUSIC_PILLS : youTubeMusic ? YOUTUBE_MUSIC_PILL : SPOTIFY_PILL,
     }));
 
     this.engine.update(dt);

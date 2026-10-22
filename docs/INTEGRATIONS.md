@@ -346,6 +346,7 @@ Pas d'API WhatsApp pour un compte perso : Coucou parle à une **passerelle local
 | Automatisation → Terminal / iTerm / navigateur | sauter au bon onglet, lire l'URL | première utilisation |
 | Automatisation → Musique *(GitHub only)* | contrôler la lecture Apple Music | première commande depuis le notch |
 | Automatisation → Spotify *(GitHub only)* | lire la position, le shuffle, le volume ; piloter la lecture | activation de la pill Spotify, ou première ouverture de sa carte |
+| Aucune permission macOS — « Autoriser » dans Pear Desktop *(YouTube Music, GitHub only)* | piloter YouTube Music via le plugin API Server de Pear, sur `127.0.0.1:26538` uniquement (docs/YOUTUBE_MUSIC.md) | clic sur « Connecter… » dans la carte YouTube Music |
 | Enregistrement de l'écran | capturer la fenêtre attrapée | première attache |
 | Micro + Reconnaissance vocale (optionnel) | dictée | premier clic sur le micro |
 | État de Concentration *(GitHub only)* | WhatsApp reste discret pendant une Concentration | activation de WhatsApp, si « Rester discret pendant une Concentration » est coché |

@@ -376,6 +376,17 @@
    "ru": "Разрешить Coucou управлять Spotify",
    "id": "Izinkan Coucou mengontrol Spotify"
   },
+  "Allow Coucou to control YouTube Music": {
+   "zh-Hans": "允许 Coucou 控制 YouTube Music",
+   "hi": "Coucou को YouTube Music नियंत्रित करने दें",
+   "es": "Permite que Coucou controle YouTube Music",
+   "ar": "اسمح لـ Coucou بالتحكم في YouTube Music",
+   "fr": "Autorisez Coucou à piloter YouTube Music",
+   "bn": "Coucou-কে YouTube Music নিয়ন্ত্রণ করতে দিন",
+   "pt-BR": "Permita que o Coucou controle o YouTube Music",
+   "ru": "Разрешите Coucou управлять YouTube Music",
+   "id": "Izinkan Coucou mengontrol YouTube Music"
+  },
   "Already active": {
    "zh-Hans": "已激活",
    "hi": "पहले से सक्रिय",
@@ -1080,6 +1091,17 @@
    "ru": "Очистить историю",
    "id": "Hapus riwayat"
   },
+  "Click Allow in YouTube Music": {
+   "zh-Hans": "在 YouTube Music 中点击「允许」",
+   "hi": "YouTube Music में «अनुमति दें» पर क्लिक करें",
+   "es": "Haz clic en «Permitir» en YouTube Music",
+   "ar": "انقر على «السماح» في YouTube Music",
+   "fr": "Cliquez sur « Autoriser » dans YouTube Music",
+   "bn": "YouTube Music-এ «অনুমতি দিন» চাপুন",
+   "pt-BR": "Clique em «Permitir» no YouTube Music",
+   "ru": "Нажмите «Разрешить» в YouTube Music",
+   "id": "Klik «Izinkan» di YouTube Music"
+  },
   "Close": {
    "zh-Hans": "关闭",
    "hi": "बंद करें",
@@ -1288,6 +1310,17 @@
    "pt-BR": "Conectando…",
    "ru": "Подключение…",
    "id": "Menghubungkan…"
+  },
+  "Connect…": {
+   "zh-Hans": "连接…",
+   "hi": "कनेक्ट करें…",
+   "es": "Conectar…",
+   "ar": "اتصال…",
+   "fr": "Connecter…",
+   "bn": "সংযুক্ত করুন…",
+   "pt-BR": "Conectar…",
+   "ru": "Подключить…",
+   "id": "Hubungkan…"
   },
   "Contact": {
    "zh-Hans": "联系人",
@@ -2212,6 +2245,17 @@
    "pt-BR": "Geral",
    "ru": "Основные",
    "id": "Umum"
+  },
+  "Get Pear Desktop": {
+   "zh-Hans": "获取 Pear Desktop",
+   "hi": "Pear Desktop पाएँ",
+   "es": "Obtener Pear Desktop",
+   "ar": "تنزيل Pear Desktop",
+   "fr": "Installer Pear Desktop",
+   "bn": "Pear Desktop নিন",
+   "pt-BR": "Obter o Pear Desktop",
+   "ru": "Скачать Pear Desktop",
+   "id": "Dapatkan Pear Desktop"
   },
   "Get Spotify": {
    "zh-Hans": "获取 Spotify",
@@ -4192,6 +4236,17 @@
    "pt-BR": "Abrir Visual Studio Code",
    "ru": "Открыть Visual Studio Code",
    "id": "Buka Visual Studio Code"
+  },
+  "Open YouTube Music": {
+   "zh-Hans": "打开 YouTube Music",
+   "hi": "YouTube Music खोलें",
+   "es": "Abrir YouTube Music",
+   "ar": "فتح YouTube Music",
+   "fr": "Ouvrir YouTube Music",
+   "bn": "YouTube Music খুলুন",
+   "pt-BR": "Abrir YouTube Music",
+   "ru": "Открыть YouTube Music",
+   "id": "Buka YouTube Music"
   },
   "Open chat": {
    "zh-Hans": "打开聊天",
@@ -6338,6 +6393,17 @@
    "ru": "Переводить на",
    "id": "Terjemahkan ke"
   },
+  "Try again": {
+   "zh-Hans": "重试",
+   "hi": "फिर से कोशिश करें",
+   "es": "Reintentar",
+   "ar": "إعادة المحاولة",
+   "fr": "Réessayer",
+   "bn": "আবার চেষ্টা করুন",
+   "pt-BR": "Tentar novamente",
+   "ru": "Повторить",
+   "id": "Coba lagi"
+  },
   "Try demo mode": {
    "zh-Hans": "试用演示模式",
    "hi": "डेमो मोड आज़माएँ",
@@ -6359,6 +6425,17 @@
    "pt-BR": "Ativar o ditado",
    "ru": "Включить диктовку",
    "id": "Aktifkan dikte"
+  },
+  "Turn on the API Server plugin in YouTube Music": {
+   "zh-Hans": "在 YouTube Music 中开启 API Server 插件",
+   "hi": "YouTube Music में API Server प्लगइन चालू करें",
+   "es": "Activa el plugin API Server en YouTube Music",
+   "ar": "فعّل إضافة API Server في YouTube Music",
+   "fr": "Activez le plugin API Server dans YouTube Music",
+   "bn": "YouTube Music-এ API Server প্লাগইন চালু করুন",
+   "pt-BR": "Ative o plugin API Server no YouTube Music",
+   "ru": "Включите плагин API Server в YouTube Music",
+   "id": "Aktifkan plugin API Server di YouTube Music"
   },
   "Turned off in Settings": {
    "zh-Hans": "已在设置中关闭",
@@ -7020,6 +7097,28 @@
    "ru": "Ты говоришь",
    "id": "Kamu berbicara"
   },
+  "YouTube Music not installed": {
+   "zh-Hans": "未安装 YouTube Music",
+   "hi": "YouTube Music इंस्टॉल नहीं है",
+   "es": "YouTube Music no está instalado",
+   "ar": "YouTube Music غير مثبت",
+   "fr": "YouTube Music n'est pas installé",
+   "bn": "YouTube Music ইনস্টল নেই",
+   "pt-BR": "YouTube Music não está instalado",
+   "ru": "YouTube Music не установлен",
+   "id": "YouTube Music belum terpasang"
+  },
+  "YouTube Music refused the connection": {
+   "zh-Hans": "YouTube Music 拒绝了连接",
+   "hi": "YouTube Music ने कनेक्शन अस्वीकार कर दिया",
+   "es": "YouTube Music rechazó la conexión",
+   "ar": "رفض YouTube Music الاتصال",
+   "fr": "YouTube Music a refusé la connexion",
+   "bn": "YouTube Music সংযোগ প্রত্যাখ্যান করেছে",
+   "pt-BR": "O YouTube Music recusou a conexão",
+   "ru": "YouTube Music отклонил подключение",
+   "id": "YouTube Music menolak koneksi"
+  },
   "Your GOWA gateway is set up": {
    "zh-Hans": "你的 GOWA 网关已设置",
    "hi": "आपका GOWA गेटवे सेट है",
@@ -7481,6 +7580,17 @@
    "pt-BR": "{0} — abrir o Spotify",
    "ru": "{0} — открыть Spotify",
    "id": "{0} — buka Spotify"
+  },
+  "{0} — open YouTube Music": {
+   "zh-Hans": "{0} — 打开 YouTube Music",
+   "hi": "{0} — YouTube Music खोलें",
+   "es": "{0} — abrir YouTube Music",
+   "ar": "{0} — فتح YouTube Music",
+   "fr": "{0} — ouvrir YouTube Music",
+   "bn": "{0} — YouTube Music খুলুন",
+   "pt-BR": "{0} — abrir YouTube Music",
+   "ru": "{0} — открыть YouTube Music",
+   "id": "{0} — buka YouTube Music"
   },
   "{0} → {1}": {
    "zh-Hans": "{0} → {1}",
