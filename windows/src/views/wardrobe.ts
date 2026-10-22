@@ -10,12 +10,16 @@ import {
   wardrobeHeader, type Outfit, type OutfitSelection,
 } from "../mochi/wardrobe";
 import type { ViewActions, ViewHost } from "./views";
-import { language, tl } from "../i18n/i18n";
+import { language, t, tl } from "../i18n/i18n";
+import { LOOK_LABELS, parseLook } from "../mochi/look";
 
 const ICON = 28;
 
 export function buildWardrobe(actions: ViewActions): ViewHost {
   const note = h("span", { class: "wardrobe-note" });
+  // Mochi's face: signature, portrait, slime, sage or classic — a click goes to the next.
+  const face = h("button", { class: "wardrobe-face" });
+  face.addEventListener("click", () => actions.nextLook());
   const grid = h("div", { class: "wardrobe-grid" });
   const el = h(
     "div",
@@ -26,7 +30,7 @@ export function buildWardrobe(actions: ViewActions): ViewHost {
       h(
         "div",
         { class: "stack wardrobe-stack" },
-        h("div", { class: "wardrobe-head" }, h("span", { class: "wardrobe-title", text: tl("Wardrobe") }), note),
+        h("div", { class: "wardrobe-head" }, h("span", { class: "wardrobe-title", text: tl("Wardrobe") }), face, note),
         grid,
       ),
     ),
@@ -39,6 +43,8 @@ export function buildWardrobe(actions: ViewActions): ViewHost {
 
   const updateNote = () => {
     note.textContent = wardrobeHeader(hovered, parseOutfit(State.settings.mochiOutfit), new Date());
+    face.textContent = t("Face · {look}", { look: LOOK_LABELS[parseLook(State.settings.mochiLook)] });
+    face.title = t("Change Mochi's face");
   };
 
   for (const sel of OUTFIT_SELECTIONS) {

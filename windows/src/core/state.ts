@@ -12,6 +12,7 @@ import type { FileDiff } from "./diff";
 import type { Bindings } from "./shortcuts";
 import type { ShellCard } from "./bridge";
 import { DEFAULT_OUTFIT, type Outfit } from "../mochi/wardrobe";
+import { DEFAULT_LOOK } from "../mochi/look";
 import { pillColor } from "./pill-colors";
 import { Spotify, musicPlaying } from "./spotify";
 
@@ -149,6 +150,11 @@ export interface Settings {
    */
   mochiOutfit: string;
   /**
+   * Mochi's face: "signature", "portrait", "slime", "sage" or "classic". Same key
+   * and raw values as the Mac's "mochiLook"; read it through parseLook.
+   */
+  mochiLook: string;
+  /**
    * A colour of the user's own for a pill's Mochi, by pill ID ("#RRGGBB").
    * Empty means the catalog's colours; read it through core/pill-colors.ts.
    * Same key and values as the Mac's "pillColors".
@@ -208,6 +214,7 @@ export const DEFAULT_SETTINGS: Settings = {
   customUrl: "",
   shortcuts: {},
   mochiOutfit: DEFAULT_OUTFIT,
+  mochiLook: DEFAULT_LOOK,
   pillColors: {},
   language: "",
 };
