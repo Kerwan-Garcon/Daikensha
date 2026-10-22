@@ -18,6 +18,7 @@ mod integrations;
 mod island;
 mod local_chat;
 mod log;
+mod look;
 mod net;
 mod notes;
 mod openai_compat;

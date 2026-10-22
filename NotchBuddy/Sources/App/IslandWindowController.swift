@@ -979,8 +979,14 @@ final class IslandWindowController: NSWindowController {
                 let windowCtx = self.windowContextAtPoint(mouse)
                 let inNotchZone = self.window?.frame.contains(mouse) == true
 
-                if let ctx = windowCtx {
-                    // Drop on a window → attach context as before
+                if let ctx = windowCtx, !NSEvent.modifierFlags.contains(.option) {
+                    // Drop on a window → Mochi looks at it and says what he sees
+                    self.hideDragGhost()
+                    SoundEngine.shared.play("approve")
+                    let chat = WindowLook.shared.look(at: mouse, context: ctx)
+                    self.expand(to: chat ? .prompt : .note)
+                } else if let ctx = windowCtx {
+                    // ⌥-drop on a window → only attach it to the chat
                     self.hideDragGhost()
                     self.state.promptContext = ctx
                     SoundEngine.shared.play("approve")

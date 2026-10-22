@@ -12,6 +12,7 @@ import {
   DESKTOP_EVENTS, DesktopMochiController, alertActive, type DesktopSnapshot,
 } from "../mochi/desktop-logic";
 import { SeasonCache, parseOutfit } from "../mochi/wardrobe";
+import type { Looked } from "../core/look";
 import { parseLook } from "../mochi/look";
 
 /** Label of the desktop Mochi's window (desktop.rs LABEL). */
@@ -25,6 +26,8 @@ export interface DesktopHost {
   wardrobeFromDesktop(): void;
   /** Three pokes on the desktop Mochi. */
   dizzyFromDesktop(): void;
+  /** Dropped on a window: he is back and has looked at it (core/look.ts). */
+  looked(look: Looked): void;
 }
 
 export class DesktopLink {
@@ -71,9 +74,10 @@ export class DesktopLink {
     this.mode = info.mode;
     this.controller.enabled = info.onDesktop;
 
-    await onEvent<{ from: "island" | "desktop"; home: boolean }>(DESKTOP_EVENTS.dropped, (e) =>
-      this.onDropped(e.from, e.home),
-    );
+    await onEvent<{ from: "island" | "desktop"; home: boolean; look?: Looked | null }>(DESKTOP_EVENTS.dropped, (e) => {
+      this.onDropped(e.from, e.home);
+      if (e.look) this.host.looked(e.look);
+    });
     await onEvent<null>(DESKTOP_EVENTS.home, () => void this.controller.flyHome());
     await onEvent<null>(DESKTOP_EVENTS.wardrobe, () => this.host.wardrobeFromDesktop());
     await onEvent<null>(DESKTOP_EVENTS.dizzy, () => this.host.dizzyFromDesktop());

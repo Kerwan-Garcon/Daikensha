@@ -268,6 +268,83 @@ fn all_windows() -> Vec<HWND> {
     list.into_iter().filter(|h| eligible(*h)).collect()
 }
 
+/// The desktop and the taskbars: titled, visible, never something to look at.
+fn is_shell(hwnd: HWND) -> bool {
+    use windows::Win32::UI::WindowsAndMessaging::GetClassNameW;
+    let mut name = [0u16; 64];
+    let len = unsafe { GetClassNameW(hwnd, &mut name) };
+    let class = String::from_utf16_lossy(&name[..len.max(0) as usize]);
+    matches!(class.as_str(), "Progman" | "WorkerW" | "Shell_TrayWnd" | "Shell_SecondaryTrayWnd")
+}
+
+/// The topmost window of another app under (x, y), physical desktop pixels, as
+/// (handle, title, app): the first one, in z order, the Windows tab would list.
+pub(crate) fn window_at(x: i32, y: i32) -> Option<(isize, String, String)> {
+    all_windows()
+        .into_iter()
+        .find(|&h| {
+            let (r, _) = frame(h);
+            !unsafe { IsIconic(h) }.as_bool() && !is_shell(h) && x >= r.x && y >= r.y && x < r.x + r.w && y < r.y + r.h
+        })
+        .map(|h| (h.0 as isize, title_of(h), exe_of(pid_of(h))))
+}
+
+/// That window's own pixels, its visible frame only, as BGRA rows, top-down.
+/// PrintWindow draws it even under other windows (and under Mochi); a window
+/// it can't draw comes out black, and is then read from the screen instead.
+pub(crate) fn capture_window(id: isize) -> Result<(u32, u32, Vec<u8>), String> {
+    use windows::Win32::Graphics::Gdi::{
+        CreateCompatibleBitmap, CreateCompatibleDC, DeleteDC, DeleteObject, GetDC, GetDIBits, ReleaseDC, SelectObject, BITMAPINFO,
+        BITMAPINFOHEADER, BI_RGB, DIB_RGB_COLORS,
+    };
+    use windows::Win32::Storage::Xps::{PrintWindow, PRINT_WINDOW_FLAGS};
+    /// PW_RENDERFULLCONTENT: windows drawn by the GPU (browsers, Electron) too.
+    const FULL_CONTENT: PRINT_WINDOW_FLAGS = PRINT_WINDOW_FLAGS(2);
+
+    let hwnd = HWND(id as *mut _);
+    if !eligible(hwnd) {
+        return Err(crate::i18n::t("Mochi couldn't see that window. Try again."));
+    }
+    let mut outer = RECT::default();
+    unsafe { GetWindowRect(hwnd, &mut outer) }.map_err(err)?;
+    let (visible, (left, top, _, _)) = frame(hwnd);
+    let (w, h) = (outer.right - outer.left, outer.bottom - outer.top);
+    if w <= 0 || h <= 0 || w > 16_384 || h > 16_384 || visible.w <= 0 || visible.h <= 0 {
+        return Err(crate::i18n::t("Mochi couldn't see that window. Try again."));
+    }
+    let printed = unsafe {
+        let screen = GetDC(None);
+        let dc = CreateCompatibleDC(Some(screen));
+        let bitmap = CreateCompatibleBitmap(screen, w, h);
+        let old = SelectObject(dc, bitmap.into());
+        let drawn = PrintWindow(hwnd, dc, FULL_CONTENT).as_bool();
+        let mut info = BITMAPINFO {
+            bmiHeader: BITMAPINFOHEADER {
+                biSize: std::mem::size_of::<BITMAPINFOHEADER>() as u32,
+                biWidth: w,
+                biHeight: -h,
+                biPlanes: 1,
+                biBitCount: 32,
+                biCompression: BI_RGB.0,
+                ..Default::default()
+            },
+            ..Default::default()
+        };
+        let mut pixels = vec![0u8; (w as usize) * (h as usize) * 4];
+        SelectObject(dc, old);
+        let lines = if drawn { GetDIBits(dc, bitmap, 0, h as u32, Some(pixels.as_mut_ptr() as *mut _), &mut info, DIB_RGB_COLORS) } else { 0 };
+        let _ = DeleteObject(bitmap.into());
+        let _ = DeleteDC(dc);
+        ReleaseDC(None, screen);
+        (lines == h).then_some(pixels)
+    };
+    let crop = (left.max(0) as u32, top.max(0) as u32, visible.w as u32, visible.h as u32);
+    match printed.map(|px| crate::look::crop(w as u32, h as u32, &px, crop)) {
+        Some(Some(out)) if !crate::look::is_blank(&out.2) => Ok(out),
+        _ => super::win_desk::capture_screen(visible.x, visible.y, visible.w, visible.h),
+    }
+}
+
 pub fn list_windows() -> Vec<WindowInfo> {
     let list = screens();
     let fg = unsafe { GetForegroundWindow() };

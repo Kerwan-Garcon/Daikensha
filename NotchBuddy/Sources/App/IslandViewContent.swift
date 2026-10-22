@@ -1409,6 +1409,12 @@ struct PromptView: View {
                 }
 
                 HStack(spacing: 0) {
+                    #if !APPSTORE
+                    // Mochi looked at a window: summary, analysis… one click away.
+                    if state.promptContext?.shot != nil {
+                        LookChips(state: state)
+                    }
+                    #endif
                     Spacer()
                     Button {
                         withAnimation(.spring(response: 0.3, dampingFraction: 0.75)) {
@@ -1767,7 +1773,7 @@ struct SearchingView: View {
 
     var label: String {
         switch state.promptContext {
-        case .window(_, let title, _): return String(format: String(localized: "Claude is reading %@…"), title)
+        case .window(_, let title, _, _): return String(format: String(localized: "Claude is reading %@…"), title)
         case .file(let name, _):       return String(format: String(localized: "Claude is reading %@…"), name)
         case nil:                      return String(localized: "Claude is searching…")
         }
@@ -4855,7 +4861,7 @@ struct ContextChip: View {
 
     var label: String {
         switch context {
-        case .window(let app, _, let url):
+        case .window(let app, _, let url, _):
             if let url = url, let host = URL(string: url)?.host { return "\(app) · \(host)" }
             return app
         case .file(let name, _): return name

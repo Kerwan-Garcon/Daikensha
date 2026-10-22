@@ -17,7 +17,7 @@ pub mod voice_tools;
 pub mod wallpaper;
 pub mod windows_mgr;
 #[cfg(windows)]
-mod win;
+pub(crate) mod win;
 #[cfg(windows)]
 mod win_desk;
 
