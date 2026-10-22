@@ -6,15 +6,19 @@ import CoreGraphics
 /// rice-cake pink cheeks and a few idle quirks. `.portrait` keeps all of that and makes him
 /// look like his owner: tan skin, braids, sunglasses pushed up on his head, a red hair clip,
 /// a light beard, a black tee, and eyebrows that say how each state feels.
+/// `.slime` is a hooded spirit: blue hair, red eyes, a white hood and robe, the same brows.
+/// `.sage` glows gold inside turning rune circles and light rays that speed up while he works.
 /// `.classic` is the face that shipped before.
 /// Only the main Mochi wears it; the mini Mochis keep their flat look.
 enum MochiLook: String, CaseIterable {
-    case signature, portrait, classic
+    case signature, portrait, slime, sage, classic
 
     var displayName: String {
         switch self {
         case .signature: return "Signature"
         case .portrait:  return "Portrait"
+        case .slime:     return "Slime"
+        case .sage:      return "Sage"
         case .classic:   return "Classic"
         }
     }

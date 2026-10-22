@@ -80,7 +80,8 @@ struct BotCanvasView: View {
                 let showOutfit = isFocusMain || state.mode != .expanded || isWardrobe
                 engine.setOutfit(showOutfit ? state.resolvedOutfit : .none,
                                  animated: state.view != .wardrobe)
-                engine.look = state.mochiLook
+                // Like the outfit: a focused integration pill's Mochi keeps its own plain face
+                engine.look = showOutfit ? state.mochiLook : .classic
 
                 #if !APPSTORE
                 if state.view == .listening {

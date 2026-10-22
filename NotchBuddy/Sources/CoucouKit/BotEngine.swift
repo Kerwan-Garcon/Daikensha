@@ -197,6 +197,9 @@ final class BotEngine: ObservableObject {
     var browPose = MochiBrows(lift: 0, angle: 0.05, arch: 0.22, asym: 0)
     /// Portrait look: 0 = sunglasses up on his head, 1 = dropped onto his eyes.
     var shadesDrop: CGFloat = 0
+    /// Sage look: how far the rune circles have turned, and how fast they turn now.
+    var sagePhase: CGFloat = 0
+    var sageSpin: CGFloat = 0.35
     var es:     CGFloat = 1          // eye scale
     var badgeS: CGFloat = 0          // badge scale
     var outfitPresence: CGFloat = 0  // 0=hidden, 1=fully visible (animated)
@@ -1032,8 +1035,8 @@ final class BotEngine: ObservableObject {
         // The Mac's mood (sweat, puffed up, tired) adjusts the targets above.
         updateMood(dt: dt, now: now, t: t)
 
-        // Portrait look: brows ease towards the pose of the moment
-        if hasPortrait {
+        // Portrait and slime looks: brows ease towards the pose of the moment
+        if hasCharacter {
             let target = MochiBrows.pose(state: state, eye: shownEye, t: now - t0)
             browPose = browPose.easing(toward: target, by: CGFloat(1 - pow(0.0004, dt)))
         }
@@ -1075,6 +1078,16 @@ final class BotEngine: ObservableObject {
             lastAmbient = now
             if cfg.zz { emit(.z, count: 1) }   // ZZZ works for mini too
             if !isMini && cfg.sweat && Double.random(in: 0...1) < 0.5 { emit(.sweat, count: 1) }
+            // Sage look: a golden spark now and then
+            if hasSage && Double.random(in: 0...1) < 0.45 { emit(.spark, count: 1) }
+        }
+
+        // Sage look: the circles turn faster while he works, slow down at rest
+        if hasSage {
+            let busy: Set<BotState> = [.working, .thinking, .searching]
+            let target: CGFloat = busy.contains(state) ? 1.4 : (state == .sleeping ? 0.12 : 0.35)
+            sageSpin += (target - sageSpin) * CGFloat(1 - pow(0.05, dt))
+            sagePhase = (sagePhase + sageSpin * dtCG).truncatingRemainder(dividingBy: .pi * 200)
         }
 
         // Age particles
@@ -1156,19 +1169,24 @@ final class BotEngine: ObservableObject {
         // Body path (superellipse for Mochi, morph to rect for upload)
         let bodyPath = mochiPath(rx: rx, ry: ry, morph: morph, R: R)
 
-        // Portrait look: his braids hang behind the body
+        // Portrait look: his braids hang behind the body. Slime: the hood and his side locks.
+        // Sage: the rune circles and the light.
         drawBraids(ctx: ctx, R: R, rx: rx, ry: ry)
+        drawHoodBack(ctx: ctx, path: bodyPath, R: R, rx: rx, ry: ry)
+        drawSageAura(ctx: ctx, R: R)
 
         // Body fill
         drawBody(ctx: &ctx, path: bodyPath, R: R, rx: rx, ry: ry,
-                 pumpkinColors: outfit == .pumpkin && !isMini, skin: hasPortrait)
+                 pumpkinColors: outfit == .pumpkin && !isMini, skin: skinColors)
+        drawSageGlow(ctx: ctx, path: bodyPath, R: R)
 
         // A warm Mac flushes him (MochiMood.swift).
         drawMoodTint(ctx: &ctx, path: bodyPath, rx: rx, ry: ry)
 
-        // Portrait look: beard, tee, hair and clip
+        // Portrait look: beard, tee, hair and clip. Slime: robe, blue hair, the hood's front.
         drawBeardAndTee(ctx: ctx, path: bodyPath, R: R, rx: rx, ry: ry)
         drawHair(ctx: ctx, path: bodyPath, R: R, rx: rx, ry: ry)
+        drawSlimeFront(ctx: ctx, path: bodyPath, R: R, rx: rx, ry: ry)
 
         // Blush — always shows a floor proportional to tint (prototype behaviour)
         // Signature look: his rice-cake cheeks stay a little pink.
@@ -1479,23 +1497,23 @@ final class BotEngine: ObservableObject {
     }
 
     private func drawBody(ctx: inout GraphicsContext, path: Path, R: CGFloat, rx: CGFloat, ry: CGFloat,
-                          pumpkinColors: Bool = false, skin: Bool = false) {
+                          pumpkinColors: Bool = false, skin: (top: Color, bottom: Color)? = nil) {
         if let bc = bodyColor, !pumpkinColors {
             // Mini bots: flat solid fill — no gradient, no reflection, no highlight
             ctx.fill(path, with: .color(Color(cgColor: bc)))
         } else {
             // Main bot: linear gradient body
             let top: Color = pumpkinColors ? Color(hex: "#FFA94D")
-                : skin ? Portrait.skinTop : Color(red: 0.929, green: 0.929, blue: 0.937)
+                : skin?.top ?? Color(red: 0.929, green: 0.929, blue: 0.937)
             let bot: Color = pumpkinColors ? Color(hex: "#E8590C")
-                : skin ? Portrait.skinBottom : Color(red: 0.769, green: 0.773, blue: 0.792)
+                : skin?.bottom ?? Color(red: 0.769, green: 0.773, blue: 0.792)
             ctx.fill(path, with: .linearGradient(
                 Gradient(colors: [top, bot]),
                 startPoint: CGPoint(x: rx*0.7, y: -ry*0.85),
                 endPoint: CGPoint(x: -rx*0.8, y: ry*0.9)
             ))
             // State tint — fades out as morph increases (mailbox has no tint); light on skin
-            let effectiveTint = tint * (1 - morph) * (skin ? 0.4 : 1)
+            let effectiveTint = tint * (1 - morph) * (skin != nil ? 0.4 : 1)
             if effectiveTint > 0.01 {
                 let tc = colorFromTuple(col)
                 ctx.fill(path, with: .linearGradient(
@@ -1554,12 +1572,37 @@ final class BotEngine: ObservableObject {
             else if slotHTarget > 0.05 || slotH > 0.10 { shape = .cup }
         }
         // Portrait look: cross with his eyes open, the brows and teeth say it
-        if hasPortrait && shape == .flat { shape = .pill }
+        if hasCharacter && shape == .flat { shape = .pill }
         return shape
     }
 
     private var hasSignature: Bool { look != .classic && !isMini }
     private var hasPortrait: Bool { look == .portrait && !isMini }
+    private var hasSlime: Bool { look == .slime && !isMini }
+    private var hasSage: Bool { look == .sage && !isMini }
+    /// Portrait and slime: a character's face — eyebrows, and cross with open eyes and teeth.
+    private var hasCharacter: Bool { (look == .portrait || look == .slime) && !isMini }
+
+    /// The body's gradient for the looks that change it (nil: Mochi's own grey).
+    private var skinColors: (top: Color, bottom: Color)? {
+        guard !isMini else { return nil }
+        switch look {
+        case .portrait: return (Portrait.skinTop, Portrait.skinBottom)
+        case .slime:    return (Slime.skinTop, Slime.skinBottom)
+        case .sage:     return (Sage.bodyTop, Sage.bodyBottom)
+        case .signature, .classic: return nil
+        }
+    }
+
+    /// The eyes' colour: red for the slime, amber for the sage, ink otherwise.
+    private var eyeInk: Color {
+        if isMini { return Color(cgColor: MochiConst.miniInk) }
+        switch look {
+        case .slime: return Slime.eye
+        case .sage:  return Sage.eye
+        default:     return Color(cgColor: MochiConst.ink)
+        }
+    }
 
     private func drawEyes(ctx: inout GraphicsContext, path: Path, R: CGFloat, rx: CGFloat, ry: CGFloat) {
         let shape = shownEye
@@ -1596,7 +1639,7 @@ final class BotEngine: ObservableObject {
     }
 
     private func drawEyeShape(ctx: inout GraphicsContext, shape: EyeShape, w: CGFloat, h: CGFloat, open: CGFloat, sd: CGFloat, R: CGFloat) {
-        let ink = isMini ? Color(cgColor: MochiConst.miniInk) : Color(cgColor: MochiConst.ink)
+        let ink = eyeInk
         let now = CGFloat(CACurrentMediaTime())
 
         switch shape {
@@ -1728,9 +1771,9 @@ final class BotEngine: ObservableObject {
     /// hides when he rolls away and trembles with his eyes when the Mac is stressed.
     private func drawMouth(ctx: inout GraphicsContext, R: CGFloat, rx: CGFloat, ry: CGFloat) {
         let speaking = isInVoiceCompact && voiceSubState == .speaking
-        let mouth = hasPortrait && state == .error && eyeOverride == nil && !speaking
+        let mouth = hasCharacter && state == .error && eyeOverride == nil && !speaking
             ? .grit
-            : MochiMouth.forEyes(shownEye, speaking: speaking, portrait: hasPortrait)
+            : MochiMouth.forEyes(shownEye, speaking: speaking, portrait: hasCharacter)
         guard mouth != .none else { return }
 
         let rigidRoll = outfit != .none && outfitPresence > 0.05
@@ -2023,7 +2066,10 @@ final class BotEngine: ObservableObject {
     /// Thick eyebrows above each eye. The pose eases in from MochiBrows (MochiLook.swift),
     /// and they lag a hop like the hat does: up when he jumps, down when he lands.
     private func drawBrows(ctx: GraphicsContext, R: CGFloat, rx: CGFloat, ry: CGFloat) {
-        guard hasPortrait, morph < 0.05 else { return }
+        guard hasCharacter, morph < 0.05 else { return }
+        // The slime's are finer, the blue of his hair
+        let browColor = hasSlime ? Slime.brow : Portrait.hair
+        let browWidth = R * (hasSlime ? 0.05 : 0.075)
         let pose = browPose
         let rigidRoll = outfit != .none && outfitPresence > 0.05
         let mH = MochiH(R: R, yaw: yaw, pitch: pitch)
@@ -2042,8 +2088,217 @@ final class BotEngine: ObservableObject {
             var p = Path()
             p.move(to: CGPoint(x: -len / 2, y: 0))
             p.addQuadCurve(to: CGPoint(x: len / 2, y: 0), control: CGPoint(x: 0, y: -len * pose.arch))
-            b.stroke(p, with: .color(Portrait.hair), style: StrokeStyle(lineWidth: R * 0.075, lineCap: .round))
+            b.stroke(p, with: .color(browColor), style: StrokeStyle(lineWidth: browWidth, lineCap: .round))
         }
+    }
+
+    // MARK: - Slime look (MochiLook.swift)
+
+    private enum Slime {
+        static let skinTop    = Color(hex: "#F8EDE6")
+        static let skinBottom = Color(hex: "#E2CABD")
+        static let eye        = Color(hex: "#A3172F")
+        static let brow       = Color(hex: "#3E86B4")
+        static let hairTop    = Color(hex: "#9ADBF2")
+        static let hairBottom = Color(hex: "#4B9FD0")
+        static let strand     = Color(hex: "#C4EEFA")
+        static let cloth      = Color(hex: "#FBFCFE")
+        static let clothShade = Color(hex: "#D3DAE6")
+        static let fold       = Color(hex: "#B9C3D3")
+    }
+
+    /// Behind the body: the hood, wider than his head, and the blue locks along his cheeks
+    /// that sway on the head's spring.
+    private func drawHoodBack(ctx: GraphicsContext, path: Path, R: CGFloat, rx: CGFloat, ry: CGFloat) {
+        guard hasSlime, morph < 0.05 else { return }
+        var hood = ctx
+        hood.translateBy(x: faceX(rx, 0.1) + physDx * R * 0.03, y: -R * 0.1)
+        hood.scaleBy(x: 1.14, y: 1.12)
+        hood.fill(path, with: .linearGradient(Gradient(colors: [Slime.cloth, Slime.clothShade]),
+                                              startPoint: CGPoint(x: 0, y: -ry), endPoint: CGPoint(x: 0, y: ry)))
+
+        let t = CGFloat(CACurrentMediaTime() - t0)
+        for sd: CGFloat in [-1, 1] {
+            let x0 = sd * rx * 0.9 + faceX(rx, 0.2)
+            let swing = physDx * R * 0.12 + sin(t * 1.4 + sd) * R * 0.015
+            var lock = Path()
+            lock.move(to: CGPoint(x: x0 - sd * R * 0.12, y: -R * 0.1))
+            lock.addQuadCurve(to: CGPoint(x: x0 + sd * R * 0.06 + swing, y: R * 0.72),
+                              control: CGPoint(x: x0 + sd * R * 0.2, y: R * 0.3))
+            lock.addQuadCurve(to: CGPoint(x: x0 - sd * R * 0.1, y: R * 0.2),
+                              control: CGPoint(x: x0 + swing * 0.5, y: R * 0.45))
+            lock.closeSubpath()
+            ctx.fill(lock, with: .linearGradient(Gradient(colors: [Slime.hairTop, Slime.hairBottom]),
+                                                 startPoint: CGPoint(x: 0, y: -R * 0.1),
+                                                 endPoint: CGPoint(x: 0, y: R * 0.72)))
+        }
+    }
+
+    /// On the face: the white robe, the blue fringe falling between his eyes, then the front
+    /// of the hood framing it all.
+    private func drawSlimeFront(ctx: GraphicsContext, path: Path, R: CGFloat, rx: CGFloat, ry: CGFloat) {
+        guard hasSlime, morph < 0.95 else { return }
+        var c = ctx
+        c.clip(to: path)
+        c.opacity = Double(1 - morph)
+        let x0 = faceX(rx, 0.85)
+
+        // Robe, draped across him
+        let top = ry * 0.66
+        var robe = Path()
+        robe.move(to: CGPoint(x: -rx * 1.3, y: top - R * 0.06))
+        robe.addQuadCurve(to: CGPoint(x: rx * 1.3, y: top - R * 0.02),
+                          control: CGPoint(x: faceX(rx, 0.5), y: top + R * 0.14))
+        robe.addLine(to: CGPoint(x: rx * 1.3, y: ry * 1.3))
+        robe.addLine(to: CGPoint(x: -rx * 1.3, y: ry * 1.3))
+        robe.closeSubpath()
+        c.fill(robe, with: .color(Slime.cloth))
+        var fold = Path()
+        fold.move(to: CGPoint(x: -rx * 0.7, y: top))
+        fold.addQuadCurve(to: CGPoint(x: rx * 0.5, y: ry * 1.05), control: CGPoint(x: -rx * 0.05, y: top + R * 0.12))
+        fold.move(to: CGPoint(x: rx * 0.2, y: top + R * 0.06))
+        fold.addQuadCurve(to: CGPoint(x: rx * 0.95, y: ry * 0.95), control: CGPoint(x: rx * 0.6, y: top + R * 0.12))
+        c.stroke(fold, with: .color(Slime.fold), style: StrokeStyle(lineWidth: max(0.5, R * 0.03), lineCap: .round))
+
+        // Fringe: strands ending in points between and over the eyes, longer at the sides.
+        let tips: [(x: CGFloat, y: CGFloat)] = [
+            (-1.25, 0.55), (-0.92, 0.18), (-0.6, -0.02), (-0.28, -0.1), (0.02, -0.04),
+            (0.32, -0.12), (0.62, 0.0), (0.92, 0.18), (1.25, 0.55),
+        ]
+        var fringe = Path()
+        fringe.move(to: CGPoint(x: -rx * 1.3, y: -ry * 1.3))
+        fringe.addLine(to: CGPoint(x: -rx * 1.3, y: R * 0.55))
+        var prev = CGPoint(x: -rx * 1.3, y: R * 0.55)
+        for (i, tip) in tips.enumerated() {
+            let pt = CGPoint(x: x0 * (1 - abs(tip.x) * 0.5) + tip.x * rx, y: tip.y * R)
+            if i > 0 {
+                // A sharp notch up between two pointed strands
+                let notch = CGPoint(x: (prev.x + pt.x) / 2, y: min(prev.y, pt.y) - R * 0.14)
+                fringe.addLine(to: notch)
+                fringe.addLine(to: pt)
+            } else {
+                fringe.addLine(to: pt)
+            }
+            prev = pt
+        }
+        fringe.addLine(to: CGPoint(x: rx * 1.3, y: R * 0.55))
+        fringe.addLine(to: CGPoint(x: rx * 1.3, y: -ry * 1.3))
+        fringe.closeSubpath()
+        c.fill(fringe, with: .linearGradient(Gradient(colors: [Slime.hairTop, Slime.hairBottom]),
+                                             startPoint: CGPoint(x: 0, y: -ry), endPoint: CGPoint(x: 0, y: R * 0.3)))
+        var shine = c
+        shine.clip(to: fringe)
+        for k in [-0.5, -0.1, 0.3, 0.65] as [CGFloat] {
+            var s = Path()
+            s.move(to: CGPoint(x: x0 * 0.6 + k * rx, y: -R * 0.55))
+            s.addQuadCurve(to: CGPoint(x: x0 * 0.8 + (k - 0.04) * rx, y: -R * 0.12),
+                           control: CGPoint(x: x0 * 0.7 + (k + 0.05) * rx, y: -R * 0.32))
+            shine.stroke(s, with: .color(Slime.strand.opacity(0.8)),
+                         style: StrokeStyle(lineWidth: max(0.5, R * 0.025), lineCap: .round))
+        }
+
+        // Hood front: over the crown, down the sides, its rim in shadow.
+        var hood = Path()
+        hood.move(to: CGPoint(x: -rx * 1.3, y: -ry * 1.3))
+        hood.addLine(to: CGPoint(x: rx * 1.3, y: -ry * 1.3))
+        hood.addLine(to: CGPoint(x: rx * 1.3, y: R * 0.35))
+        hood.addQuadCurve(to: CGPoint(x: x0, y: -R * 0.6), control: CGPoint(x: x0 + rx * 0.9, y: -R * 0.75))
+        hood.addQuadCurve(to: CGPoint(x: -rx * 1.3, y: R * 0.35), control: CGPoint(x: x0 - rx * 0.9, y: -R * 0.75))
+        hood.closeSubpath()
+        c.fill(hood, with: .linearGradient(Gradient(colors: [Slime.cloth, Slime.clothShade]),
+                                           startPoint: CGPoint(x: rx * 0.5, y: -ry), endPoint: CGPoint(x: -rx * 0.6, y: R * 0.3)))
+        var rim = Path()
+        rim.move(to: CGPoint(x: rx * 1.3, y: R * 0.35))
+        rim.addQuadCurve(to: CGPoint(x: x0, y: -R * 0.6), control: CGPoint(x: x0 + rx * 0.9, y: -R * 0.75))
+        rim.addQuadCurve(to: CGPoint(x: -rx * 1.3, y: R * 0.35), control: CGPoint(x: x0 - rx * 0.9, y: -R * 0.75))
+        c.stroke(rim, with: .color(Slime.fold), style: StrokeStyle(lineWidth: max(0.5, R * 0.035), lineCap: .round))
+    }
+
+    // MARK: - Sage look (MochiLook.swift)
+
+    private enum Sage {
+        static let bodyTop    = Color(hex: "#FFF1BE")
+        static let bodyBottom = Color(hex: "#E8A93C")
+        static let eye        = Color(hex: "#4A2600")
+        static let gold       = Color(hex: "#FFB52E")
+        static let light      = Color(hex: "#FFE69A")
+        static let teal       = Color(hex: "#3FD0C0")
+    }
+
+    /// Behind the body: light rays, a glow, and rune circles turning both ways. They turn
+    /// faster while he works; the outer ring takes the state's colour.
+    private func drawSageAura(ctx: GraphicsContext, R: CGFloat) {
+        guard hasSage, morph < 0.05 else { return }
+        let ph = sagePhase
+        let pulse = 0.5 + 0.5 * sin(ph * 2.2)
+        var c = ctx
+        c.scaleBy(x: max(0.75, cos(yaw * 0.6)), y: 1)
+
+        c.fill(Path(ellipseIn: CGRect(x: -R * 1.5, y: -R * 1.5, width: R * 3, height: R * 3)),
+               with: .radialGradient(Gradient(colors: [Sage.light.opacity(0.55), Sage.light.opacity(0)]),
+                                     center: .zero, startRadius: R * 0.6, endRadius: R * 1.5))
+
+        // Rays
+        for i in 0..<16 {
+            let a = CGFloat(i) / 16 * .pi * 2 + ph * 0.3
+            let r1 = R * 0.95, r2 = R * (i % 2 == 0 ? 1.55 : 1.3)
+            var ray = Path()
+            ray.move(to: CGPoint(x: cos(a) * r1, y: sin(a) * r1))
+            ray.addLine(to: CGPoint(x: cos(a) * r2, y: sin(a) * r2))
+            c.stroke(ray, with: .color(Sage.light.opacity(0.25 + 0.25 * Double(pulse))),
+                     style: StrokeStyle(lineWidth: max(0.5, R * 0.022), lineCap: .round))
+        }
+
+        // Rings
+        let ringStyle = StrokeStyle(lineWidth: max(0.5, R * 0.025))
+        for r in [1.1, 1.32] as [CGFloat] {
+            c.stroke(Path(ellipseIn: CGRect(x: -R * r, y: -R * r, width: R * r * 2, height: R * r * 2)),
+                     with: .color(Sage.gold.opacity(0.85)), style: ringStyle)
+        }
+        c.stroke(Path(ellipseIn: CGRect(x: -R * 1.45, y: -R * 1.45, width: R * 2.9, height: R * 2.9)),
+                 with: .color(colorFromTuple(col).opacity(0.55)), style: StrokeStyle(lineWidth: max(0.5, R * 0.018)))
+
+        // Runes between the two gold rings, turning forwards
+        for k in 0..<28 {
+            let a = CGFloat(k) / 28 * .pi * 2 + ph
+            var g = c
+            g.translateBy(x: cos(a) * R * 1.21, y: sin(a) * R * 1.21)
+            g.rotate(by: .radians(Double(a + .pi / 2)))
+            var rune = Path()
+            rune.move(to: CGPoint(x: 0, y: -R * 0.06))
+            rune.addLine(to: CGPoint(x: 0, y: R * 0.06))
+            switch k % 4 {
+            case 0:
+                rune.move(to: CGPoint(x: -R * 0.035, y: -R * 0.02)); rune.addLine(to: CGPoint(x: R * 0.035, y: -R * 0.02))
+            case 1:
+                rune.move(to: CGPoint(x: -R * 0.03, y: R * 0.03)); rune.addLine(to: CGPoint(x: R * 0.03, y: -R * 0.04))
+            case 2:
+                rune.addEllipse(in: CGRect(x: -R * 0.025, y: -R * 0.085, width: R * 0.05, height: R * 0.05))
+            default:
+                rune.move(to: CGPoint(x: -R * 0.035, y: R * 0.04)); rune.addLine(to: CGPoint(x: R * 0.035, y: R * 0.04))
+            }
+            g.stroke(rune, with: .color(Sage.gold), style: StrokeStyle(lineWidth: max(0.5, R * 0.018), lineCap: .round))
+        }
+
+        // Ticks on the inner ring, turning backwards
+        for k in 0..<40 {
+            let a = CGFloat(k) / 40 * .pi * 2 - ph * 1.6
+            var tick = Path()
+            tick.move(to: CGPoint(x: cos(a) * R * 1.02, y: sin(a) * R * 1.02))
+            tick.addLine(to: CGPoint(x: cos(a) * R * (k % 5 == 0 ? 1.08 : 1.05), y: sin(a) * R * (k % 5 == 0 ? 1.08 : 1.05)))
+            c.stroke(tick, with: .color(Sage.teal.opacity(0.8)), style: StrokeStyle(lineWidth: max(0.5, R * 0.015)))
+        }
+    }
+
+    /// On the body: a light from inside, breathing with the circles.
+    private func drawSageGlow(ctx: GraphicsContext, path: Path, R: CGFloat) {
+        guard hasSage, morph < 0.05 else { return }
+        var c = ctx
+        c.clip(to: path)
+        let pulse = 0.5 + 0.5 * sin(sagePhase * 2.2)
+        c.fill(path, with: .radialGradient(
+            Gradient(colors: [Color.white.opacity(0.35 + 0.15 * Double(pulse)), Color.white.opacity(0)]),
+            center: CGPoint(x: 0, y: R * 0.1), startRadius: 0, endRadius: R * 0.9))
     }
 
     /// One of his quirks, at rest only: never over a state's own animation, a greeting,
