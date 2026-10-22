@@ -297,6 +297,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         WhatsAppController.shared.start()
         #endif
         CryptoController.shared.start()
+        LinearController.shared.start()
         PortfolioController.shared.start()
     }
 }

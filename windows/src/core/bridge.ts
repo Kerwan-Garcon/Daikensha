@@ -403,6 +403,13 @@ export const Bridge = {
   githubRefresh: (section: "pulse" | "activity") => call<void>("github_refresh", { section }),
   /** Opens the configured n8n instance in the browser. */
   openN8n: () => call<void>("open_n8n"),
+  /** Linear: moves an issue to the state its button shows. Throws Linear's reason. */
+  linearAdvance: (issueId: string, stateId: string) =>
+    callOrThrow<void>("linear_advance", { issueId, stateId }),
+  /** Linear: creates an issue assigned to me in the chosen team. Throws Linear's reason. */
+  linearCreate: (title: string) => callOrThrow<void>("linear_create", { title }),
+  /** The teams the Linear key can see, for Settings. */
+  linearTeams: () => call<{ id: string; key: string; name: string }[]>("linear_teams"),
 
   /** Tray → Pause. Stops the integration pollers, not just the island. */
   setPaused: (paused: boolean) => call<void>("set_paused", { paused }),

@@ -215,6 +215,7 @@ export class Island {
           integration_github: "https://github.com/pulls",
           integration_stripe: "https://dashboard.stripe.com/payments",
           integration_notion: "https://notion.so",
+          integration_linear: "https://linear.app",
           integration_calcom: "https://app.cal.com/bookings",
         };
         if (task.id === CLAUDE_DESKTOP_ID) void Bridge.openClaudeDesktop();

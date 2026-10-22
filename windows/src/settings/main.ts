@@ -854,6 +854,9 @@ const INTEGRATIONS: IntegrationDef[] = [
     fields: [{ key: "resend-api-key", label: N_("API key"), placeholder: "re_…", secret: true }] },
   { id: "integration_notion", name: "Notion", color: "#8C8C8C",
     fields: [{ key: "notion-api-key", label: N_("Integration token"), placeholder: "ntn_…", secret: true }] },
+  { id: "integration_linear", name: "Linear", color: "#5E6AD2",
+    fields: [{ key: "linear-api-key", label: N_("API key"), placeholder: "lin_api_…", secret: true }],
+    hint: N_("Linear → Settings → Security & access → Personal API keys. Coucou shows your open issues, moves them to the next state and creates new ones, only when you click.") },
   { id: "integration_calcom", name: "Cal.com", color: "#C9956A",
     fields: [{ key: "calcom-api-key", label: N_("API key"), placeholder: "cal_…", secret: true }] },
   // Nothing to enter: Spotify is read from the OS (src-tauri/src/spotify.rs).
@@ -861,6 +864,50 @@ const INTEGRATIONS: IntegrationDef[] = [
 ];
 
 const MAX_ACTIVE = MAX_DECLARED;
+
+/** Adds Linear's MCP server to Claude Code. Shown and copied, never run by Coucou. */
+const LINEAR_MCP_COMMAND = "claude mcp add --transport http linear https://mcp.linear.app/mcp";
+
+/**
+ * Under Linear's key, as on the Mac: the team new issues go to (once the key
+ * can list them) and the command that lets Claude Code drive Linear too.
+ */
+function linearExtras(): HTMLElement[] {
+  const team = h("select", {}) as HTMLSelectElement;
+  const teamRow = h("div", { class: "row", style: "display:none" },
+    h("label", { style: "min-width:104px", text: t("Team for new issues") }), team);
+  void Bridge.linearTeams().then((teams) => {
+    if (!teams?.length) return;
+    team.append(h("option", { value: "", text: t("First team") }));
+    for (const x of teams) team.append(h("option", { value: x.id, text: `${x.name} (${x.key})` }));
+    team.value = teams.some((x) => x.id === settings.linearTeam) ? settings.linearTeam : "";
+    teamRow.style.display = "";
+  });
+  team.addEventListener("change", () => {
+    settings.linearTeam = team.value;
+    void save();
+  });
+
+  const copy = h("button", { text: t("Copy") });
+  copy.addEventListener("click", async () => {
+    try {
+      await navigator.clipboard.writeText(LINEAR_MCP_COMMAND);
+      copy.textContent = t("Copied");
+    } catch {
+      // No clipboard access: the command stays selectable next to the button.
+    }
+  });
+  const command = h("code", {
+    class: "hint",
+    style: "flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;user-select:text",
+    text: LINEAR_MCP_COMMAND,
+  });
+  return [
+    teamRow,
+    h("div", { class: "hint", text: t("To let Claude Code drive Linear too, run this command in a terminal: it adds Linear's MCP server (sign-in in the browser).") }),
+    h("div", { class: "row" }, command, copy),
+  ];
+}
 
 /** Everything that shows the declared pills, redrawn when any of them changes. */
 const declaredViews: (() => void)[] = [];
@@ -928,6 +975,7 @@ function integrationsSection(present: Record<string, boolean>): HTMLElement {
     }
 
     if (def.hint) rows.append(h("div", { class: "hint", text: t(def.hint) }));
+    if (def.id === "integration_linear") rows.append(...linearExtras());
     if (def.id === "integration_spotify") {
       // As on the Mac's row: said only when there is no Spotify to launch.
       const hint = h("div", { class: "hint", style: "padding-top:5px" });
@@ -1471,7 +1519,7 @@ async function render() {
 
   const keys = [
     "stripe-api-key", "github-token", "vercel-token",
-    "n8n-url", "n8n-api-key", "resend-api-key", "notion-api-key", "calcom-api-key",
+    "n8n-url", "n8n-api-key", "resend-api-key", "notion-api-key", "calcom-api-key", "linear-api-key",
   ];
   const present: Record<string, boolean> = {};
   for (const k of keys) present[k] = (await Bridge.secretPresent(k)) ?? false;

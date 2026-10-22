@@ -257,6 +257,8 @@ struct OverviewView: View {
             NSWorkspace.shared.open(URL(string: "https://dashboard.stripe.com/payments")!)
         case "integration_notion":
             NSWorkspace.shared.open(URL(string: "https://notion.so")!)
+        case "integration_linear":
+            NSWorkspace.shared.open(URL(string: "https://linear.app")!)
         case "integration_calcom":
             NSWorkspace.shared.open(URL(string: "https://app.cal.com/bookings")!)
         case "agent_cursor":
@@ -1969,6 +1971,7 @@ struct IntegrationCardView: View {
         case "integration_github":  return KeychainStore.shared.get("github-token")   != nil
         case "integration_stripe":  return KeychainStore.shared.get("stripe-api-key") != nil
         case "integration_notion":  return KeychainStore.shared.get("notion-api-key") != nil
+        case "integration_linear":  return LinearSettings.hasKey
         case "integration_calcom":  return KeychainStore.shared.get("calcom-api-key") != nil
         default: return false
         }
@@ -1985,6 +1988,7 @@ struct IntegrationCardView: View {
         case "integration_github":  return URL(string: "https://github.com")
         case "integration_stripe":  return URL(string: "https://dashboard.stripe.com/payments")
         case "integration_notion":  return URL(string: "https://notion.so")
+        case "integration_linear":  return URL(string: "https://linear.app")
         case "integration_calcom":  return URL(string: "https://app.cal.com/bookings")
         default: return nil
         }
@@ -2200,6 +2204,10 @@ struct IntegrationCardView: View {
                 .transition(.opacity)
         } else if notionHasData {
             NotionCardView()
+                .transition(.opacity)
+        } else if task.id == LinearController.pillId && isConfigured {
+            // Its own card in every state (loading, error, no issue, issues).
+            LinearCardView()
                 .transition(.opacity)
         } else if musicIsActive {
             #if !APPSTORE

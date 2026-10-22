@@ -15,6 +15,7 @@ mod hooks;
 mod i18n;
 mod identity;
 mod integrations;
+mod linear;
 mod island;
 mod local_chat;
 mod log;
@@ -575,6 +576,9 @@ fn secret_set(app: AppHandle, key: String, value: String) -> Result<(), String> 
         return Err("use local_set_key".into());
     }
     let before = (key == "github-token").then(|| secrets::get(&key));
+    if key == linear::KEY {
+        linear::key_changed();
+    }
     secrets::set(&key, &value)?;
     if key == claude::KEY {
         voice::sync(&app);
@@ -590,6 +594,9 @@ fn secret_set(app: AppHandle, key: String, value: String) -> Result<(), String> 
 #[tauri::command]
 fn secret_clear(app: AppHandle, key: String) -> Result<(), String> {
     let had = key == "github-token" && secrets::present(&key);
+    if key == linear::KEY {
+        linear::key_changed();
+    }
     secrets::clear(&key)?;
     if key == claude::KEY {
         voice::sync(&app);
@@ -606,6 +613,24 @@ fn open_n8n() {
     if let Some(url) = secrets::get("n8n-url") {
         open_url(url);
     }
+}
+
+/// The Linear card's buttons: move an issue to its next state, create one.
+/// Each one follows a click in the island.
+#[tauri::command]
+async fn linear_advance(app: AppHandle, issue_id: String, state_id: String) -> Result<(), String> {
+    linear::advance(app, issue_id, state_id).await
+}
+
+#[tauri::command]
+async fn linear_create(app: AppHandle, title: String) -> Result<(), String> {
+    linear::create(app, title).await
+}
+
+/// Teams the Linear key can see, for the settings window's team picker.
+#[tauri::command]
+async fn linear_teams() -> Vec<linear::Team> {
+    linear::teams().await
 }
 
 /// Refresh buttons in the integration cards.
@@ -862,6 +887,9 @@ pub fn run() {
             secret_set,
             secret_clear,
             refresh_integration,
+            linear_advance,
+            linear_create,
+            linear_teams,
             github_refresh,
             open_n8n,
             open_settings_window,
