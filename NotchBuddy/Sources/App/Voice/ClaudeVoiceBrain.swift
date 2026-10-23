@@ -157,13 +157,15 @@ final class ClaudeVoiceBrain {
         ],
         [
             "name": "music",
-            "description": "Control Apple Music or Spotify: play, pause, next, previous, volume, play a song/artist search or a playlist.",
+            "description": "Control Apple Music, Spotify or YouTube Music (through Pear Desktop): play, pause, next, previous, volume, play a song/artist search or a playlist. Commands go to the player that plays; play_search on YouTube Music plays its top result.",
             "input_schema": [
                 "type": "object",
                 "properties": [
                     "action": ["type": "string", "enum": ["play", "pause", "next", "previous", "volume_up",
                                                           "volume_down", "set_volume", "play_search", "play_playlist"]],
                     "query": ["type": "string", "description": "Song, artist or playlist name for play_search / play_playlist."],
+                    "player": ["type": "string", "enum": ["apple_music", "spotify", "youtube_music"],
+                               "description": "For play, only when the user names a player."],
                     "volume": ["type": "integer", "description": "0-100 for set_volume."],
                 ],
                 "required": ["action"],
@@ -263,7 +265,13 @@ final class ClaudeVoiceBrain {
             let query = (input["query"] as? String ?? "").trimmingCharacters(in: .whitespaces)
             let intent: VoiceIntent?
             switch action {
-            case "play":          intent = .musicPlay(target: nil)
+            case "play":
+                switch input["player"] as? String {
+                case "apple_music":   intent = .musicPlay(target: .appleMusic)
+                case "spotify":       intent = .musicPlay(target: .spotify)
+                case "youtube_music": intent = .musicPlay(target: .youTubeMusic)
+                default:              intent = .musicPlay(target: nil)
+                }
             case "pause":         intent = .musicPause
             case "next":          intent = .musicNext
             case "previous":      intent = .musicPrevious

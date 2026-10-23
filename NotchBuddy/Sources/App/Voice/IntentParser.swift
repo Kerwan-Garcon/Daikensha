@@ -223,8 +223,7 @@ enum IntentParser {
                 // Music service pills → musicPlay with explicit target
                 if let id = EntityResolver.resolve(clean, from: pills),
                    musicServicePillIds.contains(id) {
-                    let target: MusicTarget = id == "integration_spotify" ? .spotify : .appleMusic
-                    return .musicPlay(target: target)
+                    return .musicPlay(target: musicTarget(for: id))
                 }
                 // "pilule" without "principale" → pillAdd (skip workspace check)
                 if hasPilule && !hasMainKeyword {
@@ -554,12 +553,19 @@ enum IntentParser {
             guard let idx = words.lastIndex(of: preposition), idx + 1 < words.count else { continue }
             let afterWords = Array(words[(idx+1)...])
             let entity = afterWords.joined(separator: " ")
-            if let id = EntityResolver.resolve(entity, from: pills) {
-                if id == "integration_spotify"  { return .spotify }
-                if id == "integration_music"    { return .appleMusic }
+            if let id = EntityResolver.resolve(entity, from: pills), musicServicePillIds.contains(id) {
+                return musicTarget(for: id)
             }
         }
         return nil
+    }
+
+    private static func musicTarget(for pillId: String) -> MusicTarget {
+        switch pillId {
+        case "integration_spotify":       return .spotify
+        case "integration_youtube_music": return .youTubeMusic
+        default:                          return .appleMusic
+        }
     }
 
     // MARK: - pillReplace extraction
@@ -771,7 +777,7 @@ enum IntentParser {
 
     // Music-service pill ids — pill detected but route to musicPlay
     private static let musicServicePillIds: Set<String> = [
-        "integration_music", "integration_spotify",
+        "integration_music", "integration_spotify", "integration_youtube_music",
     ]
 
     private static let playPrefixes: [[String]] = [

@@ -106,6 +106,8 @@ final class LiveVoiceInfo: VoiceInfoProviding {
                 s.nowPlaying = (title: title, artist: MusicController.shared.artist)
             } else if SpotifyController.shared.isPlaying, let t = SpotifyController.shared.track {
                 s.nowPlaying = (title: t.title, artist: Optional(t.artist))
+            } else if YouTubeMusicController.shared.isPlaying, let t = YouTubeMusicController.shared.track {
+                s.nowPlaying = (title: t.title, artist: Optional(t.artist))
             }
 
         case .pills:

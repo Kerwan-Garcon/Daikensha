@@ -520,6 +520,43 @@ final class YouTubeMusicController: ObservableObject {
         }
     }
 
+    // MARK: - « OK Coucou »
+
+    /// « mets du lofi sur YouTube Music »: Pear's search, the top result right after the
+    /// current song, then on to it. False when Pear isn't connected or finds nothing.
+    func searchAndPlay(_ query: String) async -> Bool {
+        guard link == .connected, let token else { return false }
+        var request = URLRequest(url: Self.url("/api/v1/search"))
+        request.httpMethod = "POST"
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.httpBody = try? JSONSerialization.data(withJSONObject: ["query": query])
+        request.timeoutInterval = 10
+        guard let (data, response) = try? await slowSession.data(for: request),
+              (response as? HTTPURLResponse)?.statusCode == 200,
+              let id = Self.firstVideoId(in: String(decoding: data, as: UTF8.self)) else { return false }
+        var queue = URLRequest(url: Self.url("/api/v1/queue"))
+        queue.httpMethod = "POST"
+        queue.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        queue.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        queue.httpBody = try? JSONSerialization.data(withJSONObject: [
+            "videoId": id, "insertPosition": "INSERT_AFTER_CURRENT_VIDEO",
+        ])
+        guard (try? await session.data(for: queue)) != nil else { return false }
+        await send("next", body: nil)
+        await send("play", body: nil)
+        return true
+    }
+
+    /// The first song or video id in YouTube Music's answer, in the order it lists them
+    /// (read from the text: a decoded dictionary forgets the order).
+    nonisolated static func firstVideoId(in json: String) -> String? {
+        guard let regex = try? NSRegularExpression(pattern: #""videoId"\s*:\s*"([A-Za-z0-9_-]{11})""#),
+              let match = regex.firstMatch(in: json, range: NSRange(json.startIndex..., in: json)),
+              let range = Range(match.range(at: 1), in: json) else { return nil }
+        return String(json[range])
+    }
+
     nonisolated private static func url(_ path: String) -> URL {
         URL(string: "http://127.0.0.1:\(port)\(path)")!
     }

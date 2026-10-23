@@ -60,11 +60,12 @@ pub(crate) fn coucou_tools() -> Vec<Value> {
         }),
         json!({
             "name": "music",
-            "description": "Control Spotify: play or pause, next, previous, set the volume, or search a song, an artist or a playlist in Spotify.",
+            "description": "Control Spotify or YouTube Music (through Pear Desktop): play or pause, next, previous, set the volume, or search a song, an artist or a playlist. On YouTube Music, search plays the top result; on Spotify it opens the search for the user to pick.",
             "input_schema": {
                 "type": "object",
                 "properties": {
                     "action": { "type": "string", "enum": ["play_pause", "next", "previous", "set_volume", "search"] },
+                    "player": { "type": "string", "enum": ["spotify", "youtube_music"], "description": "Only when the user names one. Otherwise the one playing, else YouTube Music when it is connected, else Spotify." },
                     "query": { "type": "string", "description": "What to search, for search." },
                     "volume": { "type": "integer", "description": "0-100 for set_volume." }
                 },
@@ -73,7 +74,7 @@ pub(crate) fn coucou_tools() -> Vec<Value> {
         }),
         json!({
             "name": "service_info",
-            "description": "Read the user's real data that Coucou already has, as JSON: the active pills, the agent sessions (Claude Code, Codex…) and what they are doing, Claude or Codex plan usage, Spotify now playing, and the services' latest data (Stripe, GitHub, Vercel, Resend, n8n, Notion, Cal.com).",
+            "description": "Read the user's real data that Coucou already has, as JSON: the active pills, the agent sessions (Claude Code, Codex…) and what they are doing, Claude or Codex plan usage, Spotify and YouTube Music now playing, and the services' latest data (Stripe, GitHub, Vercel, Resend, n8n, Notion, Cal.com).",
             "input_schema": { "type": "object", "properties": {} }
         }),
         json!({

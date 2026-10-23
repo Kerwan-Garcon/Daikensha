@@ -37,6 +37,9 @@ enum IntentParserTests {
         check("lance Apple Music",           parse("lance Apple Music", pills: pills), .musicPlay(target: .appleMusic))
         check("lance Spotify",               parse("lance Spotify", pills: pills),     .musicPlay(target: .spotify))
         check("mets de la musique sur Spotify", parse("mets de la musique sur Spotify", pills: pills), .musicPlay(target: .spotify))
+        check("lance YouTube Music",         parse("lance YouTube Music", pills: pills), .musicPlay(target: .youTubeMusic))
+        check("mets de la musique sur YouTube Music", parse("mets de la musique sur YouTube Music", pills: pills), .musicPlay(target: .youTubeMusic))
+        check("play music on YouTube Music", parse("play music on YouTube Music", pills: pills), .musicPlay(target: .youTubeMusic))
 
         // ── Music: next/prev ──────────────────────────────────────────────────
         check("suivant",                     parse("suivant"),                 .musicNext)

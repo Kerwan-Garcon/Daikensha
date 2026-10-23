@@ -144,7 +144,7 @@ against its SHA-256, kept in Coucou's data folder under `Models`).
 | Tap the key twice | Hands-free: speak as long as you like, tap once to paste. `Esc` cancels |
 | Hover the pill at the bottom of the screen | Dictate, record a call, open Coucou. Put the pill on the left or right edge in Flow → Settings |
 | Click **Record a call** | Your microphone and what the computer plays, transcribed live, then written person by person with a summary and to-dos by Claude (your key). The audio is deleted once the transcript is written |
-| Say **« OK Coucou »**, then ask | Claude (your key) answers in the pill and out loud: pills, Spotify, your services' numbers, your agents, web search, open an app, an email prepared in your mail app. Turn it on in Notch → OK Coucou |
+| Say **« OK Coucou »**, then ask | Claude (your key) answers in the pill and out loud: pills, Spotify and YouTube Music, your services' numbers, your agents, web search, open an app, an email prepared in your mail app. Turn it on in Notch → OK Coucou |
 
 Your voice never leaves the computer. With Claude's clean-up (Flow → Styles),
 a call's summary or « OK Coucou », the text — never the audio — goes to
@@ -474,7 +474,8 @@ own window.
   the Mac's speech recognizer, so it understands Parakeet's 25 languages.
   Emails open in your default mail app through a `mailto:` link, with no
   contact lookup and no attachment; « play » something on Spotify opens its
-  search rather than starting a track; apps open from the Start menu's
+  search rather than starting a track (on YouTube Music it plays the top
+  result, through Pear Desktop's search); apps open from the Start menu's
   shortcuts or Linux's `.desktop` entries. The system voice is the webview's;
   where WebKitGTK has none, `spd-say` (speech-dispatcher) or `espeak-ng`
   speaks if installed.

@@ -7,6 +7,8 @@ final class MockMusic: MusicControlling, @unchecked Sendable {
     var spotifyRunning = false
     var isMusicRunning: Bool  { musicRunning }
     var isSpotifyRunning: Bool { spotifyRunning }
+    var youTubeConnected = false
+    var isYouTubeMusicConnected: Bool { youTubeConnected }
 
     var calls: [String] = []
     var searchResult  = true   // mock return for playSearch
@@ -23,6 +25,7 @@ final class MockMusic: MusicControlling, @unchecked Sendable {
     @MainActor func playPlaylist(_ n: String) async -> Bool { calls.append("playlist:\(n)"); return playlistResult }
     @MainActor func launchAndPlay() async      { calls.append("launchAndPlay") }
     @MainActor func launchSpotify() async      { calls.append("launchSpotify") }
+    @MainActor func launchYouTubeMusic() async { calls.append("launchYouTubeMusic") }
     @MainActor func openSearch(_ n: String)    { calls.append("openSearch:\(n)") }
 }
 
@@ -72,6 +75,29 @@ enum VoiceActionRunnerTests {
         let spotifyNoApp = await runner.run(.musicPlay(target: .spotify), availablePills: pills)
         check("spotify no app → launch",   spotifyNoApp.outcome, .success)
         check("spotify no app → launchSpotify", music.calls.contains("launchSpotify"), true)
+
+        // ── Music: target youTubeMusic → launch Pear, or play when connected ─
+        music.musicRunning   = false
+        music.spotifyRunning = false
+        music.youTubeConnected = false
+        music.calls = []
+        let ytNoApp = await runner.run(.musicPlay(target: .youTubeMusic), availablePills: pills)
+        check("youTubeMusic not connected → launch", ytNoApp.outcome, .success)
+        check("youTubeMusic not connected → launchYouTubeMusic", music.calls, ["launchYouTubeMusic"])
+        music.youTubeConnected = true
+        music.calls = []
+        let ytPlay = await runner.run(.musicPlay(target: .youTubeMusic), availablePills: pills)
+        check("youTubeMusic connected → play", music.calls, ["play"])
+        check("youTubeMusic connected → success", ytPlay.outcome, .success)
+        // Only YouTube Music is there: the commands go through instead of "no music app".
+        music.calls = []
+        let ytNext = await runner.run(.musicNext, availablePills: pills)
+        check("only YouTube Music → next works", ytNext.outcome, .success)
+        check("only YouTube Music → nextTrack", music.calls, ["nextTrack"])
+        music.calls = []
+        _ = await runner.run(.musicPlaySearch(name: "lofi"), availablePills: pills)
+        check("only YouTube Music → search without launching Apple Music", music.calls, ["search:lofi"])
+        music.youTubeConnected = false
 
         // ── Music: target appleMusic → launchAndPlay ─────────────────────────
         music.musicRunning   = false
