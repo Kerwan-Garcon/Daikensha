@@ -21,7 +21,7 @@ La pill `integration_youtube_music` affiche la même carte et la même pill que 
 
 ## Installer côté utilisateur
 
-1. Installer Pear Desktop depuis ses [releases](https://github.com/pear-devs/pear-desktop/releases/latest) (Mac : le `.dmg` ; Windows : le `Setup .exe` ; Linux : `.deb`, `.rpm`, AppImage ou AUR). Sur Mac, l'app n'est pas signée : ouvrez-la une première fois par clic droit → Ouvrir.
+1. Installer Pear Desktop depuis ses [releases](https://github.com/pear-devs/pear-desktop/releases/latest) (Mac : le `.dmg` ; Windows : `YouTube-Music-Web-Setup-<version>.exe`, qui télécharge et installe l'app dans `%LOCALAPPDATA%\Programs\youtube-music` ; Linux : `.deb`, `.rpm`, AppImage ou AUR). Sur Mac, l'app n'est pas signée : ouvrez-la une première fois par clic droit → Ouvrir.
 2. Dans Pear : menu **Plugins → API Server** → activer. Laisser l'authentification sur « Auth at first » (par défaut). Conseillé : régler **Hostname** sur `127.0.0.1` (par défaut `0.0.0.0`, l'API est alors joignable depuis le réseau local).
 3. Dans Coucou : Réglages → pills actives → **YouTube Music**.
 4. Ouvrir la carte YouTube Music → **Connecter…** → **Autoriser** dans Pear.

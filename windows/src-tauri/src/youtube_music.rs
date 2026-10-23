@@ -434,7 +434,10 @@ async fn listen(app: AppHandle, mut rx: mpsc::UnboundedReceiver<Wake>) {
             None => {
                 // No token: only the user's click goes further.
                 let link = if reachable().await { Link::NeedsAuth } else { Link::Unreachable };
+                // Pear may have been installed since the pill was turned on.
+                let now_installed = installed();
                 update(&app, |s| {
+                    s.installed = now_installed;
                     if s.link != Link::Waiting && s.link != Link::Denied {
                         s.disconnect(link, now_ms());
                     }
@@ -452,7 +455,11 @@ async fn listen(app: AppHandle, mut rx: mpsc::UnboundedReceiver<Wake>) {
                 }
                 Ended::Gone { was_connected } => {
                     failures = if was_connected { 0 } else { failures + 1 };
-                    update(&app, |s| s.disconnect(Link::Unreachable, now_ms()));
+                    let now_installed = installed();
+                    update(&app, |s| {
+                        s.installed = now_installed;
+                        s.disconnect(Link::Unreachable, now_ms());
+                    });
                     Some(backoff_secs(failures))
                 }
             },
@@ -626,14 +633,14 @@ pub async fn search_and_play(app: &AppHandle, query: &str) -> Result<(), String>
 /// The player as the page should show it now; reconnects at once if it can
 /// (the card coming on screen).
 #[tauri::command]
-pub fn youtube_music_refresh() -> Option<YtmState> {
-    let state = {
-        let s = SHARED.lock();
-        if !s.active {
-            return None;
-        }
-        s.state.clone()
-    };
+pub fn youtube_music_refresh(app: AppHandle) -> Option<YtmState> {
+    if !SHARED.lock().active {
+        return None;
+    }
+    // The card came on screen: Pear may have been installed since.
+    let now_installed = installed();
+    update(&app, |s| s.installed = now_installed);
+    let state = SHARED.lock().state.clone();
     if state.link != Link::Connected {
         wake(Wake::Retry);
     }
@@ -781,6 +788,8 @@ fn launcher() -> Option<std::path::PathBuf> {
         [
             // The per-user installer (the default), winget and Scoop.
             under("LOCALAPPDATA", r"Programs\youtube-music\YouTube Music.exe"),
+            // The same installer when told to use the product's name for the folder.
+            under("LOCALAPPDATA", r"Programs\YouTube Music\YouTube Music.exe"),
             // "Install for all users".
             under("ProgramFiles", r"YouTube Music\YouTube Music.exe"),
         ]
