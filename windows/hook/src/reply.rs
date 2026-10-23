@@ -51,7 +51,7 @@ pub fn stdout(agent: &str, event: &str, decision: Option<&str>, question: Option
         }
         // Claude Code and Codex share the documented hookSpecificOutput. Only
         // Claude Code asks questions.
-        "" => decision.and_then(|d| decision_json(d, question)),
+        "" => decision.and_then(|d| plan_json(d.trim(), question).or_else(|| decision_json(d, question))),
         _ => decision.and_then(|d| decision_json(d, None)),
     }
 }
@@ -108,6 +108,32 @@ pub fn decision_json(decision: &str, question: Option<&Value>) -> Option<String>
     Some(format!(
         r#"{{"hookSpecificOutput":{{"hookEventName":"PermissionRequest","decision":{behavior}}}}}"#
     ))
+}
+
+/// The island's answer to Claude Code's plan (ExitPlanMode), the choices of the
+/// terminal's plan dialog: `plan_auto` / `plan_default` approve the plan and set the
+/// session's mode, `plan_change` rejects it and stops Claude so the change can be
+/// typed in the terminal. Claude Code only (the other agents get nothing). Claude Code ignores an allow for ExitPlanMode without
+/// its own input echoed back as `updatedInput`, so with no input there is no
+/// answer (silence: the terminal asks). Same replies as the Mac relay.
+fn plan_json(decision: &str, input: Option<&Value>) -> Option<String> {
+    let decision = match decision {
+        "plan_change" => json!({
+            "behavior": "deny",
+            "interrupt": true,
+            "message": "The user wants to change the plan and will type the changes in the terminal.",
+        }),
+        "plan_auto" | "plan_default" => {
+            let mode = decision.trim_start_matches("plan_");
+            json!({
+                "behavior": "allow",
+                "updatedInput": input?,
+                "updatedPermissions": [{ "type": "setMode", "mode": mode, "destination": "session" }],
+            })
+        }
+        _ => return None,
+    };
+    Some(json!({ "hookSpecificOutput": { "hookEventName": "PermissionRequest", "decision": decision } }).to_string())
 }
 
 /// True when `answers` answers exactly the questions Claude Code asked: one entry
@@ -249,6 +275,33 @@ mod tests {
             r#"{"hookSpecificOutput":{"hookEventName":"PermissionRequest","decision":{"behavior":"allow"}}}"#
         );
         assert!(decision_json("always", None).unwrap().contains(r#""behavior":"allow""#));
+    }
+
+    #[test]
+    fn a_plan_answer_echoes_the_plan_and_sets_the_mode() {
+        let plan = json!({ "plan": "# Ship it\n1. do" });
+        let out: Value = serde_json::from_str(&stdout("", "PermissionRequest", Some("plan_auto"), Some(&plan)).unwrap()).unwrap();
+        let decision = &out["hookSpecificOutput"]["decision"];
+        assert_eq!(decision["behavior"], "allow");
+        assert_eq!(decision["updatedInput"], plan);
+        assert_eq!(decision["updatedPermissions"][0], json!({ "type": "setMode", "mode": "auto", "destination": "session" }));
+        let manual: Value = serde_json::from_str(&plan_json("plan_default", Some(&plan)).unwrap()).unwrap();
+        assert_eq!(manual["hookSpecificOutput"]["decision"]["updatedPermissions"][0]["mode"], "default");
+        // "Change plan" stops Claude without needing the plan.
+        let change: Value = serde_json::from_str(&plan_json("plan_change", None).unwrap()).unwrap();
+        assert_eq!(change["hookSpecificOutput"]["decision"]["behavior"], "deny");
+        assert_eq!(change["hookSpecificOutput"]["decision"]["interrupt"], true);
+    }
+
+    #[test]
+    fn a_plan_answer_never_allows_without_the_plan_nor_for_another_agent() {
+        assert!(plan_json("plan_auto", None).is_none());
+        assert!(decision_json("plan_change", None).is_none());
+        let plan = json!({ "plan": "x" });
+        for agent in ["codex", "copilot", "muse", "hermes"] {
+            let out = stdout(agent, "PermissionRequest", Some("plan_auto"), Some(&plan));
+            assert!(!out.as_deref().is_some_and(allows), "{agent}: {out:?}");
+        }
     }
 
     #[test]

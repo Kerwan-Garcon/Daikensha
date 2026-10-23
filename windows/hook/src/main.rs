@@ -110,7 +110,8 @@ struct Event {
     line: String,
     /// The canonical event name.
     name: String,
-    /// For Claude Code's AskUserQuestion, the question as it was asked.
+    /// For Claude Code's AskUserQuestion and ExitPlanMode, the tool input as it was
+    /// asked: what goes back to Claude Code must be its own input.
     question: Option<Value>,
 }
 
@@ -228,7 +229,7 @@ fn prepare(raw: &[u8], args: &Args, env: &dyn Fn(&str) -> Option<String>, cwd: &
 
     // Kept whole: what goes back to Claude Code must be its own input, not the
     // shortened copy the island is shown.
-    let question = (map.get("tool_name").and_then(Value::as_str) == Some("AskUserQuestion"))
+    let question = matches!(map.get("tool_name").and_then(Value::as_str), Some("AskUserQuestion" | "ExitPlanMode"))
         .then(|| map.get("tool_input").cloned())
         .flatten();
 

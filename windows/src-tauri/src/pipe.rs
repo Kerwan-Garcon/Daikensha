@@ -410,6 +410,8 @@ pub fn decline(app: &AppHandle, request_id: &str) {
 pub fn answer(app: &AppHandle, request_id: &str, decision: &str) {
     let word = match decision {
         "allow" | "always" => "allow",
+        // The plan card's choices (ExitPlanMode); only the relay turns them into a reply.
+        "plan_auto" | "plan_default" | "plan_change" => decision,
         _ => "deny",
     };
     log::line(format!("decision id={request_id} {word}"));

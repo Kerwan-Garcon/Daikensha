@@ -640,6 +640,17 @@
    "ru": "Прикрепить переднее окно",
    "id": "Lampirkan jendela depan"
   },
+  "Auto mode": {
+   "zh-Hans": "自动模式",
+   "hi": "ऑटो मोड",
+   "es": "Modo automático",
+   "ar": "الوضع التلقائي",
+   "fr": "Mode auto",
+   "bn": "অটো মোড",
+   "pt-BR": "Modo automático",
+   "ru": "Авторежим",
+   "id": "Mode otomatis"
+  },
   "Auto-close · {seconds}s": {
    "zh-Hans": "自动关闭 · {seconds} 秒",
    "hi": "ऑटो-क्लोज़ · {seconds}स",
@@ -837,6 +848,17 @@
    "pt-BR": "Capturado. O Mochi pegou.",
    "ru": "Готово. Мочи проглотил снимок.",
    "id": "Tertangkap. Mochi menyimpannya."
+  },
+  "Change plan": {
+   "zh-Hans": "修改计划",
+   "hi": "योजना बदलें",
+   "es": "Cambiar el plan",
+   "ar": "تغيير الخطة",
+   "fr": "Modifier le plan",
+   "bn": "পরিকল্পনা বদলান",
+   "pt-BR": "Mudar o plano",
+   "ru": "Изменить план",
+   "id": "Ubah rencana"
   },
   "Chat": {
    "zh-Hans": "聊天",
@@ -3257,6 +3279,17 @@
    "pt-BR": "Homem",
    "ru": "Мужской",
    "id": "Pria"
+  },
+  "Manual": {
+   "zh-Hans": "手动",
+   "hi": "मैनुअल",
+   "es": "Manual",
+   "ar": "يدوي",
+   "fr": "Manuel",
+   "bn": "ম্যানুয়াল",
+   "pt-BR": "Manual",
+   "ru": "Вручную",
+   "id": "Manual"
   },
   "Mark as read": {
    "zh-Hans": "标为已读",
@@ -7481,6 +7514,17 @@
    "pt-BR": "fn (🌐)",
    "ru": "fn (🌐)",
    "id": "fn (🌐)"
+  },
+  "has a plan ready": {
+   "zh-Hans": "的计划已就绪",
+   "hi": "की योजना तैयार है",
+   "es": "tiene un plan listo",
+   "ar": "لديه خطة جاهزة",
+   "fr": "a un plan prêt",
+   "bn": "-এর পরিকল্পনা প্রস্তুত",
+   "pt-BR": "tem um plano pronto",
+   "ru": "подготовил план",
+   "id": "punya rencana siap"
   },
   "in {h} h {m}": {
    "zh-Hans": "{h} 小时 {m} 分后",

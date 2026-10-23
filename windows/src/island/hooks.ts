@@ -149,7 +149,14 @@ const APPROVAL_FIELDS = [
   "prompt", // Task
 ] as const;
 
+/** The plan's first non-empty line without its Markdown heading marks: a plan is too long for the card. */
+export function planTitle(plan: unknown): string {
+  const line = typeof plan === "string" ? plan.split("\n").find((l) => l.trim()) : undefined;
+  return line?.replace(/^[# ]+/, "").trim() || "Plan";
+}
+
 function approvalTarget(tool: string, input: Record<string, unknown>): string {
+  if (tool === "ExitPlanMode") return planTitle(input.plan);
   for (const field of APPROVAL_FIELDS) {
     const value = input[field];
     if (typeof value === "string" && value.trim()) {

@@ -50,6 +50,9 @@ export interface AgentTask {
   replySession?: string | null;
 }
 
+/** What the island can answer a permission card: a plan (ExitPlanMode) has its own three. */
+export type ApprovalDecision = "allow" | "deny" | "plan_auto" | "plan_default" | "plan_change";
+
 export interface ApprovalInfo {
   requestId: string;
   sessionId: string;

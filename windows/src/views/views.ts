@@ -5,7 +5,7 @@
 import { h, svg, clear, dot } from "./dom";
 import { ICONS } from "./icons";
 import { Ticker } from "./ticker";
-import { State, type AgentTask } from "../core/state";
+import { State, type AgentTask, type ApprovalDecision } from "../core/state";
 import { washRGBA, type IslandViewName, type Wash } from "../core/layout";
 import { createMiniBot, pruneMiniBots } from "../mochi/minibots";
 import { buildPrompt } from "./chat";
@@ -47,7 +47,7 @@ export interface ViewActions {
   /** The ↗ button: opens whatever the focused pill points at. */
   openTarget(): void;
   openUrl(url: string): void;
-  decide(d: "allow" | "deny"): void;
+  decide(d: ApprovalDecision): void;
   /** The finished card's reply field: hands `text` to the held Claude Code turn. */
   replyToSession(text: string): void;
   /** The finished card's Done: lets a held turn end, then folds the island. */
@@ -554,7 +554,7 @@ function buildApproval(actions: ViewActions): ViewHost {
   // moments after a new request appears are ignored.
   let shownFor: string | null = null;
   let shownAt = 0;
-  const guarded = (d: "allow" | "deny") => () => {
+  const guarded = (d: ApprovalDecision) => () => {
     if (performance.now() - shownAt < CLICK_GUARD_MS) return;
     actions.decide(d);
   };
@@ -567,7 +567,8 @@ function buildApproval(actions: ViewActions): ViewHost {
         shownAt = performance.now();
       }
       clear(who);
-      who.append(agentWho(State.focusTask, t("needs permission")));
+      const isPlan = State.pendingApproval?.tool === "ExitPlanMode";
+      who.append(agentWho(State.focusTask, isPlan ? t("has a plan ready") : t("needs permission")));
       // The whole point of approving here rather than in the terminal: this line
       // is the command, the file path or the URL being authorised, not just the
       // name of the tool asking.
@@ -575,9 +576,19 @@ function buildApproval(actions: ViewActions): ViewHost {
       // Two buttons, built once. Rebuilding them between a mouse-down and a
       // mouse-up would swallow the click, and there is nothing left to vary:
       // "Always" is gone until the remembered-rules list exists to back it.
-      if (rowKey === "built") return;
-      rowKey = "built";
+      const key = isPlan ? "plan" : "built";
+      if (rowKey === key) return;
+      rowKey = key;
       clear(row);
+      // A plan is not a tool permission: the choices of the terminal's plan dialog.
+      if (isPlan) {
+        row.append(
+          btn(tl("Change plan"), "secondary", guarded("plan_change")),
+          btn(tl("Auto mode"), "primary", guarded("plan_auto")),
+          btn(tl("Manual"), "secondary", guarded("plan_default")),
+        );
+        return;
+      }
       row.append(
         btn(tl("Deny"), "secondary", guarded("deny"), "N"),
         btn(tl("Allow"), "primary", guarded("allow"), "Y"),
