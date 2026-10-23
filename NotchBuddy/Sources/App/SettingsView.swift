@@ -2234,6 +2234,7 @@ struct SettingsView: View {
             if def.id == "agent_opencode"      && !HookServer.openCodePluginInstalled()  { return String(localized: "Plugin not installed") }
             if def.id == "agent_amp"           && !HookServer.ampPluginInstalled()       { return String(localized: "Plugin not installed") }
             if def.id == SpotifyController.pillId && !SpotifyController.shared.isInstalled { return String(localized: "Not installed") }
+            if def.id == YouTubeMusicController.pillId && !YouTubeMusicController.shared.isInstalled { return String(localized: "Not installed") }
             #endif
             if def.category == .ai {
                 if let provider = ChatProvider(pillID: def.id), provider.isLocal {

@@ -77,6 +77,8 @@ final class KeychainStore: @unchecked Sendable {
         "elevenlabs-api-key",
         // WhatsApp (local gateway): its address, credentials and the webhook's signing secret
         "whatsapp-url", "whatsapp-api-key", "whatsapp-webhook-secret",
+        // YouTube Music: the token Pear Desktop's API Server gave after the user clicked "Allow"
+        "youtube-music-token",
         // Portfolio exchange credentials
         "portfolio-binance-key",  "portfolio-binance-secret",
         "portfolio-okx-key",      "portfolio-okx-secret",      "portfolio-okx-passphrase",

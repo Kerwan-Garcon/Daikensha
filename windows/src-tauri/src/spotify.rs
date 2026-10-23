@@ -395,7 +395,7 @@ pub fn sniff_image(bytes: &[u8]) -> Option<&'static str> {
     }
 }
 
-fn data_url(bytes: &[u8]) -> Option<String> {
+pub(crate) fn data_url(bytes: &[u8]) -> Option<String> {
     let mime = sniff_image(bytes)?;
     Some(format!("data:{mime};base64,{}", crate::claude::base64_for(bytes)))
 }

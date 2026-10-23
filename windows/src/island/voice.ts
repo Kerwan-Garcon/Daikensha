@@ -6,6 +6,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { Bridge, IS_TAURI, onEvent } from "../core/bridge";
 import { MAX_DECLARED, availablePills, chooseMainPill, pillDefinition, sanitizeDeclared, toggleDeclared } from "../core/pills";
 import { Spotify } from "../core/spotify";
+import { YouTubeMusic } from "../core/youtube-music";
 import { State } from "../core/state";
 import { serviceCards } from "./phone-services";
 
@@ -100,12 +101,14 @@ function info(): string {
       weekPercent: p.sevenDay?.usedPct ?? null,
     };
   const s = Spotify.state;
+  const y = YouTubeMusic.state;
   return JSON.stringify({
     pills: JSON.parse(describe()) as unknown,
     sessions,
     claudePlan: plan(State.planUsage),
     codexPlan: plan(State.codexPlanUsage),
     spotify: s.running && s.track ? { playing: s.playing, title: s.track.title, artist: s.track.artist } : null,
+    youtubeMusic: y.running && y.track ? { playing: y.playing, title: y.track.title, artist: y.track.artist } : null,
     services: serviceCards().map((c) => ({ service: c.title, headline: c.headline, about: c.reason, items: c.items })),
   });
 }

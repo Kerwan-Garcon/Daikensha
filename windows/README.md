@@ -505,6 +505,12 @@ own window.
   its `spotify:` link, and without Spotify **Get Spotify** opens its download
   page. Windows gives no Spotify link for the track, so an ad is told apart by
   having a title and no artist or album.
+- **YouTube Music** (Settings → Integrations) goes through
+  [Pear Desktop](https://github.com/pear-devs/pear-desktop) and its **API
+  Server** plugin, as on Linux and the Mac: see
+  [docs/YOUTUBE_MUSIC.md](../docs/YOUTUBE_MUSIC.md). **Open YouTube Music**
+  starts `YouTube Music.exe` from where Pear's installer puts it
+  (`%LOCALAPPDATA%\Programs\youtube-music`, or Program Files).
 - Not in this version: sending a dropped file by email. On the Mac, email goes
   through Resend or Apple Mail's scripting; neither has a safe equivalent that
   attaches a file here, and the drop card would need a third button it doesn't have.
@@ -673,6 +679,10 @@ What changes on Linux:
   Spotify builds that don't report the position over MPRIS show the bar
   from where the track started; the Mac's Automation prompt has no
   equivalent here.
+- **YouTube Music** goes through Pear Desktop's **API Server** plugin, the
+  same as on Windows ([docs/YOUTUBE_MUSIC.md](../docs/YOUTUBE_MUSIC.md));
+  **Open YouTube Music** starts `youtube-music` from your `PATH` (the .deb,
+  .rpm and AUR packages) or `/opt/YouTube Music`.
 - **Plan usage**: the status line relay is `~/.local/share/coucou/bin/coucou-hook
   --statusline` and runs your previous status line with `/bin/sh -c`, like Claude
   Code. Codex is found on `$PATH`, in `~/.local/bin`, npm's global prefix, Volta,

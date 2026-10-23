@@ -442,9 +442,9 @@ final class SpotifyController: ObservableObject {
         }
     }
 
-    // MARK: - Metadata cleaners (same rules as Apple Music)
+    // MARK: - Metadata cleaners (same rules as Apple Music and YouTube Music)
 
-    private static func shortTitle(_ raw: String) -> String {
+    static func shortTitle(_ raw: String) -> String {
         guard !raw.isEmpty else { return raw }
         var s = raw
         // Cut at first " - " ("Song - Remastered 2011")
@@ -465,7 +465,7 @@ final class SpotifyController: ObservableObject {
         return result.isEmpty ? raw : result
     }
 
-    private static func shortArtist(_ raw: String) -> String {
+    static func shortArtist(_ raw: String) -> String {
         guard !raw.isEmpty else { return raw }
         let lower = raw.lowercased()
         for tag in [" feat.", " ft."] {

@@ -23,6 +23,8 @@ import { buildRecap } from "./recap";
 import { buildWardrobe } from "./wardrobe";
 import { buildSpotifyCard, buildSpotifyPill, type SpotifyPillHost } from "./spotify";
 import { SPOTIFY_ID } from "../core/spotify";
+import { buildYouTubeMusicCard, buildYouTubeMusicPill } from "./youtube-music";
+import { YOUTUBE_MUSIC_ID } from "../core/youtube-music";
 import type { Outfit, OutfitSelection } from "../mochi/wardrobe";
 import { language, t, tl, type Msg } from "../i18n/i18n";
 import type { ViewCommand } from "../island/shortcuts";
@@ -212,6 +214,9 @@ function buildOverview(actions: ViewActions): ViewHost {
   // runs on, and a slider being dragged must not be rebuilt under the pointer.
   const spotifyCard = buildSpotifyCard();
   let spotifyPill: SpotifyPillHost | null = null;
+  // YouTube Music's, likewise.
+  const youTubeMusicCard = buildYouTubeMusicCard();
+  let youTubeMusicPill: SpotifyPillHost | null = null;
 
   const el = h("div", { class: "view overview" },
     h("div", { class: "left" }, left),
@@ -221,7 +226,7 @@ function buildOverview(actions: ViewActions): ViewHost {
   let pillIds = "";
   let detailOpen = false;
   let lastFocus: string | null = null;
-  let mode: "ticker" | "card" | "plan" | "diff" | "spotify" | null = null;
+  let mode: "ticker" | "card" | "plan" | "diff" | "spotify" | "youtube-music" | null = null;
   let cardKey = "";
   /** The list row highlighted at the last sync, to scroll only when it moves. */
   let shownSelection: number | null = null;
@@ -381,6 +386,15 @@ function buildOverview(actions: ViewActions): ViewHost {
           cardKey = "";
         }
         spotifyCard.sync();
+      } else if (task?.id === YOUTUBE_MUSIC_ID) {
+        // Its own card for every state: playing, idle, not connected, not installed.
+        if (mode !== "youtube-music") {
+          clear(leftBody);
+          leftBody.append(youTubeMusicCard.el);
+          mode = "youtube-music";
+          cardKey = "";
+        }
+        youTubeMusicCard.sync();
       } else if (task) {
         const info = State.integrations[task.id];
         const key = [
@@ -411,10 +425,14 @@ function buildOverview(actions: ViewActions): ViewHost {
         pillIds = pillKey;
         clear(pills);
         spotifyPill = null;
+        youTubeMusicPill = null;
         for (const t of others) {
           if (t.id === SPOTIFY_ID) {
             spotifyPill = buildSpotifyPill(t, () => actions.setFocus(t.id));
             pills.append(spotifyPill.el);
+          } else if (t.id === YOUTUBE_MUSIC_ID) {
+            youTubeMusicPill = buildYouTubeMusicPill(t, () => actions.setFocus(t.id));
+            pills.append(youTubeMusicPill.el);
           } else {
             pills.append(buildPill(t, actions));
           }
@@ -422,6 +440,7 @@ function buildOverview(actions: ViewActions): ViewHost {
         pruneMiniBots();
       }
       spotifyPill?.sync();
+      youTubeMusicPill?.sync();
     },
   };
 }

@@ -63,13 +63,15 @@ struct BotCanvasView: View {
                     let active = AppState.shared.activeIntegrations
                     let music = AppState.shared.musicPlaying && active.contains("integration_music")
                     let spotify = SpotifyController.shared.isPlaying && active.contains(SpotifyController.pillId)
-                    guard music || spotify else { return false }
+                    let youTube = YouTubeMusicController.shared.isPlaying && active.contains(YouTubeMusicController.pillId)
+                    guard music || spotify || youTube else { return false }
                     let allowed: Set<BotState> = [.idle, .working, .thinking, .searching, .finished]
                     guard allowed.contains(state.effectiveState) else { return false }
                     if state.mode == .compact { return true }
                     guard state.mode == .expanded && state.view == .overview else { return false }
                     return (music && state.focusId == "integration_music")
                         || (spotify && state.focusId == SpotifyController.pillId)
+                        || (youTube && state.focusId == YouTubeMusicController.pillId)
                     #else
                     return false
                     #endif

@@ -300,6 +300,10 @@ struct OverviewView: View {
             #if !APPSTORE
             SpotifyController.shared.openSpotify()
             #endif
+        case "integration_youtube_music":
+            #if !APPSTORE
+            YouTubeMusicController.shared.openYouTubeMusic()
+            #endif
         default:
             // Non-integration real tasks
             if task.source == .n8n {
@@ -2073,6 +2077,15 @@ struct IntegrationCardView: View {
         #endif
     }
 
+    // YouTube Music: its own card for every state (playing, idle, not installed, not connected)
+    private var isYouTubeMusic: Bool {
+        #if !APPSTORE
+        return task.id == YouTubeMusicController.pillId
+        #else
+        return false
+        #endif
+    }
+
     private var statusDot: Color {
         #if !APPSTORE
         if task.id == "integration_music" {
@@ -2235,6 +2248,11 @@ struct IntegrationCardView: View {
         } else if isSpotify {
             #if !APPSTORE
             SpotifyCardView()
+                .transition(.opacity)
+            #endif
+        } else if isYouTubeMusic {
+            #if !APPSTORE
+            YouTubeMusicCardView()
                 .transition(.opacity)
             #endif
         } else if agentSessionActive {
@@ -4113,6 +4131,13 @@ struct AgentPillsView: View {
                         }
                     } else if task.id == "integration_spotify" {
                         SpotifyPill(task: task, swapping: $swapping) {
+                            swapping = true
+                            state.setFocus(task.id)
+                            SoundEngine.shared.play("blip")
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { swapping = false }
+                        }
+                    } else if task.id == YouTubeMusicController.pillId {
+                        YouTubeMusicPill(task: task, swapping: $swapping) {
                             swapping = true
                             state.setFocus(task.id)
                             SoundEngine.shared.play("blip")

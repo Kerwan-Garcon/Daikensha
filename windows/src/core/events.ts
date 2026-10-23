@@ -13,6 +13,7 @@ import type { FlowEntry, FlowPrefs, ModelsStatus, PillState } from "./flow";
 import type { GitHubEvent } from "./github";
 import type { Looked } from "./look";
 import type { SpotifyState } from "./spotify";
+import type { YouTubeMusicState } from "./youtube-music";
 import type { Settings } from "./state";
 
 export interface EventMap {
@@ -36,6 +37,8 @@ export interface EventMap {
   "github-alerts": GitHubEvent[];
   "spotify": SpotifyState;
   "spotify-artwork": { artUrl: string; dataUrl: string };
+  "youtube-music": YouTubeMusicState;
+  "youtube-music-artwork": { artUrl: string; dataUrl: string };
   // Coucou Shell
   "shell-confirm": ShellCard;
   "shell-clipboard": null;

@@ -43,7 +43,7 @@ class PlanTextTest {
 
     @Test fun theLevelsAreTheOnesInThePCsSource() {
         val ts = ReferenceFiles.read("windows/src/core/plan.ts")
-        assertTrue(ts.contains("if (pct < 50) return \"#22C55E\"") && ts.contains("if (pct < 80) return \"#F59E0B\""))
+        assertTrue(ts.contains("if (pct < 50) return colorHex(\"--color-success\")") && ts.contains("if (pct < 80) return colorHex(\"--amber-50\")"))
         assertTrue(ts.contains("w.resetsAt <= now ? 0 : w.usedPct"))
     }
 }
