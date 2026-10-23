@@ -20,6 +20,7 @@ import { card, cardTitle, chipRow, foot, linkButton, message, note, ring, switch
 import { buildClipboard, buildPower, buildToday, buildWallpapers } from "./shell-tabs";
 import type { ViewHost } from "./views";
 import { colorHex } from "../design/tokens";
+import { itemAt } from "../core/arrays";
 
 const ICON: Record<ShellTab, string> = {
   controls: "M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6",
@@ -606,7 +607,7 @@ export function buildShell(onCircle: () => void): ShellHost {
 
   function drawTabs() {
     const list = availableTabs(caps);
-    if (!list.includes(current)) current = list[0];
+    if (!list.includes(current)) current = itemAt(list, 0);
     nav.replaceChildren(
       ...list.map((tab) =>
         h(

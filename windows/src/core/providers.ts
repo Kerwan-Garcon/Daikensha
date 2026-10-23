@@ -4,6 +4,7 @@
 
 import type { Settings } from "./state";
 import { N_ } from "../i18n/i18n";
+import { itemAt } from "./arrays";
 
 export type ProviderId =
   | "anthropic" | "anthropic-subscription" | "openai" | "google" | "openrouter"
@@ -39,7 +40,7 @@ export const PROVIDERS: readonly ProviderDef[] = [
 export const CUSTOM_SERVER_KEY = "openai-compatible-key";
 
 export function providerDef(id: string): ProviderDef {
-  return PROVIDERS.find((p) => p.id === id) ?? PROVIDERS[0];
+  return PROVIDERS.find((p) => p.id === id) ?? itemAt(PROVIDERS, 0);
 }
 
 /** The model the chat uses for the active provider. */
@@ -75,7 +76,7 @@ export function pickModel(provider: ProviderDef, offered: string[], current: str
   if (offered.includes(current)) return current;
   const preferred = provider.prefer ? offered.find((id) => id.includes(provider.prefer!)) : undefined;
   if (preferred) return preferred;
-  return offered.includes(provider.defaultModel) ? provider.defaultModel : offered[0];
+  return offered.includes(provider.defaultModel) ? provider.defaultModel : itemAt(offered, 0);
 }
 
 // ── Where an address points ───────────────────────────────────────────────────

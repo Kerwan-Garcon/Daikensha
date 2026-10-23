@@ -6,6 +6,7 @@ import { BotEngine } from "../mochi/engine";
 import { formatCount, formatDuration, weekRangeLabel, type WeeklySummary } from "./summary";
 import { t } from "../i18n/i18n";
 import { SCRIPT_FONTS } from "../core/fonts";
+import { itemAt } from "../core/arrays";
 
 export const SHARE_W = 1080;
 export const SHARE_H = 1920;
@@ -74,7 +75,7 @@ function spaced(x: Ctx, text: string, cx: number, y: number, spacing: number, ma
   x.textAlign = "left";
   chars.forEach((c, i) => {
     x.fillText(c, at, y);
-    at += widths[i] + spacing;
+    at += itemAt(widths, i) + spacing;
   });
 }
 

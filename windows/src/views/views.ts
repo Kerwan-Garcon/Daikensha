@@ -30,6 +30,7 @@ import { buildShell } from "./shell";
 import { buildConfirm } from "./confirm";
 import { buildCircle } from "./circle";
 import { colorHex } from "../design/tokens";
+import { itemAt } from "../core/arrays";
 
 export interface ViewActions {
   setView(v: IslandViewName): void;
@@ -593,8 +594,9 @@ function buildQuestion(actions: ViewActions): ViewHost {
       // Only a request that is waiting can be folded away and come back.
       fold.style.display = State.pendingApproval ? "" : "none";
 
-      // A question that arrived as a notification has nothing to pick from.
-      if (!questions) {
+      // A question that arrived as a notification has nothing to pick from (and an
+      // empty list would leave `q` below undefined).
+      if (!questions || questions.length === 0) {
         who.append(agentWho(State.focusTask, t("is asking a question")));
         const task = State.focusTask;
         title.textContent = (task && lastTextStep(task.steps)) ?? t("Claude needs an answer.");
@@ -612,7 +614,7 @@ function buildQuestion(actions: ViewActions): ViewHost {
         answers = {};
         picked = new Set();
       }
-      const q = questions[Math.min(index, questions.length - 1)];
+      const q = itemAt(questions, Math.min(index, questions.length - 1));
       const asking = questions.length > 1
         ? t("is asking ({index} of {total})", { index: index + 1, total: questions.length })
         : t("is asking");

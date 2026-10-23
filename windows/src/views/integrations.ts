@@ -15,6 +15,7 @@ import { githubDetail, githubPulseCard } from "./github";
 import { N_, language, t } from "../i18n/i18n";
 import { colorHex } from "../design/tokens";
 import { Sound } from "../core/sound";
+import { itemAt } from "../core/arrays";
 
 /** Same shape as the Swift `timeAgo` computed properties. */
 export function timeAgo(value: unknown): string {
@@ -92,6 +93,7 @@ function idleCard(task: AgentTask, openSettings: () => void): HTMLElement {
   const status = idleStatus(task.id, info, State.settings.model);
 
   const actions = h("div", { class: "int-actions" });
+  const openUrl = OPEN_URLS[task.id];
   if (task.id === "integration_claude") {
     actions.append(
       h("button", {
@@ -119,13 +121,13 @@ function idleCard(task: AgentTask, openSettings: () => void): HTMLElement {
         onclick: () => void Bridge.openN8n(),
       }),
     );
-  } else if (OPEN_URLS[task.id]) {
+  } else if (openUrl) {
     actions.append(
       h("button", {
         class: "link-btn",
         style: `color:${task.color}d9`,
         text: t("Open {name}", { name: task.name }),
-        onclick: () => void Bridge.openUrl(OPEN_URLS[task.id]),
+        onclick: () => void Bridge.openUrl(openUrl),
       }),
     );
   }
@@ -418,7 +420,7 @@ function linearCard(): HTMLElement {
   );
 
   if (teams.length > 0) {
-    const picked = teams.find((x) => x.id === State.settings.linearTeam) ?? teams[0];
+    const picked = teams.find((x) => x.id === State.settings.linearTeam) ?? itemAt(teams, 0);
     const input = h("input", {
       class: "linear-input",
       type: "text",

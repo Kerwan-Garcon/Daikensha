@@ -24,12 +24,13 @@ function fit() {
 
 function draw() {
   ctx.clearRect(0, 0, window.innerWidth, window.innerHeight);
-  if (points.length < 2) return;
+  const [first, ...rest] = points;
+  if (!first || rest.length === 0) return;
   ctx.lineJoin = "round";
   ctx.lineCap = "round";
   ctx.beginPath();
-  ctx.moveTo(points[0][0], points[0][1]);
-  for (const [x, y] of points.slice(1)) ctx.lineTo(x, y);
+  ctx.moveTo(first[0], first[1]);
+  for (const [x, y] of rest) ctx.lineTo(x, y);
   if (!drawing) ctx.closePath();
   ctx.fillStyle = colorAlpha("--color-accent-rgb", 0.10);
   ctx.fill();
@@ -86,8 +87,8 @@ window.addEventListener("pointerdown", (e) => {
 });
 window.addEventListener("pointermove", (e) => {
   if (!drawing) return;
-  const last = points[points.length - 1];
-  if (Math.hypot(e.clientX - last[0], e.clientY - last[1]) < 2) return;
+  const last = points.at(-1);
+  if (last && Math.hypot(e.clientX - last[0], e.clientY - last[1]) < 2) return;
   points.push([e.clientX, e.clientY]);
   draw();
 });

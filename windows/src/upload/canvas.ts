@@ -12,6 +12,7 @@ import {
   USC, eIn, eInOut, eOut, lerp, progressAt,
   type UploadEyeShape, type UploadFrame,
 } from "./sequence";
+import { itemAt } from "../core/arrays";
 
 const FONT = `system-ui, "Segoe UI Variable Text", "Segoe UI", ${SCRIPT_FONTS}, sans-serif`;
 
@@ -242,7 +243,7 @@ export class UploadCanvas {
     }
     let cx = USC.TEXT_X;
     labels.forEach((chip, i) => {
-      const w = ws[i];
+      const w = itemAt(ws, i);
       ctx.fillStyle = "rgba(255,255,255,0.07)";
       rr(ctx, cx, USC.TEXT_Y + 9, w, 18, 9);
       ctx.fill();

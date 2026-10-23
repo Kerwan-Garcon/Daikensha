@@ -17,6 +17,7 @@
 // (Ctrl, Alt, Space…) are never translated.
 
 import { N_ } from "../i18n/i18n";
+import { cyclicAt } from "./arrays";
 
 export const SHORTCUT_TEXT = {
   toggleIsland: N_("Open or close the island"),
@@ -353,12 +354,12 @@ export function navigate(selection: number | null, delta: number, itemCount: num
 export function cyclePill(ids: readonly string[], current: string | null, delta: number): string | null {
   if (ids.length === 0) return null;
   const at = Math.max(0, current == null ? 0 : ids.indexOf(current));
-  return ids[(((at + delta) % ids.length) + ids.length) % ids.length];
+  return cyclicAt(ids, at + delta);
 }
 
 /** Pill number `n`, counting from 1 (switchToPill). */
 export function pillByNumber(ids: readonly string[], n: number): string | null {
-  return n >= 1 && n <= ids.length ? ids[n - 1] : null;
+  return ids[n - 1] ?? null;
 }
 
 /** Shown read-only in Settings, like ShortcutLogic.islandShortcuts, in its order. */
@@ -408,7 +409,7 @@ export function islandKeyAction(
   }
   const digit = /^Digit([1-9])$/.exec(e.code);
   if (digit) return { kind: "pill", number: Number(digit[1]) };
-  const letter = /^[a-z]$/i.test(e.key) ? e.key.toLowerCase() : /^Key([A-Z])$/.exec(e.code)?.[1].toLowerCase();
+  const letter = /^[a-z]$/i.test(e.key) ? e.key.toLowerCase() : /^Key([A-Z])$/.exec(e.code)?.[1]?.toLowerCase();
   if (letter === "k") return ctx.view === "prompt" ? { kind: "newChat" } : null;
   if (letter === "p") return { kind: "pin" };
   if (letter === "o") return { kind: "openSelection" };

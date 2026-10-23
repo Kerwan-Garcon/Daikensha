@@ -195,8 +195,9 @@ export class Ticker {
   /** Called every frame by the island while the overview is on screen. */
   tick(nowMs: number) {
     if (this.startMs == null) {
-      if (this.queue.length === 0) return;
-      setText(this.c, this.queue[0]);
+      const first = this.queue[0];
+      if (first === undefined) return;
+      setText(this.c, first);
       place(this.c, ROW_H * 2, 0, 0, this.still);
       this.startMs = nowMs;
     }

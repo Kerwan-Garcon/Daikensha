@@ -223,7 +223,10 @@ export class Island {
           void Bridge.openSession(task.sessionId ?? null, task.sessionCwd ?? null);
         } else if (task.id === "integration_n8n") void Bridge.openN8n();
         else if (task.id === SPOTIFY_ID) void Bridge.spotifyOpen();
-        else if (urls[task.id]) void Bridge.openUrl(urls[task.id]);
+        else {
+          const url = urls[task.id];
+          if (url) void Bridge.openUrl(url);
+        }
       },
       openUrl: (url) => {
         if (url) void Bridge.openUrl(url);

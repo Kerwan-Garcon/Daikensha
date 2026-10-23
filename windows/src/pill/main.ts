@@ -12,6 +12,7 @@ import { BotEngine, hexToRGB } from "../mochi/engine";
 import { resolveLanguage, setLanguage, systemLanguages, t } from "../i18n/i18n";
 import { HUB_ICONS, keyLabel } from "../hub/ui";
 import { colorHex } from "../design/tokens";
+import { itemAt } from "../core/arrays";
 
 const RESTING_LENGTH = 44;
 const RESTING_THICKNESS = 8;
@@ -350,7 +351,7 @@ function animating(): boolean {
 /** Where dot `i` goes: the voice, a slow wave while thinking, a lively one while Coucou speaks. */
 function dotGoal(now: number, i: number): number {
   if (state.phase === "thinking") return 0.25 + 0.25 * Math.sin(now / 160 - i * 0.7);
-  if (state.phase === "listening" || state.phase === "locked") return target[i];
+  if (state.phase === "listening" || state.phase === "locked") return itemAt(target, i);
   switch (state.voice?.phase) {
     case "thinking":
       return 0.25 + 0.25 * Math.sin(now / 160 - i * 0.7);
@@ -371,9 +372,10 @@ function tick(now: number) {
   // The dots: follow the voice, or a slow wave while thinking.
   for (let i = 0; i < BANDS; i++) {
     const goal = dotGoal(now, i);
-    levels[i] += (goal - levels[i]) * Math.min(1, dt * 14);
+    const level = itemAt(levels, i) + (goal - itemAt(levels, i)) * Math.min(1, dt * 14);
+    levels[i] = level;
     const bar = barsEl.children[i] as HTMLElement;
-    const size = 3.4 + 16 * Math.max(0, levels[i]);
+    const size = 3.4 + 16 * Math.max(0, level);
     if (vertical()) bar.style.width = `${size}px`;
     else bar.style.height = `${size}px`;
   }

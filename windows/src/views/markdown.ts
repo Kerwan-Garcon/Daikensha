@@ -7,6 +7,7 @@
 // a model writes can inject markup. Links open only when they are http(s), and
 // even then through Rust, which checks the scheme again.
 
+import { itemAt } from "../core/arrays";
 import { Bridge } from "../core/bridge";
 import { h, svg } from "./dom";
 import { ICONS } from "./icons";
@@ -37,12 +38,12 @@ export function parseMarkdown(input: string): Block[] {
   const lines = input.replace(/\r\n?/g, "\n").split("\n");
   let i = 0;
   while (i < lines.length) {
-    const line = lines[i];
+    const line = itemAt(lines, i);
 
     if (line.startsWith("```")) {
       const lang = line.slice(3).trim();
       const code: string[] = [];
-      for (i++; i < lines.length && !lines[i].startsWith("```"); i++) code.push(lines[i]);
+      for (i++; i < lines.length && !itemAt(lines, i).startsWith("```"); i++) code.push(itemAt(lines, i));
       blocks.push({ kind: "code", lang, code: code.join("\n") });
       i++;
       continue;
@@ -77,7 +78,8 @@ export function parseMarkdown(input: string): Block[] {
     }
     const number = ordered(stripped);
     if (number) {
-      blocks.push({ kind: "item", prefix: `${number[1]}.`, text: stripped.slice(number[0].length), indent });
+      const [marker, digits = ""] = number;
+      blocks.push({ kind: "item", prefix: `${digits}.`, text: stripped.slice(marker.length), indent });
       i++;
       continue;
     }
@@ -89,7 +91,7 @@ export function parseMarkdown(input: string): Block[] {
     // A paragraph runs until a blank line or the start of another block.
     const para = [line];
     for (i++; i < lines.length; i++) {
-      const next = lines[i];
+      const next = itemAt(lines, i);
       const s = next.trim();
       if (!s || next.startsWith("#") || next.startsWith("```") || isQuote(s) || isBullet(s) || isRule(s) || ordered(s)) break;
       para.push(next);
@@ -148,9 +150,9 @@ export function parseInline(text: string): Inline[] {
     pushText(text.slice(at, m.index));
     at = m.index + m[0].length;
     if (m[1] != null) out.push({ kind: "code", text: m[1] });
-    else if (m[6] != null) out.push({ kind: "link", url: safeWebUrl(m[7]), children: parseInline(m[6]) });
-    else if (m[2] != null || m[3] != null) out.push({ kind: "strong", children: parseInline(m[2] ?? m[3]) });
-    else out.push({ kind: "em", children: parseInline(m[4] ?? m[5]) });
+    else if (m[6] != null) out.push({ kind: "link", url: safeWebUrl(m[7] ?? ""), children: parseInline(m[6]) });
+    else if (m[2] != null || m[3] != null) out.push({ kind: "strong", children: parseInline(m[2] ?? m[3] ?? "") });
+    else out.push({ kind: "em", children: parseInline(m[4] ?? m[5] ?? "") });
   }
   pushText(text.slice(at));
   return out;

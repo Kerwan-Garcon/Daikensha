@@ -27,6 +27,7 @@ import {
   LANGUAGES, N_, isRtl, language, onLanguageChange, resolveLanguage, setLanguage, systemLanguages, t, tn, weekdayShort,
 } from "../i18n/i18n";
 import { colorHex } from "../design/tokens";
+import { itemAt } from "../core/arrays";
 
 /** Where secrets.rs keeps the keys on this OS. */
 const KEY_STORE = navigator.userAgent.includes("Windows")
@@ -800,7 +801,7 @@ function localSection(customKey: boolean): HTMLElement {
         } else {
           settings[field] = server.url;
           if (!server.models.includes(settings.chatModels[id] ?? "")) {
-            settings.chatModels = { ...settings.chatModels, [id]: server.models[0] };
+            settings.chatModels = { ...settings.chatModels, [id]: itemAt(server.models, 0) };
           }
           await save();
           redraw();

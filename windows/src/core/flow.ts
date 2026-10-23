@@ -2,6 +2,7 @@
 // the pill see them (src-tauri/src/flow, speech, notes).
 
 import { invoke } from "@tauri-apps/api/core";
+import { cyclicAt } from "./arrays";
 
 const IS_TAURI = typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
 
@@ -227,7 +228,7 @@ export const FlowBridge = {
 export const SPEAKER_COLORS = ["#3B9EFF", "#34D399", "#A78BFA", "#F7B32B", "#F472B6", "#22D3EE"];
 
 export function speakerColor(index: number): string {
-  return SPEAKER_COLORS[Math.max(0, index) % SPEAKER_COLORS.length];
+  return cyclicAt(SPEAKER_COLORS, Math.max(0, index));
 }
 
 /** 75 → "1:15", 3725 → "1:02:05". */

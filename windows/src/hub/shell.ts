@@ -10,6 +10,7 @@ import { FlowBridge, type FlowPrefs, type FlowStatus, type ModelsStatus } from "
 import { hero, liveMochi } from "./hero";
 import { icon, keyLabel } from "./ui";
 import { colorHex } from "../design/tokens";
+import { itemAt } from "../core/arrays";
 
 export type PageId =
   | "dictation" | "notes" | "insights" | "dictionary" | "snippets" | "styles" | "flowsettings"
@@ -57,7 +58,7 @@ export interface HubContext {
   /** The band of a page, its Mochis walking. */
   hero(page: PageId, title: string, subtitle: string | null, actions?: HTMLElement[], compact?: boolean): HTMLElement;
   /** Set by a page: called when the page is left. */
-  onLeave?: () => void;
+  onLeave?: (() => void) | undefined;
 }
 
 export type FlowPageRenderer = (container: HTMLElement, ctx: HubContext) => void | Promise<void>;
@@ -132,7 +133,7 @@ export async function startHub(root: HTMLElement, opts: HubOptions) {
   }
 
   async function show(page: PageId) {
-    const def = ALL.find((p) => p.id === page) ?? FLOW_PAGES[0];
+    const def = ALL.find((p) => p.id === page) ?? itemAt(FLOW_PAGES, 0);
     ctx.onLeave?.();
     ctx.onLeave = undefined;
     current = def.id;

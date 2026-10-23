@@ -13,6 +13,7 @@ import {
   DEFAULT_LOOK, browPose, easeBrows, isCharacterLook, mouthForEyes,
   type Brows, type MochiLook, type MochiMouth,
 } from "./look";
+import { itemAt } from "../core/arrays";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -37,7 +38,7 @@ interface Tween {
   index: number;
   from: number;
   startMs: number;
-  onComplete?: () => void;
+  onComplete: (() => void) | undefined;
 }
 
 type PropKey =
@@ -615,7 +616,7 @@ export class BotEngine {
     const nowMs = performance.now();
 
     for (const tw of [...this.tweens.values()]) {
-      const k = tw.keys[tw.index];
+      const k = itemAt(tw.keys, tw.index);
       const p = Math.min(1, Math.max(0, (nowMs - tw.startMs) / k[1]));
       this[tw.prop] = tw.from + (k[0] - tw.from) * k[2](p);
       if (p >= 1) {

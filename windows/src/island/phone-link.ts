@@ -93,6 +93,7 @@ export function linkSnapshot(): LinkSnapshot {
       const last = t.steps[t.steps.length - 1] ?? "";
       // A step that stands for a file diff is shown by the file's name.
       const diff = parseDiffStep(last);
+      const project = folderName(t.sessionCwd);
       return {
         pillId: t.id,
         agent: t.name,
@@ -103,8 +104,8 @@ export function linkSnapshot(): LinkSnapshot {
         // Session details. Rust sends them only to a phone that asked and was offered them (the user's
         // switch), and cuts them to size; the folder's name is all that leaves this file, not the path.
         steps: t.steps.slice(-20).map(stepText),
-        finalLine: t.finalLine || undefined,
-        project: folderName(t.sessionCwd),
+        ...(t.finalLine ? { finalLine: t.finalLine } : {}),
+        ...(project === undefined ? {} : { project }),
         color: t.color,
         files: linkFiles(t.id),
       };

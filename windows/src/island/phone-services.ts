@@ -63,7 +63,7 @@ const BUILDERS: Record<string, Builder> = {
     const ready = (d: Record<string, unknown>) => d.state === "READY";
     return {
       id: "integration_vercel", title: "Vercel",
-      headline: deployments.length === 0 ? "—" : ready(deployments[0]) ? t("Ready") : t("Failed"),
+      headline: deployments[0] === undefined ? "—" : ready(deployments[0]) ? t("Ready") : t("Failed"),
       reason: t("Deployments"),
       items: deployments.slice(0, 3).map((d) => ({ label: String(d.projectName ?? ""), detail: `${ready(d) ? t("Ready") : t("Failed")} · ${ago(d.createdAt, now)}` })),
     };
@@ -98,7 +98,7 @@ const BUILDERS: Record<string, Builder> = {
     };
     return {
       id: "integration_calcom", title: "Cal.com",
-      headline: bookings.length === 0 ? t("No calls scheduled") : when(bookings[0]),
+      headline: bookings[0] === undefined ? t("No calls scheduled") : when(bookings[0]),
       reason: t("Schedule"),
       items: bookings.slice(0, 3).map((b) => ({ label: String(b.title ?? t("Meeting")), detail: when(b) })),
     };

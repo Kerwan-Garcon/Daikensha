@@ -19,6 +19,7 @@ import { createMiniBot } from "../mochi/minibots";
 import { pillDefinition } from "../core/pills";
 import { N_, t } from "../i18n/i18n";
 import { colorHex } from "../design/tokens";
+import { itemAt } from "../core/arrays";
 
 
 function lighter(hex: string, amount: number): string {
@@ -399,7 +400,7 @@ export function buildSpotifyCard(): SpotifyCardHost {
     if (level !== volIconLevel) {
       volIconLevel = level;
       clear(volIcon);
-      volIcon.append(svg([ICONS.volume0, ICONS.volume1, ICONS.volume2, ICONS.volume3][level], 10, { stroke: 2.2 }));
+      volIcon.append(svg(itemAt([ICONS.volume0, ICONS.volume1, ICONS.volume2, ICONS.volume3], level), 10, { stroke: 2.2 }));
     }
     volume.set(s.volume / 100);
     volumeBox.title = t("Volume {0}%", { 0: s.volume });

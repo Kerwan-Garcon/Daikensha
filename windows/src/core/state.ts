@@ -448,8 +448,9 @@ class AppState {
     for (const def of availablePills(this.os)) {
       const shouldLoad = def.id === d.mainPill || d.activeIntegrations.includes(def.id);
       const idx = this.tasks.findIndex((t) => t.id === def.id);
-      if (shouldLoad && idx < 0) this.tasks.push(taskFor(def, this.settings.pillColors));
-      const busy = idx >= 0 && (this.tasks[idx].state !== "idle" || this.tasks[idx].steps.length > 0);
+      const existing = this.tasks[idx];
+      if (shouldLoad && !existing) this.tasks.push(taskFor(def, this.settings.pillColors));
+      const busy = existing !== undefined && (existing.state !== "idle" || existing.steps.length > 0);
       if (!shouldLoad && idx >= 0 && !busy) this.tasks.splice(idx, 1);
     }
     // A colour picked in Settings reaches the pills that are already up.
@@ -468,9 +469,9 @@ class AppState {
    */
   removeTask(id: string) {
     const idx = this.tasks.findIndex((t) => t.id === id);
-    if (idx < 0) return;
+    const t = this.tasks[idx];
+    if (!t) return;
     if (this.isKept(id)) {
-      const t = this.tasks[idx];
       t.state = "idle";
       t.steps = [];
       t.stepIndex = 0;

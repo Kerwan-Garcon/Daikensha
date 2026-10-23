@@ -208,7 +208,7 @@ export function labels<K extends string>(keys: Record<K, string>): Record<K, str
  */
 export class Msg {
   readonly key: string;
-  readonly vars?: Vars;
+  readonly vars: Vars | undefined;
   constructor(key: string, vars?: Vars) {
     this.key = key;
     this.vars = vars;
