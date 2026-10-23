@@ -3,9 +3,10 @@
 // against this same server in android/.../RustDesktopInteropTest.kt.
 
 use std::future::Future;
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 use std::time::Duration;
 
+use parking_lot::Mutex;
 use ring::digest;
 use serde_json::{json, Value};
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader, ReadHalf, WriteHalf};
@@ -31,13 +32,13 @@ fn block_on<F: Future>(f: F) -> F::Output {
 struct Recorder(Mutex<Vec<(String, bool)>>, Mutex<Vec<(String, Value)>>, Mutex<Vec<(u64, String, u64)>>);
 impl Host for Recorder {
     fn get_diff(&self, sub_id: u64, pill_id: &str, file_id: u64) {
-        self.2.lock().unwrap().push((sub_id, pill_id.to_string(), file_id));
+        self.2.lock().push((sub_id, pill_id.to_string(), file_id));
     }
     fn decide(&self, request_id: &str, allow: bool) {
-        self.0.lock().unwrap().push((request_id.to_string(), allow));
+        self.0.lock().push((request_id.to_string(), allow));
     }
     fn answer(&self, request_id: &str, answers: &serde_json::Map<String, Value>) {
-        self.1.lock().unwrap().push((request_id.to_string(), Value::Object(answers.clone())));
+        self.1.lock().push((request_id.to_string(), Value::Object(answers.clone())));
     }
 }
 
@@ -86,7 +87,7 @@ impl Rig {
     }
 
     fn decisions(&self) -> Vec<(String, bool)> {
-        self.host.0.lock().unwrap().clone()
+        self.host.0.lock().clone()
     }
 }
 
@@ -453,7 +454,7 @@ fn pairing_again_locks_the_old_phone_out() {
         let mut old = Client::paired(&rig).await;
 
         // What phone_link_new_pairing does.
-        *rig.shared.token.lock().unwrap() = "a-brand-new-token-0123456789".to_string();
+        *rig.shared.token.lock() = "a-brand-new-token-0123456789".to_string();
         rig.hub.kick_all("auth", "unpaired");
         let word = old.expect("error").await;
         assert_eq!(word["code"], "auth");
@@ -584,7 +585,6 @@ fn a_flood_from_several_addresses_still_leaves_room_for_the_known_phone() {
     });
 }
 
-
 // ── Chat from the phone: the rules, with a fake provider ──────────────────
 
 mod chat_tests {
@@ -629,20 +629,20 @@ mod chat_tests {
             })
         }
         fn script(&self, s: Script) {
-            *self.script.lock().unwrap() = s;
+            *self.script.lock() = s;
         }
         fn enable(&self, on: bool) {
-            self.config.lock().unwrap().enabled = on;
+            self.config.lock().enabled = on;
         }
     }
 
     impl ChatBackend for Fake {
         fn config(&self) -> ChatConfig {
-            self.config.lock().unwrap().clone()
+            self.config.lock().clone()
         }
         fn send(&self, model_id: &str, text: String, deltas: UnboundedSender<String>) -> BoxFuture<Result<String, ChatFail>> {
-            self.calls.lock().unwrap().push((model_id.to_string(), text));
-            let script = self.script.lock().unwrap().clone();
+            self.calls.lock().push((model_id.to_string(), text));
+            let script = self.script.lock().clone();
             let dropped = self.dropped.clone();
             self.dropped.store(false, Ordering::SeqCst);
             Box::pin(async move {
@@ -745,7 +745,7 @@ mod chat_tests {
                     break;
                 }
             }
-            assert!(fake.calls.lock().unwrap().is_empty());
+            assert!(fake.calls.lock().is_empty());
         });
     }
 
@@ -776,7 +776,7 @@ mod chat_tests {
                     break;
                 }
             }
-            assert!(fake.calls.lock().unwrap().is_empty());
+            assert!(fake.calls.lock().is_empty());
         });
     }
 
@@ -791,7 +791,7 @@ mod chat_tests {
             assert_eq!(text, "Hello world");
             assert_eq!(end["type"], "chatDone");
             assert!(end.get("text").is_none(), "no correction needed");
-            assert_eq!(*fake.calls.lock().unwrap(), vec![("openai/gpt-y".to_string(), "Say hello".to_string())]);
+            assert_eq!(*fake.calls.lock(), vec![("openai/gpt-y".to_string(), "Say hello".to_string())]);
         });
     }
 
@@ -871,7 +871,7 @@ mod chat_tests {
             }
             c.send(json!({ "type": "ping" })).await;
             c.expect("pong").await;
-            assert_eq!(fake.calls.lock().unwrap().len(), 1, "only the valid send reached the provider");
+            assert_eq!(fake.calls.lock().len(), 1, "only the valid send reached the provider");
         });
     }
 
@@ -885,7 +885,7 @@ mod chat_tests {
             c.send(send("a1", "openai/gpt-y", "slow")).await;
             // wait until the provider call has started
             for _ in 0..100 {
-                if !fake.calls.lock().unwrap().is_empty() {
+                if !fake.calls.lock().is_empty() {
                     break;
                 }
                 tokio::time::sleep(Duration::from_millis(10)).await;
@@ -928,7 +928,7 @@ mod chat_tests {
             }
             c.send(send("over", "openai/gpt-y", "hi")).await;
             assert_eq!(answer(&mut c, "over").await.1["reason"], "rate");
-            assert_eq!(fake.calls.lock().unwrap().len(), MAX_SENDS);
+            assert_eq!(fake.calls.lock().len(), MAX_SENDS);
         });
     }
 
@@ -940,7 +940,7 @@ mod chat_tests {
             let rig = rig(&fake).await;
             let (mut c, _) = phone(&rig, Some(json!(["chat"]))).await;
             c.send(send("a1", "openai/gpt-y", "slow")).await;
-            assert!(wait_for(|| !fake.calls.lock().unwrap().is_empty()).await);
+            assert!(wait_for(|| !fake.calls.lock().is_empty()).await);
             c.send(json!({ "type": "bye" })).await;
             assert!(c.closed().await);
             assert!(wait_for(|| fake.dropped.load(Ordering::SeqCst)).await, "no answer keeps running for a phone that left");
@@ -961,7 +961,7 @@ mod chat_tests {
             c.send(send("a1", "openai/gpt-y", "hi")).await;
             let (_, end) = answer(&mut c, "a1").await;
             assert_eq!(end["reason"], "off");
-            assert!(fake.calls.lock().unwrap().is_empty());
+            assert!(fake.calls.lock().is_empty());
             c.send(json!({ "type": "chatModels" })).await;
             assert_eq!(c.expect("chatModels").await["models"], json!([]));
         });
@@ -975,7 +975,7 @@ mod chat_tests {
             let mut rig = rig(&fake).await;
             let (mut c, _) = phone(&rig, Some(json!(["chat"]))).await;
             c.send(send("a1", "openai/gpt-y", "slow")).await;
-            assert!(wait_for(|| !fake.calls.lock().unwrap().is_empty()).await);
+            assert!(wait_for(|| !fake.calls.lock().is_empty()).await);
             rig.handle.take().unwrap().stop();
             assert!(wait_for(|| fake.dropped.load(Ordering::SeqCst)).await);
             assert_eq!(fake.resets.load(Ordering::SeqCst), 1);
@@ -990,7 +990,7 @@ mod chat_tests {
             let rig = rig(&fake).await;
             let (mut c, _) = phone(&rig, Some(json!(["chat"]))).await;
             c.send(send("a1", "openai/gpt-y", "slow")).await;
-            assert!(wait_for(|| !fake.calls.lock().unwrap().is_empty()).await);
+            assert!(wait_for(|| !fake.calls.lock().is_empty()).await);
             c.send(json!({ "type": "chatReset" })).await;
             assert_eq!(answer(&mut c, "a1").await.1["reason"], "canceled");
             assert_eq!(fake.resets.load(Ordering::SeqCst), 1);
@@ -1020,7 +1020,6 @@ mod chat_tests {
         false
     }
 }
-
 
 // ── Session details (cap `details`) end to end ───────────────────────────────────────────────
 
@@ -1140,7 +1139,6 @@ mod details_tests {
     }
 }
 
-
 // ── Answering questions (cap `answers`) end to end ───────────────────────────────────────────
 
 mod answers_tests {
@@ -1206,7 +1204,7 @@ mod answers_tests {
     }
 
     fn answers_of(rig: &Rig) -> Vec<(String, Value)> {
-        rig.host.1.lock().unwrap().clone()
+        rig.host.1.lock().clone()
     }
 
     #[test]
@@ -1464,7 +1462,7 @@ mod diffs_tests {
             assert_eq!(list["sessions"][0]["files"][0]["name"], "app.ts");
             c.send(json!({ "type": "getDiff", "pillId": "integration_claude", "fileId": 7 })).await;
             let conn = loop {
-                if let Some(first) = rig.host.2.lock().unwrap().first().cloned() {
+                if let Some(first) = rig.host.2.lock().first().cloned() {
                     break first;
                 }
                 tokio::time::sleep(std::time::Duration::from_millis(10)).await;
@@ -1508,7 +1506,7 @@ mod diffs_tests {
                     break;
                 }
             }
-            assert!(rig.host.2.lock().unwrap().is_empty());
+            assert!(rig.host.2.lock().is_empty());
         });
     }
 }
@@ -1576,7 +1574,7 @@ mod services_tests {
     use super::*;
     use crate::phone_link::hub::{ServiceIn, ServiceItemIn};
     use crate::phone_link::server::Features;
-    use std::sync::Mutex as StdMutex;
+    use parking_lot::Mutex as StdMutex;
 
     struct Ticks(StdMutex<Vec<String>>);
     impl Features for Ticks {
@@ -1584,7 +1582,7 @@ mod services_tests {
             false
         }
         fn services(&self) -> Vec<String> {
-            self.0.lock().unwrap().clone()
+            self.0.lock().clone()
         }
     }
 
@@ -1725,7 +1723,7 @@ fn the_whole_pairing_life_works_through_the_real_key_list() {
     let hub = Hub::new(Arc::new(Recorder::default()));
     let token = Mutex::new(t1.clone());
     super::renew_pairing(&hub, &token, &store).unwrap();
-    assert_ne!(*token.lock().unwrap(), t1);
+    assert_ne!(*token.lock(), t1);
     assert_ne!(relay::pairing(&store).unwrap().0, room1);
     // Clearing the access key goes through too.
     relay::set_access_key(&store, "").unwrap();

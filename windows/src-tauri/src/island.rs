@@ -6,9 +6,10 @@
 // window that never takes focus.
 
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::{Arc, Condvar, Mutex};
+use std::sync::Arc;
 use std::time::Duration;
 
+use parking_lot::{Condvar, Mutex};
 use serde::Serialize;
 use tauri::{AppHandle, Emitter, Manager, Monitor, PhysicalPosition, PhysicalSize, WebviewWindow};
 
@@ -99,7 +100,7 @@ impl PollGate {
     }
 
     pub fn set_rect(&self, rect: IslandRect) {
-        *self.rect.lock().unwrap() = rect;
+        *self.rect.lock() = rect;
     }
 
     /// Forces the next poll tick to re-apply the flag (after a window resize).
@@ -108,20 +109,20 @@ impl PollGate {
     }
 
     pub fn set_active(&self, on: bool) {
-        let mut guard = self.active.lock().unwrap();
+        let mut guard = self.active.lock();
         *guard = on;
         self.cv.notify_all();
     }
 
     pub(crate) fn wait_until_active(&self) {
-        let mut guard = self.active.lock().unwrap();
+        let mut guard = self.active.lock();
         while !*guard {
-            guard = self.cv.wait(guard).unwrap();
+            self.cv.wait(&mut guard);
         }
     }
 
     pub(crate) fn is_active(&self) -> bool {
-        *self.active.lock().unwrap()
+        *self.active.lock()
     }
 }
 
@@ -370,7 +371,6 @@ mod zoom_tests {
     }
 }
 
-
 pub fn screen_info(app: &AppHandle, pref: &str) -> ScreenInfo {
     match target_monitor(app, pref) {
         Some(m) => {
@@ -439,7 +439,7 @@ pub fn apply_geometry(app: &AppHandle, pref: &str, collapsed: bool) {
 fn current_screen_key(app: &AppHandle) -> Option<(i32, i32, u32, u32, u64)> {
     let pref = app
         .try_state::<crate::Shared>()
-        .map(|s| s.settings.lock().unwrap().screen.clone())
+        .map(|s| s.settings.lock().screen.clone())
         .unwrap_or_else(|| "primary".into());
     let m = target_monitor(app, &pref)?;
     let p = m.position();
@@ -501,7 +501,7 @@ pub fn spawn_cursor_poll(app: AppHandle, gate: Arc<PollGate>) {
                 // Click-through: the window only takes the mouse over the island
                 // shape. A small entry margin means the flag is already off by the
                 // time a moving cursor reaches a button.
-                let r = *gate.rect.lock().unwrap();
+                let r = *gate.rect.lock();
                 let on_island = r.w > 0.0
                     && x >= r.x - HIT_MARGIN
                     && x <= r.x + r.w + HIT_MARGIN
@@ -560,7 +560,7 @@ pub fn refresh_click_through(app: &AppHandle, gate: &PollGate) {
         // meant for whatever sits under the top of the screen.
         Some((0.0, 0.0, STRIP_W, STRIP_H))
     } else {
-        let r = *gate.rect.lock().unwrap();
+        let r = *gate.rect.lock();
         if r.w <= 0.0 {
             // Nothing drawn yet: nothing takes the mouse.
             Some((0.0, 0.0, 0.0, 0.0))

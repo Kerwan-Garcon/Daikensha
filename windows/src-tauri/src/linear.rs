@@ -6,8 +6,7 @@
 // GraphQL API and the same key as the Mac. Every change to Linear follows a
 // click; the text the user typed only ever travels in GraphQL variables.
 
-use std::sync::Mutex;
-
+use parking_lot::Mutex;
 use serde::Serialize;
 use serde_json::{json, Value};
 use tauri::{AppHandle, Manager};
@@ -173,7 +172,7 @@ pub async fn poll(app: AppHandle) {
             let teams = parse_teams(&data);
             let card = card_data(&data, &teams);
             {
-                let mut cache = CACHE.lock().unwrap();
+                let mut cache = CACHE.lock();
                 cache.viewer = data
                     .get("viewer")
                     .and_then(|v| v.get("id"))
@@ -191,7 +190,7 @@ pub async fn poll(app: AppHandle) {
 
 /// Teams the key can see, for Settings → Integrations → Linear.
 pub async fn teams() -> Vec<Team> {
-    let cached = CACHE.lock().unwrap().teams.clone();
+    let cached = CACHE.lock().teams.clone();
     if !cached.is_empty() {
         return cached;
     }
@@ -236,10 +235,10 @@ pub async fn create(app: AppHandle, title: String) -> Result<(), String> {
     let key = secrets::get(KEY).ok_or_else(|| crate::i18n::t("Key not configured"))?;
     let picked = app
         .try_state::<crate::Shared>()
-        .map(|shared| shared.settings.lock().unwrap().linear_team.clone())
+        .map(|shared| shared.settings.lock().linear_team.clone())
         .unwrap_or_default();
     let (team, viewer) = {
-        let cache = CACHE.lock().unwrap();
+        let cache = CACHE.lock();
         (chosen_team(&cache.teams, &picked), cache.viewer.clone())
     };
     let team = team.ok_or_else(|| crate::i18n::t("This key can't see any Linear team"))?;
@@ -262,7 +261,7 @@ pub async fn create(app: AppHandle, title: String) -> Result<(), String> {
 
 /// A new key: forget what the old one saw.
 pub fn key_changed() {
-    let mut cache = CACHE.lock().unwrap();
+    let mut cache = CACHE.lock();
     cache.viewer = None;
     cache.teams.clear();
 }

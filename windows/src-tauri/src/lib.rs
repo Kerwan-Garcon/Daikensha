@@ -44,8 +44,9 @@ mod webview_drop;
 
 use std::process::Command;
 use std::sync::atomic::Ordering;
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 
+use parking_lot::Mutex;
 use serde::Serialize;
 use tauri::{AppHandle, Emitter, Manager, State, WebviewUrl, WebviewWindowBuilder};
 use tauri_plugin_autostart::{ManagerExt, MacosLauncher};
@@ -76,7 +77,7 @@ pub struct BootInfo {
 
 #[tauri::command]
 fn boot(app: AppHandle, shared: State<Shared>) -> BootInfo {
-    let mut settings = shared.settings.lock().unwrap().clone();
+    let mut settings = shared.settings.lock().clone();
     // The real state of ~/.claude/settings.json wins over whatever we stored.
     let hooks_status = hooks::status();
     settings.hooks_installed = hooks_status.installed;
@@ -94,7 +95,7 @@ fn boot(app: AppHandle, shared: State<Shared>) -> BootInfo {
 #[tauri::command]
 fn save_settings(app: AppHandle, shared: State<Shared>, settings: Settings) {
     let (screen_changed, autostart_changed, shortcuts_changed, top_bar_changed, account_changed) = {
-        let mut current = shared.settings.lock().unwrap();
+        let mut current = shared.settings.lock();
         let top_bar_changed = shell::appbar::wanted(&current) != shell::appbar::wanted(&settings);
         let screen_changed = current.screen != settings.screen;
         let autostart_changed = current.autostart != settings.autostart;
@@ -118,7 +119,7 @@ fn save_settings(app: AppHandle, shared: State<Shared>, settings: Settings) {
         *current = settings;
         (screen_changed, autostart_changed, shortcuts_changed, top_bar_changed, account_changed)
     };
-    let settings = shared.settings.lock().unwrap().clone();
+    let settings = shared.settings.lock().clone();
     if let Err(err) = settings::save(&settings) {
         log::line(format!("could not save settings: {err}"));
     }
@@ -175,7 +176,7 @@ fn language_changed(app: &AppHandle) {
 /// cursor poll; anything else → full panel and 60 Hz polling.
 #[tauri::command]
 fn set_collapsed(app: AppHandle, shared: State<Shared>, collapsed: bool) {
-    let pref = shared.settings.lock().unwrap().screen.clone();
+    let pref = shared.settings.lock().screen.clone();
     shared.gate.collapsed.store(collapsed, Ordering::Relaxed);
     island::apply_geometry(&app, &pref, collapsed);
     // The wake strip must always take the mouse, and a resize invalidates the flag.
@@ -188,9 +189,9 @@ fn set_collapsed(app: AppHandle, shared: State<Shared>, collapsed: bool) {
 /// back to the usual panel after (shell/).
 #[tauri::command]
 fn set_shell_open(app: AppHandle, shared: State<Shared>, open: bool) {
-    let open = open && shared.settings.lock().unwrap().shell_panel;
+    let open = open && shared.settings.lock().shell_panel;
     island::set_shell_open(open);
-    let pref = shared.settings.lock().unwrap().screen.clone();
+    let pref = shared.settings.lock().screen.clone();
     let collapsed = shared.gate.collapsed.load(Ordering::Relaxed);
     island::apply_geometry(&app, &pref, collapsed);
     island::refresh_click_through(&app, &shared.gate);
@@ -217,7 +218,7 @@ fn focus_window(app: AppHandle, focused: bool) {
 
 #[tauri::command]
 fn reposition(app: AppHandle, shared: State<Shared>) {
-    let pref = shared.settings.lock().unwrap().screen.clone();
+    let pref = shared.settings.lock().screen.clone();
     let collapsed = shared.gate.collapsed.load(Ordering::Relaxed);
     island::apply_geometry(&app, &pref, collapsed);
 }
@@ -229,8 +230,8 @@ fn reposition(app: AppHandle, shared: State<Shared>) {
 fn fit_zoom(app: AppHandle, dpr: f64) -> bool {
     let Some(win) = island::window(&app) else { return false };
     let scale = win.scale_factor().unwrap_or(1.0);
-    static ZOOM: std::sync::Mutex<f64> = std::sync::Mutex::new(1.0);
-    let mut zoom = ZOOM.lock().unwrap();
+    static ZOOM: parking_lot::Mutex<f64> = parking_lot::Mutex::new(1.0);
+    let mut zoom = ZOOM.lock();
     if let Some(new_zoom) = island::calculate_zoom_correction(*zoom, scale, dpr) {
         *zoom = new_zoom;
         log::line(format!("webview dpr {dpr} != window scale {scale} — setting zoom {new_zoom:.3}"));
@@ -240,7 +241,6 @@ fn fit_zoom(app: AppHandle, dpr: f64) -> bool {
         false
     }
 }
-
 
 /// The displays the island can be pinned to, for Settings.
 #[tauri::command]
@@ -396,7 +396,7 @@ fn hooks_apply(
     // settings.json that changed in between is refused rather than overwritten.
     let backup = hooks::write(install, &fingerprint)?;
     let updated = {
-        let mut current = shared.settings.lock().unwrap();
+        let mut current = shared.settings.lock();
         current.hooks_installed = install;
         if let Err(err) = settings::save(&current) {
             log::line(format!("could not save settings: {err}"));
@@ -449,7 +449,7 @@ fn status_line_apply(
 ) -> Result<String, String> {
     let backup = hooks::status_line_write(install, &fingerprint)?;
     let updated = {
-        let mut current = shared.settings.lock().unwrap();
+        let mut current = shared.settings.lock();
         current.plan_relay_installed = install;
         // As on the Mac: taking the relay out turns the pill off with it.
         if !install {
@@ -517,7 +517,7 @@ async fn chat_send(
     query: String,
     context: Option<ChatContext>,
 ) -> Result<ChatReply, String> {
-    let settings = shared.settings.lock().unwrap().clone();
+    let settings = shared.settings.lock().clone();
     chat::send(&app, &chat, &settings, query, context).await
 }
 
@@ -525,7 +525,7 @@ async fn chat_send(
 /// once the user picked that provider, and only with its key or address.
 #[tauri::command]
 async fn chat_models(shared: State<'_, Shared>, provider: String) -> Result<Vec<ModelInfo>, String> {
-    let settings = shared.settings.lock().unwrap().clone();
+    let settings = shared.settings.lock().clone();
     chat::models(&settings, &provider).await
 }
 
@@ -667,7 +667,7 @@ fn shortcuts_suspend(app: AppHandle, shared: State<Shared>, suspended: bool) {
     if suspended {
         shortcuts::suspend(&app);
     } else {
-        let stored = shell::appbar::bindings(&shared.settings.lock().unwrap());
+        let stored = shell::appbar::bindings(&shared.settings.lock());
         shortcuts::apply(&app, &stored);
     }
 }
@@ -1051,7 +1051,7 @@ pub fn run() {
                 // writing it again adds it, so the window stays hidden at login.
                 let _ = handle.autolaunch().enable();
             }
-            let open_window = flow::get(&handle).map(|f| f.store.lock().unwrap().prefs.open_at_launch).unwrap_or(true);
+            let open_window = flow::get(&handle).map(|f| f.store.lock().prefs.open_at_launch).unwrap_or(true);
             if open_window && !launched_at_login() {
                 show_hub(&handle, None);
             }

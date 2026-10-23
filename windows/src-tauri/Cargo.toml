@@ -19,6 +19,9 @@ tauri-plugin-single-instance = "2"
 tauri-plugin-autostart = "2"
 tauri-plugin-global-shortcut = "2"
 serde = { version = "1", features = ["derive"] }
+# Locks that never poison: a panicking thread can't turn every later `lock()` into
+# an error to unwrap. Already in the tree through tauri, so nothing new is compiled.
+parking_lot = "0.12"
 serde_json = { version = "1", features = ["preserve_order"] }
 # "process": the Claude subscription mode runs the user's own `claude` CLI as a
 # child process (claude_cli.rs). A feature of tokio, already here; no new crate.

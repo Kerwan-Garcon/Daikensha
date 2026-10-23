@@ -176,16 +176,16 @@ pub fn computer_name() -> String {
 pub mod tests {
     use super::*;
     use std::collections::HashMap;
-    use std::sync::Mutex;
+    use parking_lot::Mutex;
 
     #[derive(Default)]
     pub struct MemStore(pub Mutex<HashMap<String, String>>);
     impl SecretStore for MemStore {
         fn get(&self, key: &str) -> Option<String> {
-            self.0.lock().unwrap().get(key).cloned()
+            self.0.lock().get(key).cloned()
         }
         fn set(&self, key: &str, value: &str) -> Result<(), String> {
-            self.0.lock().unwrap().insert(key.into(), value.into());
+            self.0.lock().insert(key.into(), value.into());
             Ok(())
         }
     }
@@ -242,7 +242,7 @@ pub mod tests {
         let store = MemStore::default();
         let id = load_or_create_identity(&store).unwrap();
         let t = token(&store).unwrap();
-        let kept = store.0.lock().unwrap();
+        let kept = store.0.lock();
         assert_eq!(kept.get(PRIVATE_KEY).unwrap(), &hex(&id.key_der));
         assert_eq!(kept.get(TOKEN_KEY).unwrap(), &t);
     }

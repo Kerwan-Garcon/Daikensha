@@ -625,7 +625,7 @@ fn excerpt(text: &str, max: usize) -> String {
 const GUARD_PROBE: &str = r#"{"hook_event_name":"PreToolUse","tool_name":"Bash","tool_input":{"command":"whoami"}}"#;
 
 /// The relay file (modified time, size) that last passed the probe.
-static RELAY_CHECKED: std::sync::Mutex<Option<(std::time::SystemTime, u64)>> = std::sync::Mutex::new(None);
+static RELAY_CHECKED: parking_lot::Mutex<Option<(std::time::SystemTime, u64)>> = parking_lot::Mutex::new(None);
 
 /// Claude Code lets a tool run when its hook is missing, times out, or is an
 /// older relay that does not know `--tool-guard` (it would forward the event
@@ -636,11 +636,11 @@ pub(crate) async fn relay_ready() -> Result<(), Failure> {
     let path = settings::hook_exe_path();
     let meta = std::fs::metadata(&path).map_err(|_| Failure::Other(t("Coucou's relay is missing. Reinstall Coucou.")))?;
     let stamp = (meta.modified().unwrap_or(std::time::UNIX_EPOCH), meta.len());
-    if *RELAY_CHECKED.lock().unwrap_or_else(|e| e.into_inner()) == Some(stamp) {
+    if *RELAY_CHECKED.lock() == Some(stamp) {
         return Ok(());
     }
     if probe_relay(&path).await {
-        *RELAY_CHECKED.lock().unwrap_or_else(|e| e.into_inner()) = Some(stamp);
+        *RELAY_CHECKED.lock() = Some(stamp);
         Ok(())
     } else {
         crate::log::line("subscription: the installed relay does not deny tools; not starting Claude Code");

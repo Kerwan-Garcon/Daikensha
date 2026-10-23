@@ -246,12 +246,12 @@ pub fn search_url(site: &str, query: &str, lang: &str) -> Option<String> {
 }
 
 fn panel_on(app: &AppHandle) -> bool {
-    app.try_state::<crate::Shared>().is_some_and(|s| s.settings.lock().unwrap().shell_panel)
+    app.try_state::<crate::Shared>().is_some_and(|s| s.settings.lock().shell_panel)
 }
 
 fn clipboard_voice_on(app: &AppHandle) -> bool {
     app.try_state::<crate::Shared>().is_some_and(|s| {
-        let s = s.settings.lock().unwrap();
+        let s = s.settings.lock();
         s.shell_panel && s.shell_clipboard && s.shell_clipboard_voice
     })
 }

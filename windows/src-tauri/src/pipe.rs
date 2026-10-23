@@ -22,9 +22,9 @@
 
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicU64, Ordering};
-use std::sync::Mutex;
 use std::time::Duration;
 
+use parking_lot::Mutex;
 use serde_json::{json, Value};
 use tauri::{AppHandle, Emitter, Manager};
 use tokio::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt};
@@ -230,7 +230,7 @@ async fn handle(app: AppHandle, mut pipe: impl Relay) {
     let (tx, mut rx) = mpsc::channel::<Reply>(4);
     {
         let pending = app.state::<Pending>();
-        pending.0.lock().unwrap().insert(id.clone(), tx);
+        pending.0.lock().insert(id.clone(), tx);
     }
     crate::recap::note_request(&app, &id, &payload);
     payload["request_id"] = json!(id);
@@ -238,7 +238,7 @@ async fn handle(app: AppHandle, mut pipe: impl Relay) {
     let _ = app.emit_to(WINDOW_LABEL, "hook", payload);
 
     let decision = wait_for_decision(&id, &mut rx).await;
-    app.state::<Pending>().0.lock().unwrap().remove(&id);
+    app.state::<Pending>().0.lock().remove(&id);
 
     // No decision: say nothing at all. coucou-hook then writes nothing to stdout
     // and Claude Code asks in the terminal, exactly as if Coucou were closed.
@@ -317,7 +317,7 @@ fn loggable(decision: &str) -> &str {
 fn send(app: &AppHandle, request_id: &str, reply: Reply, keep: bool) {
     let sender = {
         let pending = app.state::<Pending>();
-        let mut map = pending.0.lock().unwrap();
+        let mut map = pending.0.lock();
         if keep { map.get(request_id).cloned() } else { map.remove(request_id) }
     };
     match sender {

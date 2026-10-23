@@ -4,8 +4,9 @@
 // WM_CLIPBOARDUPDATE; the rest runs only when the panel asks.
 
 use std::path::Path;
-use std::sync::{Mutex, OnceLock};
+use std::sync::OnceLock;
 
+use parking_lot::Mutex;
 use windows::core::{w, HSTRING, PCWSTR};
 use windows::Win32::Foundation::{CloseHandle, HANDLE, HGLOBAL, HWND, LPARAM, LRESULT, WPARAM};
 use windows::Win32::System::DataExchange::{
@@ -37,7 +38,7 @@ static NOTIFY: OnceLock<Box<dyn Fn() + Send + Sync>> = OnceLock::new();
 /// Starts or stops the listener. `notify` runs after each kept copy.
 pub fn clipboard_listen(on: bool, notify: impl Fn() + Send + Sync + 'static) {
     let _ = NOTIFY.set(Box::new(notify));
-    let mut current = LISTENER.lock().unwrap_or_else(|e| e.into_inner());
+    let mut current = LISTENER.lock();
     match (on, *current) {
         (true, None) => {
             let (tx, rx) = std::sync::mpsc::channel();

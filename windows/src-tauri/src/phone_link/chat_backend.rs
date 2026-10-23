@@ -32,7 +32,7 @@ impl AppChat {
     }
 
     fn settings(&self) -> Settings {
-        self.app.state::<Shared>().settings.lock().unwrap().clone()
+        self.app.state::<Shared>().settings.lock().clone()
     }
 }
 

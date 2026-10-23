@@ -113,7 +113,7 @@ that it is done, and a spoken yes is not a click.\n"
 }
 
 fn shell_on(app: &AppHandle) -> bool {
-    app.try_state::<crate::Shared>().is_some_and(|s| s.settings.lock().unwrap().shell_panel)
+    app.try_state::<crate::Shared>().is_some_and(|s| s.settings.lock().shell_panel)
 }
 
 fn system_prompt(pills: &str, shell: bool) -> String {
@@ -193,7 +193,7 @@ impl Brain {
         let tools: Vec<Value> = tools().into_iter().filter(|t| shell || t["name"].as_str().and_then(crate::shell::voice_tools::level).is_none()).collect();
         let chat_model = app
             .try_state::<crate::Shared>()
-            .map(|s| s.settings.lock().unwrap().model.clone())
+            .map(|s| s.settings.lock().model.clone())
             .unwrap_or_default();
         let mut acted = false;
         let mut spoken = String::new();

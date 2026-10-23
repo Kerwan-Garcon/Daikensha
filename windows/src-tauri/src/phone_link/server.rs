@@ -18,9 +18,10 @@
 
 use std::net::IpAddr;
 use std::sync::atomic::Ordering;
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 use std::time::Duration;
 
+use parking_lot::Mutex;
 use serde_json::json;
 use tokio::io::{AsyncBufReadExt, AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt, BufReader};
 use tokio::net::{TcpListener, TcpStream};
@@ -258,7 +259,7 @@ where
         return;
     }
     let sent_token = hello["token"].as_str().unwrap_or("").to_string();
-    let expected = shared.token.lock().unwrap().clone();
+    let expected = shared.token.lock().clone();
     let good = hello["v"].as_u64() == Some(PROTOCOL) && constant_eq(sent_token.as_bytes(), expected.as_bytes());
     if !good {
         tokio::time::sleep(AUTH_PENALTY).await;

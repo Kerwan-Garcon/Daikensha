@@ -18,9 +18,9 @@
 use std::collections::{HashMap, HashSet};
 use std::io::{ErrorKind, Write};
 use std::path::{Path, PathBuf};
-use std::sync::{Mutex, MutexGuard, PoisonError};
 use std::time::{SystemTime, UNIX_EPOCH};
 
+use parking_lot::{Mutex, MutexGuard};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use tauri::{AppHandle, Emitter, Manager, State};
@@ -676,7 +676,7 @@ pub struct Store(Mutex<Recap>);
 
 impl Store {
     fn lock(&self) -> MutexGuard<'_, Recap> {
-        self.0.lock().unwrap_or_else(PoisonError::into_inner)
+        self.0.lock()
     }
 }
 

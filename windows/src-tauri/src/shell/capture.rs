@@ -13,8 +13,7 @@
 // The encoder serves the Windows capture; elsewhere only the tests use it.
 #![cfg_attr(not(windows), allow(dead_code))]
 
-use std::sync::Mutex;
-
+use parking_lot::Mutex;
 use tauri::{AppHandle, Emitter, Manager};
 
 pub const LABEL: &str = "circle";
@@ -25,11 +24,11 @@ const MIN_SIDE: f64 = 8.0;
 static CAPTURE: Mutex<Option<Vec<u8>>> = Mutex::new(None);
 
 pub fn peek() -> Option<Vec<u8>> {
-    CAPTURE.lock().unwrap_or_else(|e| e.into_inner()).clone()
+    CAPTURE.lock().clone()
 }
 
 pub fn discard() {
-    *CAPTURE.lock().unwrap_or_else(|e| e.into_inner()) = None;
+    *CAPTURE.lock() = None;
 }
 
 // ── A PNG, without a crate ────────────────────────────────────────────────────
@@ -138,7 +137,7 @@ fn page_url(app: &AppHandle) -> tauri::WebviewUrl {
 }
 
 fn panel_on(app: &AppHandle) -> bool {
-    app.try_state::<crate::Shared>().is_some_and(|s| s.settings.lock().unwrap().shell_panel)
+    app.try_state::<crate::Shared>().is_some_and(|s| s.settings.lock().shell_panel)
 }
 
 /// Lays the overlay over the screen under the cursor. Nothing while the panel is off.
@@ -213,7 +212,7 @@ pub async fn circle_capture(app: AppHandle, x: f64, y: f64, width: f64, height: 
     // Let the compositor repaint the screen without the overlay first.
     tokio::time::sleep(std::time::Duration::from_millis(150)).await;
     let png = tauri::async_runtime::spawn_blocking(move || grab(rect)).await.map_err(|e| e.to_string())??;
-    *CAPTURE.lock().unwrap_or_else(|e| e.into_inner()) = Some(png);
+    *CAPTURE.lock() = Some(png);
     let _ = app.emit_to(crate::island::WINDOW_LABEL, "circle-captured", ());
     Ok(())
 }

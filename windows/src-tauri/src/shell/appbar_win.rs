@@ -1,8 +1,7 @@
 // The Windows calls of the « top bar » mode (appbar.rs): the taskbar's
 // auto-hide switch and the reserved band, through SHAppBarMessage only.
 
-use std::sync::Mutex;
-
+use parking_lot::Mutex;
 use windows::core::w;
 use windows::Win32::Foundation::{HWND, LPARAM, LRESULT, RECT, WPARAM};
 use windows::Win32::Graphics::Gdi::{GetMonitorInfoW, MonitorFromPoint, MONITORINFO, MONITOR_DEFAULTTOPRIMARY};
@@ -56,7 +55,7 @@ static BAND: Mutex<Option<isize>> = Mutex::new(None);
 /// Registers (or removes) the top band as an AppBar, from a hidden tool
 /// window of its own that sleeps in GetMessage.
 pub fn reserve(on: bool) {
-    let mut band = BAND.lock().unwrap_or_else(|e| e.into_inner());
+    let mut band = BAND.lock();
     match (on, *band) {
         (true, None) => {
             let (tx, rx) = std::sync::mpsc::channel();

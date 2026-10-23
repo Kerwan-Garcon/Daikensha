@@ -10,9 +10,10 @@
 // most 15 minutes at a time, so a changed clock or a sleeping computer is
 // caught up with), and not at all while there is no routine.
 
-use std::sync::{Condvar, Mutex, OnceLock};
+use std::sync::OnceLock;
 use std::time::Duration;
 
+use parking_lot::{Condvar, Mutex};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use tauri::{AppHandle, Emitter};
@@ -212,7 +213,7 @@ fn loaded(slot: &mut Option<Vec<Routine>>) -> &mut Vec<Routine> {
 }
 
 fn with_list<R>(f: impl FnOnce(&mut Vec<Routine>) -> R) -> R {
-    let mut guard = LIST.lock().unwrap_or_else(|e| e.into_inner());
+    let mut guard = LIST.lock();
     f(loaded(&mut guard))
 }
 
@@ -290,15 +291,15 @@ pub fn start(app: &AppHandle) {
             continue;
         }
         // Looked at under the lock the wait releases, so an add in between is never missed.
-        let mut guard = LIST.lock().unwrap_or_else(|e| e.into_inner());
+        let mut guard = LIST.lock();
         let next = loaded(&mut guard).iter().filter_map(|r| next_due(&r.when, now + 1)).min();
         match next {
             // Nothing scheduled: sleep until a routine is added.
-            None => drop(WAKE.wait(guard)),
+            None => WAKE.wait(&mut guard),
             Some(at) => {
                 let second = crate::platform::local_time().second as i64;
                 let secs = ((at - now) * 60 - second).clamp(1, 15 * 60) as u64;
-                drop(WAKE.wait_timeout(guard, Duration::from_secs(secs)));
+                WAKE.wait_for(&mut guard, Duration::from_secs(secs));
             }
         }
     });
@@ -306,7 +307,7 @@ pub fn start(app: &AppHandle) {
 
 fn panel_on(app: &AppHandle) -> bool {
     use tauri::Manager;
-    app.try_state::<crate::Shared>().is_some_and(|s| s.settings.lock().unwrap().shell_panel)
+    app.try_state::<crate::Shared>().is_some_and(|s| s.settings.lock().shell_panel)
 }
 
 /// Runs what is due now; true if anything ran.

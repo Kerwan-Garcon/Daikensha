@@ -8,8 +8,7 @@
 // The history serves the Windows listener; elsewhere only the tests use it.
 #![cfg_attr(not(windows), allow(dead_code))]
 
-use std::sync::Mutex;
-
+use parking_lot::Mutex;
 use serde::Serialize;
 
 pub const MAX_ENTRIES: usize = 25;
@@ -93,8 +92,8 @@ impl History {
 
 static HISTORY: Mutex<History> = Mutex::new(History { entries: Vec::new(), next: 0 });
 
-pub fn history() -> std::sync::MutexGuard<'static, History> {
-    HISTORY.lock().unwrap_or_else(|e| e.into_inner())
+pub fn history() -> parking_lot::MutexGuard<'static, History> {
+    HISTORY.lock()
 }
 
 pub fn now_ms() -> u64 {

@@ -34,11 +34,11 @@ pub fn inbox_dir() -> PathBuf {
 const DROP_VALID_FOR: Duration = Duration::from_secs(120);
 const DROP_MAX_PENDING: usize = 64;
 
-static DROPPED: std::sync::Mutex<Vec<(String, std::time::Instant)>> = std::sync::Mutex::new(Vec::new());
+static DROPPED: parking_lot::Mutex<Vec<(String, std::time::Instant)>> = parking_lot::Mutex::new(Vec::new());
 
 /// Records paths that came from a real drop.
 pub fn allow_dropped<I: IntoIterator<Item = String>>(paths: I) {
-    let mut list = DROPPED.lock().unwrap_or_else(|e| e.into_inner());
+    let mut list = DROPPED.lock();
     let now = std::time::Instant::now();
     list.retain(|(_, at)| now.duration_since(*at) < DROP_VALID_FOR);
     for p in paths {
@@ -50,7 +50,7 @@ pub fn allow_dropped<I: IntoIterator<Item = String>>(paths: I) {
 
 /// True (once) when `path` was delivered by a drop in the last couple of minutes.
 pub(crate) fn take_dropped(path: &str) -> bool {
-    let mut list = DROPPED.lock().unwrap_or_else(|e| e.into_inner());
+    let mut list = DROPPED.lock();
     let now = std::time::Instant::now();
     list.retain(|(_, at)| now.duration_since(*at) < DROP_VALID_FOR);
     match list.iter().position(|(p, _)| p == path) {
@@ -193,7 +193,7 @@ mod drop_tests {
         assert!(!take_dropped(&p), "good once");
 
         allow_dropped((0..200).map(|i| format!("/tmp/bounded-{i}")));
-        assert!(DROPPED.lock().unwrap().len() <= DROP_MAX_PENDING);
+        assert!(DROPPED.lock().len() <= DROP_MAX_PENDING);
         assert!(take_dropped("/tmp/bounded-199"));
         assert!(!take_dropped("/tmp/bounded-0"));
     }

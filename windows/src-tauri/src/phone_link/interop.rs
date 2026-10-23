@@ -43,7 +43,7 @@ struct Switches {
     details: AtomicBool,
     diffs: AtomicBool,
     usage: AtomicBool,
-    services: std::sync::Mutex<Vec<String>>,
+    services: parking_lot::Mutex<Vec<String>>,
 }
 impl Features for Switches {
     fn details(&self) -> bool {
@@ -56,7 +56,7 @@ impl Features for Switches {
         self.usage.load(Ordering::SeqCst)
     }
     fn services(&self) -> Vec<String> {
-        self.services.lock().unwrap().clone()
+        self.services.lock().clone()
     }
 }
 
@@ -119,7 +119,7 @@ fn interop_server() {
         let token = std::env::var("COUCOU_INTEROP_TOKEN").unwrap_or_else(|_| "interop-token-0123456789abcdef".into());
         let hub = Hub::new(Arc::new(Printing));
         let fake = Arc::new(FakeChat { on: AtomicBool::new(false) });
-        let switches = Arc::new(Switches { details: AtomicBool::new(false), diffs: AtomicBool::new(false), usage: AtomicBool::new(false), services: std::sync::Mutex::new(Vec::new()) });
+        let switches = Arc::new(Switches { details: AtomicBool::new(false), diffs: AtomicBool::new(false), usage: AtomicBool::new(false), services: parking_lot::Mutex::new(Vec::new()) });
         let shared = server::Shared::with_features(
             hub.clone(), token.clone(), "Rust desktop".into(), Some(ChatLink::new(fake.clone())), switches.clone(),
         );
@@ -168,13 +168,13 @@ fn interop_server() {
                 ),
                 (Some("clear"), _, _) => hub.publish(vec![], None, server::now_ms()),
                 (Some("repair"), Some(new_token), _) => {
-                    *shared.token.lock().unwrap() = new_token.to_string();
+                    *shared.token.lock() = new_token.to_string();
                     hub.kick_all("auth", "unpaired");
                 }
                 (Some("chat"), Some(state), _) => fake.on.store(state == "on", Ordering::SeqCst),
                 // `services stripe,notion` ticks those (empty: none); `servicecards` publishes a Stripe and a Notion card.
                 (Some("services"), ticks, _) => {
-                    *switches.services.lock().unwrap() = ticks.unwrap_or("").split(',').filter(|s| !s.is_empty()).map(|s| format!("integration_{s}")).collect();
+                    *switches.services.lock() = ticks.unwrap_or("").split(',').filter(|s| !s.is_empty()).map(|s| format!("integration_{s}")).collect();
                 }
                 (Some("servicecards"), _, _) => hub.publish_services(vec![
                     ServiceIn { id: "integration_stripe".into(), title: "Stripe".into(), headline: "12.50 EUR".into(), reason: Some("Payments".into()), items: vec![ServiceItemIn { label: "Payment".into(), detail: "+9.00 · 2m".into() }] },
