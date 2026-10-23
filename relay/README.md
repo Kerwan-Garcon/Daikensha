@@ -43,3 +43,17 @@ message. It stores nothing and logs nothing.
 
 200 when Apple accepted the push, 410 when the token is no longer valid,
 400 when the request is malformed.
+
+## Code
+
+| File | Role |
+| --- | --- |
+| `src/request.ts` | Untrusted JSON → `LiveActivityRequest`. The body is read with a 4 KiB cap enforced while streaming (a chunked request has no Content-Length to check). |
+| `src/payload.ts` | `LiveActivityRequest` → APNs payload. Pure: the clock is a parameter. |
+| `src/apns.ts` | The ES256 provider token, reused for 50 minutes per isolate. |
+| `src/index.ts` | Routing. `createHandler` takes `fetch` and the clock, so the tests run without network. |
+
+```
+npm test          # vitest: validation, payload, signing (verified with WebCrypto), size limits
+npm run typecheck
+```

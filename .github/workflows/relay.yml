@@ -1,0 +1,36 @@
+name: Live Activity relay
+
+# Type-checks, tests and bundles the iPhone Live Activity relay (relay/) on every
+# change to it. Nothing is deployed: the relay is deployed by hand (relay/README.md).
+
+on:
+  pull_request:
+    paths:
+      - 'relay/**'
+      - '.github/workflows/relay.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'relay/**'
+      - '.github/workflows/relay.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  relay:
+    runs-on: ubuntu-24.04
+    defaults: { run: { working-directory: relay } }
+    steps:
+      - uses: actions/checkout@v7
+        with: { persist-credentials: false }
+      - uses: actions/setup-node@v7
+        with: { node-version: 24, cache: npm, cache-dependency-path: relay/package-lock.json }
+      - run: npm ci
+      - name: Types
+        run: npm run typecheck
+      - name: Validation, payload and APNs signing
+        run: npm test
+      - name: A deploy builds (nothing is uploaded)
+        env: { WRANGLER_SEND_METRICS: "false" }
+        run: npx wrangler deploy --dry-run --outdir "$RUNNER_TEMP/relay-build"
