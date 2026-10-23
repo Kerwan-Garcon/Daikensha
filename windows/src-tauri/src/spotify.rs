@@ -659,7 +659,7 @@ mod linux {
     }
 
     pub fn playing() -> bool {
-        let s = SHARED.lock().unwrap();
+        let s = SHARED.lock();
         s.active && s.state.playing
     }
 
@@ -1491,7 +1491,7 @@ mod win {
     // ── Start / stop ──────────────────────────────────────────────────────────
 
     pub fn playing() -> bool {
-        let s = SHARED.lock().unwrap();
+        let s = SHARED.lock();
         s.active && s.state.playing
     }
 
