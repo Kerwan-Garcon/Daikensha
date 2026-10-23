@@ -99,6 +99,7 @@ jobs:
       - name: Test
         run: |
           cargo build --release -p coucou-hook
+          cargo clippy --workspace --all-targets --locked -- -D warnings
           cargo test --workspace
 
       # linuxdeploy is itself an AppImage; runners have no FUSE, so it unpacks

@@ -13,10 +13,12 @@ import {
 import { Sound } from "../core/sound";
 import { State } from "../core/state";
 import { SPOTIFY_ID, islandDances } from "../core/spotify";
+import { YOUTUBE_MUSIC_ID } from "../core/youtube-music";
 import { BotEngine, hexToRGB } from "../mochi/engine";
 import { Greeting } from "../mochi/greeting";
 import { createMiniBot, pruneMiniBots, syncMiniBotStates, tickMiniBots } from "../mochi/minibots";
 import { SeasonCache, parseOutfit } from "../mochi/wardrobe";
+import { nextLook, parseLook } from "../mochi/look";
 import { UploadCanvas } from "../upload/canvas";
 import { USC, UploadSeq } from "../upload/sequence";
 import { closePlanCard, openPlanColor, planCardOpen } from "../views/usage";
@@ -25,6 +27,8 @@ import { h } from "../views/dom";
 import type { ShellHost } from "../views/shell";
 import { clockText } from "../core/shell";
 import { language, t } from "../i18n/i18n";
+import { LOOK_BUBBLE, lookPrompt, type Looked } from "../core/look";
+import { askInChat } from "../views/chat";
 
 const IS_WINDOWS = typeof navigator !== "undefined" && navigator.userAgent.includes("Windows");
 import { IslandStateMachine } from "./fsm";
@@ -33,12 +37,20 @@ import { DesktopLink } from "./desktop";
 import type { ViewCommand } from "./shortcuts";
 import { DRAG_THRESHOLD } from "../mochi/desktop-logic";
 
+// The music pills Mochi dances on when in front, without a new array each frame.
+const SPOTIFY_PILL = [SPOTIFY_ID];
+const YOUTUBE_MUSIC_PILL = [YOUTUBE_MUSIC_ID];
+const BOTH_MUSIC_PILLS = [SPOTIFY_ID, YOUTUBE_MUSIC_ID];
+
 const BOT_OVERHANG = 40;
 const CLAUDE_DESKTOP_ID = "agent_claude-desktop";
 /** Extra canvas on each side of Mochi, for the witch hat's brim and the Santa hat's tip. */
 const BOT_SIDE = 24;
 /** Same margin as the Rust hit test (src-tauri/src/island.rs). */
 const HIT_MARGIN = 14;
+/** A look waits for a pending chat answer this often, and at most this long. */
+const LOOK_WAIT_STEP_MS = 250;
+const LOOK_WAIT_MAX_MS = 120_000;
 
 /** The three views the drop sequence owns; leaving them stops the engine. */
 const UPLOAD_VIEWS: ReadonlySet<IslandViewName> = new Set(["upload", "uploading", "choose"]);
@@ -145,6 +157,7 @@ export class Island {
       reveal: () => this.reveal(),
       wardrobeFromDesktop: () => this.wardrobeFromDesktop(),
       dizzyFromDesktop: () => this.handleDizzy(),
+      looked: (look) => this.onLooked(look),
     });
     this.build();
     this.wireFsm();
@@ -244,6 +257,7 @@ export class Island {
           integration_github: "https://github.com/pulls",
           integration_stripe: "https://dashboard.stripe.com/payments",
           integration_notion: "https://notion.so",
+          integration_linear: "https://linear.app",
           integration_calcom: "https://app.cal.com/bookings",
         };
         if (task.id === CLAUDE_DESKTOP_ID) void Bridge.openClaudeDesktop();
@@ -251,7 +265,11 @@ export class Island {
           void Bridge.openSession(task.sessionId ?? null, task.sessionCwd ?? null);
         } else if (task.id === "integration_n8n") void Bridge.openN8n();
         else if (task.id === SPOTIFY_ID) void Bridge.spotifyOpen();
-        else if (urls[task.id]) void Bridge.openUrl(urls[task.id]);
+        else if (task.id === YOUTUBE_MUSIC_ID) void Bridge.youTubeMusicOpen();
+        else {
+          const url = urls[task.id];
+          if (url) void Bridge.openUrl(url);
+        }
       },
       openUrl: (url) => {
         if (url) void Bridge.openUrl(url);
@@ -311,6 +329,12 @@ export class Island {
       },
       previewOutfit: (outfit) => {
         State.wardrobePreview = outfit;
+        State.notify();
+      },
+      nextLook: () => {
+        State.settings.mochiLook = nextLook(parseLook(State.settings.mochiLook));
+        void Bridge.saveSettings(State.settings);
+        Sound.play("pop");
         State.notify();
       },
     };
@@ -535,6 +559,8 @@ export class Island {
       window.addEventListener("resize", done);
       window.setTimeout(done, 150);
     });
+    // Read again after the awaits above: a request may have arrived meanwhile.
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- narrowed before the awaits, not after
     if (State.pendingApproval || !State.settings.shellPanel) {
       if (!this.shellOn) void Bridge.setShellOpen(false);
       return;
@@ -566,7 +592,7 @@ export class Island {
     }
     Sound.play("approve");
     this.setView(State.defaultView());
-    Bridge.shellConfirm(card.token).catch((err) => {
+    Bridge.shellConfirm(card.token).catch((err: unknown) => {
       State.noteMessage = String(err).replace(/^Error:\s*/, "");
       this.setView("note");
       window.setTimeout(() => this.setView(State.defaultView()), 3000);
@@ -587,10 +613,43 @@ export class Island {
     State.capturePreview = url;
     State.droppedFile = null;
     State.promptContext = null;
+    State.lookWindow = null;
     State.chatHistory = [];
     void Bridge.chatReset();
     Sound.play("pop");
     this.alert("circle");
+  }
+
+  /**
+   * Mochi was dropped on a window and is back: a fresh chat about it, asked at
+   * once (the Mac's WindowLook). Rust holds the picture for that one turn.
+   */
+  private onLooked(look: Looked, waitedMs = 0) {
+    // An answer is on its way: resetting now would drop the look question
+    // (the chat ignores a send while one is pending) and land that answer in
+    // the new chat. Ask right after it instead, as the newChat shortcut waits.
+    if (State.stateOverride === "thinking" && !look.error) {
+      if (waitedMs < LOOK_WAIT_MAX_MS) {
+        window.setTimeout(() => this.onLooked(look, waitedMs + LOOK_WAIT_STEP_MS), LOOK_WAIT_STEP_MS);
+      }
+      return;
+    }
+    if (look.error) {
+      State.noteMessage = look.error;
+      Sound.play("error");
+      this.alert("note");
+      return;
+    }
+    State.capturePreview = null;
+    State.droppedFile = null;
+    State.promptContext = null;
+    State.lookWindow = { appName: look.appName, title: look.title };
+    State.chatHistory = [];
+    void Bridge.chatReset();
+    this.engine.gulp();
+    Sound.play("gulp");
+    this.alert("prompt");
+    askInChat(lookPrompt(language()), t(LOOK_BUBBLE));
   }
 
   decideCapture(ask: boolean) {
@@ -608,7 +667,7 @@ export class Island {
     this.barClock.classList.toggle("on", on);
     if (on === (this.barClockTimer != null)) return;
     if (!on) {
-      window.clearInterval(this.barClockTimer!);
+      window.clearInterval(this.barClockTimer ?? undefined);
       this.barClockTimer = null;
       return;
     }
@@ -811,6 +870,7 @@ export class Island {
     const name = path.split(/[\\/]/).pop() || "file";
     State.droppedFile = { name, path };
     State.promptContext = { kind: "file", name, path };
+    State.lookWindow = null;
     State.chatHistory = [];
     void Bridge.chatReset();
 
@@ -835,7 +895,7 @@ export class Island {
         State.promptContext = { kind: "file", name: file.name, path: file.path };
         State.notify();
       })
-      .catch((err) => {
+      .catch((err: unknown) => {
         if (State.droppedFile?.path !== path) return;
         UploadSeq.deactivate();
         State.noteMessage = String(err).replace(/^Error:\s*/, "");
@@ -1043,10 +1103,10 @@ export class Island {
     });
 
     void onDragDrop((e) => this.onDragDrop(e));
-    void onEvent<ShellCard>("shell-confirm", (card) => this.showCard(card));
-    void onEvent<null>("circle-captured", () => void this.onCaptured());
+    void onEvent("shell-confirm", (card) => this.showCard(card));
+    void onEvent("circle-captured", () => void this.onCaptured());
     // A routine ran (shell/routines.rs): say so for a moment, unless a card is waiting.
-    void onEvent<string>("shell-routine-ran", (message) => {
+    void onEvent("shell-routine-ran", (message) => {
       if (State.pendingApproval || State.shellCard) return;
       State.noteMessage = message;
       this.alert("note");
@@ -1347,14 +1407,19 @@ export class Island {
     const showOutfit = mainFocused || State.mode !== "expanded" || inWardrobe;
     const outfit = State.wardrobePreview ?? this.seasons.get(parseOutfit(State.settings.mochiOutfit));
     this.engine.setOutfit(showOutfit ? outfit : "none", !inWardrobe);
+    // Like the outfit: a focused integration pill's Mochi keeps its own plain face.
+    this.engine.look = showOutfit ? parseLook(State.settings.mochiLook) : "classic";
     // Dances while music plays: always in the compact island, expanded only on
     // the music pill's card (BotCanvasView, macOS). Asked every frame.
+    const spotify = State.spotifyPlaying;
+    const youTubeMusic = State.youTubeMusicPlaying;
     this.engine.setDancing(islandDances({
-      music: State.spotifyPlaying,
+      music: spotify || youTubeMusic,
       state: State.effectiveState,
       mode: State.mode,
       view: State.view,
       focusId: State.focusTask?.id,
+      musicPills: spotify && youTubeMusic ? BOTH_MUSIC_PILLS : youTubeMusic ? YOUTUBE_MUSIC_PILL : SPOTIFY_PILL,
     }));
 
     this.engine.update(dt);

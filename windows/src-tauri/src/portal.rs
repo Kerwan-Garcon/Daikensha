@@ -78,6 +78,7 @@ fn trigger_of(shortcut: &Shortcut) -> Option<String> {
 /// The xkb keysym name of the keys an accelerator may name (KEY_NAMES in
 /// src/core/shortcuts.ts).
 fn keysym(code: Code) -> Option<String> {
+    #[allow(clippy::enum_glob_use)] // a key table: every arm is a Code variant
     use Code::*;
     let fixed = match code {
         Space => "space",
@@ -473,7 +474,7 @@ impl Portal {
         let reply = self.call(method(OBJECT, IFACE, "CreateSession")?.append1(options))?;
         // An old portal may not follow the token; its answer is the truth.
         let request = reply
-            .read1::<Path>()
+            .read1::<Path<'_>>()
             .map(|p| p.to_string())
             .unwrap_or_else(|_| request_path(&self.sender, &handle_token));
         let session = session_path(&self.sender, &session_token);
@@ -506,7 +507,7 @@ impl Portal {
             want: want.clone(),
         };
         let reply = self.call(msg)?;
-        if let Ok(path) = reply.read1::<Path>() {
+        if let Ok(path) = reply.read1::<Path<'_>>() {
             self.phase = Phase::Binding { gen, request: path.to_string(), session, want };
         }
         Ok(())
@@ -523,7 +524,7 @@ impl Portal {
             (REQUEST, "Response") => self.response(&path, msg, on_event),
             (IFACE, member @ ("Activated" | "Deactivated")) => {
                 let Phase::Bound { session, .. } = &self.phase else { return };
-                if let Ok((from, id)) = msg.read2::<Path, String>() {
+                if let Ok((from, id)) = msg.read2::<Path<'_>, String>() {
                     if &*from == session.as_str() {
                         on_event(if member == "Activated" { Event::Activated(id) } else { Event::Deactivated(id) });
                     }
@@ -532,7 +533,7 @@ impl Portal {
             (IFACE, "ShortcutsChanged") => {
                 let Phase::Bound { gen, session, shortcuts, .. } = &mut self.phase else { return };
                 let mut args = msg.iter_init();
-                let from: Option<Path> = args.read().ok();
+                let from: Option<Path<'_>> = args.read().ok();
                 if from.as_deref() != Some(session.as_str()) {
                     return;
                 }
@@ -756,7 +757,7 @@ mod tests {
             .append2(Path::new("/s").unwrap(), list);
         let msg = wire(msg);
         let mut args = msg.iter_init();
-        let _: Path = args.read().unwrap();
+        let _: Path<'_> = args.read().unwrap();
         let parsed = parse_shortcuts(&*args.get_refarg().unwrap()).unwrap();
         assert_eq!(parsed, vec![Bound { id: "nextPill".into(), trigger: Some("Meta+N".into()) }]);
         // Not a list: nothing.
@@ -807,7 +808,7 @@ mod tests {
                 }
                 (IFACE, "BindShortcuts") => {
                     let mut args = msg.iter_init();
-                    let session: Path = args.read().unwrap();
+                    let session: Path<'_> = args.read().unwrap();
                     let list: Vec<(String, PropMap)> = args.read().unwrap();
                     let _parent: String = args.read().unwrap();
                     let options: PropMap = args.read().unwrap();

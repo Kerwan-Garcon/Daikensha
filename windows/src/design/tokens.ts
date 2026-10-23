@@ -16,8 +16,8 @@ import source from "./tokens.css?raw";
 export type Token = `--${string}`;
 
 const DECLS = new Map<string, string>();
-for (const m of source.replace(/\/\*[\s\S]*?\*\//g, "").matchAll(/(--[a-z0-9-]+)\s*:\s*([^;]+);/g)) {
-  DECLS.set(m[1], m[2].replace(/\s+/g, " ").trim());
+for (const [, name = "", value = ""] of source.replace(/\/\*[\s\S]*?\*\//g, "").matchAll(/(--[a-z0-9-]+)\s*:\s*([^;]+);/g)) {
+  DECLS.set(name, value.replace(/\s+/g, " ").trim());
 }
 
 /** Every token tokens.css defines. */
@@ -41,13 +41,14 @@ export function cssVar(name: Token): string {
 /** The R, G, B of a colour token (#rgb, #rrggbb, "r g b" or rgb(r g b)). */
 export function colorChannels(name: Token): [number, number, number] {
   const v = tokenValue(name);
-  const hex = v.match(/^#([0-9a-f]{3}|[0-9a-f]{6})$/i)?.[1];
+  const hex = (/^#([0-9a-f]{3}|[0-9a-f]{6})$/i.exec(v))?.[1];
   if (hex) {
-    const full = hex.length === 3 ? [...hex].map((c) => c + c).join("") : hex;
+    const full = hex.length === 3 ? Array.from(hex, (c) => c + c).join("") : hex;
     return [0, 2, 4].map((i) => parseInt(full.slice(i, i + 2), 16)) as [number, number, number];
   }
   const nums = v.replace(/^rgb\(|\)$/g, "").trim().split(/[\s,]+/).map(Number);
-  if (nums.length >= 3 && nums.slice(0, 3).every((n) => Number.isFinite(n))) return [nums[0], nums[1], nums[2]];
+  const [r, g, b] = nums;
+  if (r !== undefined && g !== undefined && b !== undefined && [r, g, b].every((n) => Number.isFinite(n))) return [r, g, b];
   throw new Error(`Design token ${name} is not a colour: ${v}`);
 }
 

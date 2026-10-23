@@ -47,7 +47,7 @@ function cancelStopTimer(id: string): boolean {
 /** Events after which a pending permission request of the same session is moot. */
 const TURN_OVER = new Set(["Stop", "StopFailure", "UserPromptSubmit", "SessionEnd", "Interrupt"]);
 
-interface HookPayload {
+export interface HookPayload {
   hook_event_name?: string;
   request_id?: string;
   session_id?: string;
@@ -119,7 +119,7 @@ const TOOL_LABELS: Record<string, string> = {
 
 function stepLabel(tool: string, input: Record<string, unknown>): string {
   const label = TOOL_LABELS[tool] ? t(TOOL_LABELS[tool]) : tool;
-  const str = (k: string) => (typeof input[k] === "string" ? (input[k] as string) : null);
+  const str = (k: string) => (typeof input[k] === "string" ? (input[k]) : null);
   const cmd = str("command");
   if (cmd) return `${label} · ${cmd.slice(0, 40)}`;
   const path = str("path");
@@ -166,17 +166,17 @@ function approvalTarget(tool: string, input: Record<string, unknown>): string {
 function askedQuestions(tool: string, input: Record<string, unknown>): AskedQuestion[] | null {
   if (tool !== "AskUserQuestion" || !Array.isArray(input.questions)) return null;
   const out: AskedQuestion[] = [];
-  for (const raw of input.questions as Record<string, unknown>[]) {
+  for (const raw of input.questions as (Record<string, unknown> | null | undefined)[]) {
     const question = typeof raw?.question === "string" ? raw.question : "";
-    const options = (Array.isArray(raw?.options) ? (raw.options as Record<string, unknown>[]) : [])
+    const options = (Array.isArray(raw?.options) ? (raw.options as (Record<string, unknown> | null | undefined)[]) : [])
       .filter((o) => typeof o?.label === "string" && o.label)
       .map((o) => ({
-        label: o.label as string,
-        description: typeof o.description === "string" ? o.description : "",
+        label: o?.label as string,
+        description: typeof o?.description === "string" ? o.description : "",
       }));
     // A question cut short by the relay would be answered under the wrong text.
     if (!question || question.endsWith("…") || options.length < 2) return null;
-    out.push({ question, options, multiSelect: raw.multiSelect === true });
+    out.push({ question, options, multiSelect: raw?.multiSelect === true });
   }
   return out.length > 0 ? out : null;
 }
@@ -235,9 +235,9 @@ function recordDiff(agentId: string, payload: HookPayload) {
 export function registerHookHandlers(island: Island) {
   // The last plan numbers seen survive a restart, as on the Mac.
   State.planUsage ??= restorePlanUsage(storedClaudePlanUsage());
-  void onEvent<HookPayload>("hook", (payload) => handleHook(island, payload));
+  void onEvent("hook", (payload) => handleHook(island, payload));
   // A held turn ended in the terminal (Esc) or its relay went away: no reply any more.
-  void onEvent<{ reply_id: string }>("reply-closed", ({ reply_id }) => {
+  void onEvent("reply-closed", ({ reply_id }) => {
     const t = State.tasks.find((x) => x.replyId === reply_id);
     if (!t) return;
     t.replyId = null;
@@ -292,7 +292,7 @@ function handleHook(island: Island, payload: HookPayload) {
   /** Ensure the agent pill exists (no-op for Claude Code). */
   const ensurePill = () => {
     if (isExternalAgent) {
-      State.upsertExternalAgent(agentId, agentName(validAgent!), agentColor(validAgent!));
+      State.upsertExternalAgent(agentId, agentName(validAgent), agentColor(validAgent));
       const t = State.tasks.find((x) => x.id === agentId);
       if (t && cwd) t.sessionCwd = cwd;
       if (t && sessionId) t.sessionId = sessionId;
@@ -499,7 +499,7 @@ function handleHook(island: Island, payload: HookPayload) {
       // Only Claude Code and the agents the relay can answer for (Codex, Copilot
       // CLI, Muse Code — same as the Mac) get a card. Anyone else's request is
       // declined at once, so the agent asks in its own terminal.
-      if (isExternalAgent && !APPROVAL_AGENTS.has(validAgent!)) {
+      if (isExternalAgent && !APPROVAL_AGENTS.has(validAgent)) {
         if (payload.request_id) void Bridge.approvalDecline(payload.request_id);
         break;
       }

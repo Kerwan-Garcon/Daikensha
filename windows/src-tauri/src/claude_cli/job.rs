@@ -41,11 +41,11 @@ pub fn contain(child: &tokio::process::Child) -> Option<Job> {
         SetInformationJobObject(
             job.handle,
             JobObjectExtendedLimitInformation,
-            &info as *const _ as *const core::ffi::c_void,
+            (&raw const info).cast::<core::ffi::c_void>(),
             std::mem::size_of::<JOBOBJECT_EXTENDED_LIMIT_INFORMATION>() as u32,
         )
         .ok()?;
-        AssignProcessToJobObject(job.handle, HANDLE(raw as _)).ok()?;
+        AssignProcessToJobObject(job.handle, HANDLE(raw.cast())).ok()?;
         Some(job)
     }
 }

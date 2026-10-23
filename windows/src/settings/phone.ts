@@ -3,7 +3,7 @@
 
 import { Bridge, type PhoneChatStatus, type PhoneLinkPairing, type PhoneLinkStatus, type PhoneRelayState, type PhoneRelayStatus } from "../core/bridge";
 import { modelId, modelsOf, toggleModel, usableProviders } from "../core/phone-chat";
-import { PROVIDERS, type ProviderDef } from "../core/providers";
+import { PROVIDERS, isKeyed, type KeyedProvider, type ProviderDef } from "../core/providers";
 import type { Settings } from "../core/state";
 import { h } from "../views/dom";
 import { t } from "../i18n/i18n";
@@ -64,6 +64,7 @@ export function phoneSection(on: boolean, makeToggle: Toggle, settings: Settings
       h("div", { class: "hint", text: t("The phone connects to {address}", { address }) }),
       h("div", { class: "hint", text: t("If Windows asks about the firewall, allow Coucou on private networks. The phone and this computer must be on the same Wi-Fi.") }),
       h("div", { class: "hint", text: t("Your phone finds this computer again by itself when the network changes. It is announced on your local network only while this switch is on. Some hotspots and guest networks block this.") }),
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- a build-time switch
       ...(SHOW_RELAY_SETTINGS ? [relayBlock(makeToggle, () => void refreshPairing())] : []),
       detailsBlock(makeToggle),
       answersBlock(makeToggle),
@@ -77,7 +78,10 @@ export function phoneSection(on: boolean, makeToggle: Toggle, settings: Settings
   /** Kept up to date while the window is open and the link is on; nothing runs otherwise. */
   const clients = h("div", { class: "hint" });
   const watch = window.setInterval(() => {
-    if (!section.isConnected) return window.clearInterval(watch);
+    if (!section.isConnected) {
+      window.clearInterval(watch);
+      return;
+    }
     if (document.visibilityState !== "visible" || !clients.isConnected) return;
     void Bridge.phoneLinkStatus().then((s) => {
       if (s?.running) clients.textContent = t("Phones connected: {count}", { count: s.clients });
@@ -135,8 +139,8 @@ export function relayStateText(state: PhoneRelayState): string {
 function relayBlock(makeToggle: Toggle, changed: () => void): HTMLElement {
   const note = h("div", { class: "hint" });
   const state = h("div", { class: "hint" });
-  const address = h("input", { type: "text", placeholder: "wss://", style: "width:100%", autocomplete: "off", spellcheck: "false" }) as HTMLInputElement;
-  const access = h("input", { type: "password", style: "width:100%", autocomplete: "off", spellcheck: "false" }) as HTMLInputElement;
+  const address = h("input", { type: "text", placeholder: "wss://", style: "width:100%", autocomplete: "off", spellcheck: "false" });
+  const access = h("input", { type: "password", style: "width:100%", autocomplete: "off", spellcheck: "false" });
   let current: PhoneRelayStatus = { enabled: false, url: "", hasAccess: false, state: "off" };
 
   const show = (status: PhoneRelayStatus | null) => {
@@ -183,7 +187,10 @@ function relayBlock(makeToggle: Toggle, changed: () => void): HTMLElement {
   void Bridge.phoneRelayStatus().then(show);
   // Kept up to date while the window is open; nothing runs while it is hidden.
   const watch = window.setInterval(() => {
-    if (!state.isConnected) return window.clearInterval(watch);
+    if (!state.isConnected) {
+      window.clearInterval(watch);
+      return;
+    }
     if (document.visibilityState !== "visible") return;
     void Bridge.phoneRelayStatus().then(show);
   }, 5000);
@@ -283,7 +290,7 @@ function servicesBlock(): HTMLElement {
   const note = h("div", { class: "hint" });
   let ticked: string[] = [];
   const boxes = PHONE_SERVICES.map(([id, name]) => {
-    const box = h("input", { type: "checkbox" }) as HTMLInputElement;
+    const box = h("input", { type: "checkbox" });
     box.addEventListener("change", () => {
       void (async () => {
         note.textContent = "";
@@ -405,7 +412,7 @@ function chatBlock(makeToggle: Toggle, settings: Settings): HTMLElement {
       list.replaceChildren(
         ...[...new Set([...models, ...modelsOf(allowed, p.id)])].map((model) => {
           const id = modelId(p.id, model);
-          const box = h("input", { type: "checkbox" }) as HTMLInputElement;
+          const box = h("input", { type: "checkbox" });
           box.checked = allowed.includes(id);
           box.addEventListener("change", () => void save(toggleModel(allowed, id, box.checked)));
           return h("div", { class: "row" }, h("label", {}, box, h("span", { text: ` ${model}` })));
@@ -416,7 +423,7 @@ function chatBlock(makeToggle: Toggle, settings: Settings): HTMLElement {
       list.replaceChildren(h("div", { class: "hint", text: t("Loading models…") }));
       Bridge.chatModels(p.id).then(
         (models) => show(models.map((m) => m.id)),
-        (err) => list.replaceChildren(h("div", { class: "hint", text: String(err).replace(/^Error:\s*/, "") })),
+        (err: unknown) => list.replaceChildren(h("div", { class: "hint", text: String(err).replace(/^Error:\s*/, "") })),
       );
     });
     return h("div", {}, head, list);
@@ -427,7 +434,7 @@ function chatBlock(makeToggle: Toggle, settings: Settings): HTMLElement {
     body.replaceChildren();
     if (!status.enabled) return;
     const hasKey: Record<string, boolean> = {};
-    for (const p of usableProvidersCandidates()) hasKey[p.id] = (await Bridge.secretPresent(p.key!)) ?? false;
+    for (const p of usableProvidersCandidates()) hasKey[p.id] = (await Bridge.secretPresent(p.key)) ?? false;
     const providers = usableProviders(settings, hasKey);
     body.append(h("div", { class: "hint", text: t("Models the phone may use") }));
     if (providers.length === 0) body.append(h("div", { class: "hint", text: t("No provider is ready: add an API key or connect a local model first.") }));
@@ -467,8 +474,8 @@ function chatBlock(makeToggle: Toggle, settings: Settings): HTMLElement {
   );
 }
 
-function usableProvidersCandidates(): ProviderDef[] {
-  return PROVIDERS.filter((p) => p.key !== null);
+function usableProvidersCandidates(): KeyedProvider[] {
+  return PROVIDERS.filter(isKeyed);
 }
 
 /**
@@ -489,13 +496,13 @@ function pairingRows(pairing: PhoneLinkPairing, again: () => void): HTMLElement[
   const qr = h("div", { class: "qr" });
   qr.innerHTML = pairing.qrSvg;
 
-  const link = h("input", { type: "text", readonly: "true", value: pairing.link, style: "width:100%" }) as HTMLInputElement;
+  const link = h("input", { type: "text", readonly: "true", value: pairing.link, style: "width:100%" });
   link.addEventListener("focus", () => link.select());
 
   const copy = h("button", { text: t("Copy link") });
   const copied = copyLinkHint();
   copy.addEventListener("click", () => {
-    void navigator.clipboard?.writeText(pairing.link).then(() => {
+    void (navigator as Partial<Navigator>).clipboard?.writeText(pairing.link).then(() => {
       copied.hidden = false; // stays after the button text is restored
       copy.textContent = t("Copied");
       window.setTimeout(() => (copy.textContent = t("Copy link")), 1500);

@@ -145,7 +145,7 @@ async fn read_request(stream: &mut TcpStream) -> Option<Request> {
 }
 
 async fn respond(stream: &mut TcpStream, status: &str, body: Option<&Value>) -> std::io::Result<()> {
-    let body = body.map(|b| b.to_string()).unwrap_or_default();
+    let body = body.map(std::string::ToString::to_string).unwrap_or_default();
     let kind = if body.is_empty() { "" } else { "Content-Type: application/json\r\n" };
     let allow = if status.starts_with("405") { "Allow: POST\r\n" } else { "" };
     let head = format!("HTTP/1.1 {status}\r\n{kind}{allow}Content-Length: {}\r\nConnection: close\r\n\r\n", body.len());

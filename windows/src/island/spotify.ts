@@ -16,8 +16,8 @@ export interface SpotifyHost {
 }
 
 export function registerSpotifyHandlers(island: SpotifyHost) {
-  void onEvent<SpotifyState>("spotify", (s) => applySpotify(island, s));
-  void onEvent<{ artUrl: string; dataUrl: string }>("spotify-artwork", (art) => {
+  void onEvent("spotify", (s) => applySpotify(island, s));
+  void onEvent("spotify-artwork", (art) => {
     Spotify.artwork = art;
     State.notify();
   });

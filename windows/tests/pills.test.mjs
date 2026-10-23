@@ -41,10 +41,12 @@ test("the catalog holds the Mac's pills with the Claude Code label for Windows a
     ["integration_vercel", "Vercel", "#7C5CFF", "service", "Integration"],
     ["integration_github", "GitHub", "#F4505E", "service", "Integration"],
     ["integration_notion", "Notion", "#8C8C8C", "service", "Integration"],
+    ["integration_linear", "Linear", "#5E6AD2", "service", "Integration"],
     ["integration_calcom", "Cal.com", "#C9956A", "service", "Integration"],
     ["integration_stripe", "Stripe", "#0570DE", "service", "Integration"],
     ["integration_music", "Apple Music", "#FA2D48", "service", "Integration"],
     ["integration_spotify", "Spotify", "#1DB954", "service", "Integration"],
+    ["integration_youtube_music", "YouTube Music", "#FF0033", "service", "Integration"],
   ];
   assert.deepEqual(
     PILL_CATALOG.map((p) => [p.id, p.name, p.color, p.category, p.subtitle]),
@@ -96,6 +98,9 @@ test("this build leaves out what only macOS has, and Claude Desktop on Linux", (
   // Spotify: MPRIS on Linux, the system media controls on Windows.
   assert.ok(linux.includes("integration_spotify"));
   assert.ok(windows.includes("integration_spotify"));
+  // YouTube Music: Pear Desktop's API Server, the same on both.
+  assert.ok(linux.includes("integration_youtube_music"));
+  assert.ok(windows.includes("integration_youtube_music"));
   assert.deepEqual(linux, windows.filter((id) => id !== "agent_claude-desktop"));
 });
 
@@ -108,6 +113,19 @@ test("Spotify: a service on both systems with nothing to set up", () => {
   assert.ok(!isHookPill("integration_spotify"));
   assert.ok(!mainPillChoices("linux").some((p) => p.id === "integration_spotify"));
   assert.ok(!mainPillChoices("windows").some((p) => p.id === "integration_spotify"));
+});
+
+test("YouTube Music: a service on both systems, connected from its card rather than Settings", () => {
+  const def = pillDefinition("integration_youtube_music");
+  assert.equal(def.support, "yes");
+  assert.deepEqual(def.connect, { kind: "none" });
+  assert.equal(def.category, "service");
+  assert.ok(!isComingSoon("integration_youtube_music"));
+  assert.ok(!isHookPill("integration_youtube_music"));
+  assert.ok(!mainPillChoices("windows").some((p) => p.id === "integration_youtube_music"));
+  const empty = { mainPill: "integration_claude", activeIntegrations: [] };
+  assert.deepEqual(toggleDeclared(empty, "integration_youtube_music", "linux"), ["integration_youtube_music"]);
+  assert.deepEqual(toggleDeclared(empty, "integration_youtube_music", "windows"), ["integration_youtube_music"]);
 });
 
 test("Spotify can be declared on both systems; Claude Desktop only on Windows", () => {

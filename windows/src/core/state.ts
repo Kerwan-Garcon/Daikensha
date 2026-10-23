@@ -1,5 +1,6 @@
 // App state — mirror of AppState.swift (the parts the island needs).
 
+import type { LookWindow } from "./look";
 import type { BotEmoteName, BotStateName, IslandMode, IslandViewName } from "./layout";
 import type { EyeShape } from "../mochi/engine";
 import {
@@ -12,8 +13,10 @@ import type { FileDiff } from "./diff";
 import type { Bindings } from "./shortcuts";
 import type { ShellCard } from "./bridge";
 import { DEFAULT_OUTFIT, type Outfit } from "../mochi/wardrobe";
+import { DEFAULT_LOOK } from "../mochi/look";
 import { pillColor } from "./pill-colors";
 import { Spotify, musicPlaying } from "./spotify";
+import { YouTubeMusic, youTubeMusicPlaying } from "./youtube-music";
 
 export type AgentSource = "claudeCode" | "n8n" | "agent";
 export type PillBadge = "approval" | "finished" | "error";
@@ -155,6 +158,11 @@ export interface Settings {
    */
   mochiOutfit: string;
   /**
+   * Mochi's face: "signature", "portrait", "slime", "sage" or "classic". Same key
+   * and raw values as the Mac's "mochiLook"; read it through parseLook.
+   */
+  mochiLook: string;
+  /**
    * A colour of the user's own for a pill's Mochi, by pill ID ("#RRGGBB").
    * Empty means the catalog's colours; read it through core/pill-colors.ts.
    * Same key and values as the Mac's "pillColors".
@@ -165,6 +173,8 @@ export interface Settings {
    * else English), or one of src/i18n's ten codes ("fr", "pt-BR", "zh-Hans"…).
    */
   language: string;
+  /** Linear: the team new issues go to (its id). Empty: the first team. */
+  linearTeam: string;
   /**
    * The phone link for Coucou for Android is on. Rust owns it (only the switch in
    * Settings → Android phone turns it on): whatever the page sends back is ignored.
@@ -215,8 +225,10 @@ export const DEFAULT_SETTINGS: Settings = {
   customUrl: "",
   shortcuts: {},
   mochiOutfit: DEFAULT_OUTFIT,
+  mochiLook: DEFAULT_LOOK,
   pillColors: {},
   language: "",
+  linearTeam: "",
 };
 
 type Listener = () => void;
@@ -254,6 +266,8 @@ class AppState {
   shellCard: ShellCard | null = null;
   /** The circled capture's preview (a data: URL) until its first question goes out. */
   capturePreview: string | null = null;
+  /** The window Mochi looked at (core/look.ts): the chat is about it, its chips show. */
+  lookWindow: LookWindow | null = null;
   searchResult: SearchResult | null = null;
   chatHistory: ChatMessage[] = [];
   pendingApproval: ApprovalInfo | null = null;
@@ -320,6 +334,11 @@ class AppState {
     return musicPlaying(Spotify.state, sanitizeDeclared(this.settings, this.os).activeIntegrations);
   }
 
+  /** YouTube Music plays on a declared pill: Mochi dances too. */
+  get youTubeMusicPlaying(): boolean {
+    return youTubeMusicPlaying(YouTubeMusic.state, sanitizeDeclared(this.settings, this.os).activeIntegrations);
+  }
+
   get otherTasks(): AgentTask[] {
     return this.tasks.filter((t) => t.id !== this.focusId);
   }
@@ -340,7 +359,7 @@ class AppState {
   beginApproval(info: ApprovalInfo) {
     this.pendingApproval = info;
     this.isPinned = true;
-    if (this.focusBeforeApproval == null) this.focusBeforeApproval = this.focusId;
+    this.focusBeforeApproval ??= this.focusId;
     this.setFocus(info.pillId);
   }
 
@@ -442,8 +461,9 @@ class AppState {
     for (const def of availablePills(this.os)) {
       const shouldLoad = def.id === d.mainPill || d.activeIntegrations.includes(def.id);
       const idx = this.tasks.findIndex((t) => t.id === def.id);
-      if (shouldLoad && idx < 0) this.tasks.push(taskFor(def, this.settings.pillColors));
-      const busy = idx >= 0 && (this.tasks[idx].state !== "idle" || this.tasks[idx].steps.length > 0);
+      const existing = this.tasks[idx];
+      if (shouldLoad && !existing) this.tasks.push(taskFor(def, this.settings.pillColors));
+      const busy = existing !== undefined && (existing.state !== "idle" || existing.steps.length > 0);
       if (!shouldLoad && idx >= 0 && !busy) this.tasks.splice(idx, 1);
     }
     // A colour picked in Settings reaches the pills that are already up.
@@ -462,9 +482,9 @@ class AppState {
    */
   removeTask(id: string) {
     const idx = this.tasks.findIndex((t) => t.id === id);
-    if (idx < 0) return;
+    const t = this.tasks[idx];
+    if (!t) return;
     if (this.isKept(id)) {
-      const t = this.tasks[idx];
       t.state = "idle";
       t.steps = [];
       t.stepIndex = 0;

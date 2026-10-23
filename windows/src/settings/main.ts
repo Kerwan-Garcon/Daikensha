@@ -5,7 +5,7 @@
 
 import { Bridge, onEvent, type ClaudeCliStatus, type HookPreview, type HookStatus, type ShellRoutine, type ShortcutsReport } from "../core/bridge";
 import { whenText } from "../core/shell";
-import { CUSTOM_SERVER_KEY, providerDef, urlExposure } from "../core/providers";
+import { CUSTOM_SERVER_KEY, keyedProvider, serverProvider, urlExposure } from "../core/providers";
 import {
   ISLAND_SHORTCUTS, SHORTCUTS, SHORTCUT_TEXT, activeKeys, displayKeys, duplicates, effective,
   recordPress, type Binding,
@@ -27,6 +27,8 @@ import {
   LANGUAGES, N_, isRtl, language, onLanguageChange, resolveLanguage, setLanguage, systemLanguages, t, tn, weekdayShort,
 } from "../i18n/i18n";
 import { colorHex } from "../design/tokens";
+import { itemAt } from "../core/arrays";
+import { requireChild, requireElement } from "../core/elements";
 
 /** Where secrets.rs keeps the keys on this OS. */
 const KEY_STORE = navigator.userAgent.includes("Windows")
@@ -36,7 +38,7 @@ const KEY_STORE = navigator.userAgent.includes("Windows")
 let settings: Settings = { ...DEFAULT_SETTINGS };
 let version = "";
 
-const windowRoot = document.getElementById("hub")!;
+const windowRoot = requireElement("hub");
 /** Where the Notch page being shown draws its sections. */
 let root: HTMLElement = windowRoot;
 let hub: { redraw(): void; current(): PageId } | null = null;
@@ -178,7 +180,7 @@ function claudeSection(status: HookStatus): HTMLElement {
     const fresh = await Bridge.hooksStatus();
     if (fresh) Object.assign(status, fresh);
     redraw();
-    const head = section.querySelector("h2")!;
+    const head = requireChild(section, "h2");
     clear(head);
     head.append(statusDot(status.installed), h("span", { text: "Claude Code" }));
   };
@@ -359,7 +361,7 @@ function apiSection(hasKey: boolean): HTMLElement {
     style: "flex:1 1 auto;min-width:0",
     autocomplete: "off",
     spellcheck: "false",
-  }) as HTMLInputElement;
+  });
 
   const saveBtn = h("button", { class: "primary", text: t("Save key") });
   const clearBtn = h("button", { class: "danger", text: t("Remove") });
@@ -410,7 +412,7 @@ function apiSection(hasKey: boolean): HTMLElement {
     }
   });
 
-  const model = h("select", {}) as HTMLSelectElement;
+  const model = h("select", {});
   for (const [id, label] of MODELS) model.append(h("option", { value: id, text: label }));
   if (!MODELS.some(([id]) => id === settings.model)) {
     model.append(h("option", { value: settings.model, text: settings.model }));
@@ -425,7 +427,7 @@ function apiSection(hasKey: boolean): HTMLElement {
 
   // How Claude is reached: the key above, or the user's own Claude Code signed in
   // to their subscription (claude_cli.rs). The API stays the default.
-  const account = h("select", {}) as HTMLSelectElement;
+  const account = h("select", {});
   account.append(
     h("option", { value: "api", text: t("API key") }),
     h("option", { value: "subscription", text: t("Claude subscription") }),
@@ -506,7 +508,7 @@ function cliStatusText(status: ClaudeCliStatus | null): string {
  */
 function activePillsSection(connected: Record<string, boolean>): HTMLElement {
   const slots = h("div", { class: "hint" });
-  const main = h("select", {}) as HTMLSelectElement;
+  const main = h("select", {});
   for (const def of mainPillChoices()) main.append(h("option", { value: def.id, text: def.name }));
   main.addEventListener("change", () => {
     const next = chooseMainPill(settings, main.value);
@@ -540,7 +542,7 @@ function activePillsSection(connected: Record<string, boolean>): HTMLElement {
     }
     const why = hint(def);
     el.append(h("span", { class: "state", text: why ?? "" }));
-    const sw = h("button", { class: on ? "switch on" : "switch" }) as HTMLButtonElement;
+    const sw = h("button", { class: on ? "switch on" : "switch" });
     sw.disabled = full;
     sw.addEventListener("click", () => {
       const next = toggleDeclared(settings, def.id);
@@ -623,15 +625,15 @@ function chatProvidersSection(
 ): HTMLElement {
   const list = h("div", { style: "display:flex;flex-direction:column;gap:8px" });
   for (const def of CLOUD) {
-    const p = providerDef(def.id);
-    const key = p.key!;
+    const p = keyedProvider(def.id);
+    const { key } = p;
     const input = h("input", {
       type: "password",
       placeholder: present[key] ? CHAT_STRINGS.stored : def.placeholder,
       autocomplete: "off",
       spellcheck: "false",
       style: "flex:1 1 auto;min-width:0",
-    }) as HTMLInputElement;
+    });
     const dotEl = statusDot(present[key] ?? false);
     const saveBtn = h("button", { text: CHAT_STRINGS.save });
     const removeBtn = h("button", { class: "danger", text: CHAT_STRINGS.remove });
@@ -732,8 +734,8 @@ function localSection(customKey: boolean): HTMLElement {
 
   function serverBlock(id: LocalId): HTMLElement {
     const def = LOCAL[id];
-    const p = providerDef(id);
-    const field = p.urlField!;
+    const p = serverProvider(id);
+    const field = p.urlField;
     const connected = settings[field] !== "";
     const status = h("div", {});
     const exposure = h("div", {});
@@ -777,7 +779,7 @@ function localSection(customKey: boolean): HTMLElement {
       style: "flex:1 1 auto;min-width:0",
       spellcheck: "false",
       autocomplete: "off",
-    }) as HTMLInputElement;
+    });
     // A custom server may want a key; it goes to the keychain, never to settings.json.
     const key = h("input", {
       type: "password",
@@ -785,7 +787,7 @@ function localSection(customKey: boolean): HTMLElement {
       style: "flex:1 1 auto;min-width:0",
       autocomplete: "off",
       spellcheck: "false",
-    }) as HTMLInputElement;
+    });
     const connect = h("button", { class: "primary", text: CHAT_STRINGS.connect });
 
     const showExposure = () => {
@@ -815,7 +817,7 @@ function localSection(customKey: boolean): HTMLElement {
         } else {
           settings[field] = server.url;
           if (!server.models.includes(settings.chatModels[id] ?? "")) {
-            settings.chatModels = { ...settings.chatModels, [id]: server.models[0] };
+            settings.chatModels = { ...settings.chatModels, [id]: itemAt(server.models, 0) };
           }
           await save();
           redraw();
@@ -869,13 +871,62 @@ const INTEGRATIONS: IntegrationDef[] = [
     fields: [{ key: "resend-api-key", label: N_("API key"), placeholder: "re_…", secret: true }] },
   { id: "integration_notion", name: "Notion", color: "#8C8C8C",
     fields: [{ key: "notion-api-key", label: N_("Integration token"), placeholder: "ntn_…", secret: true }] },
+  { id: "integration_linear", name: "Linear", color: "#5E6AD2",
+    fields: [{ key: "linear-api-key", label: N_("API key"), placeholder: "lin_api_…", secret: true }],
+    hint: N_("Linear → Settings → Security & access → Personal API keys. Coucou shows your open issues, moves them to the next state and creates new ones, only when you click.") },
   { id: "integration_calcom", name: "Cal.com", color: "#C9956A",
     fields: [{ key: "calcom-api-key", label: N_("API key"), placeholder: "cal_…", secret: true }] },
   // Nothing to enter: Spotify is read from the OS (src-tauri/src/spotify.rs).
   { id: "integration_spotify", name: "Spotify", color: "#1DB954", fields: [] },
+  // Nothing to enter either: "Connect…" on its card asks Pear Desktop (src-tauri/src/youtube_music.rs).
+  { id: "integration_youtube_music", name: "YouTube Music", color: "#FF0033", fields: [] },
 ];
 
 const MAX_ACTIVE = MAX_DECLARED;
+
+/** Adds Linear's MCP server to Claude Code. Shown and copied, never run by Coucou. */
+const LINEAR_MCP_COMMAND = "claude mcp add --transport http linear https://mcp.linear.app/mcp";
+
+/**
+ * Under Linear's key, as on the Mac: the team new issues go to (once the key
+ * can list them) and the command that lets Claude Code drive Linear too.
+ */
+function linearExtras(): HTMLElement[] {
+  const team = h("select", {});
+  const teamRow = h("div", { class: "row", style: "display:none" },
+    h("label", { style: "min-width:104px", text: t("Team for new issues") }), team);
+  void Bridge.linearTeams().then((teams) => {
+    if (!teams?.length) return;
+    team.append(h("option", { value: "", text: t("First team") }));
+    for (const x of teams) team.append(h("option", { value: x.id, text: `${x.name} (${x.key})` }));
+    team.value = teams.some((x) => x.id === settings.linearTeam) ? settings.linearTeam : "";
+    teamRow.style.display = "";
+  });
+  team.addEventListener("change", () => {
+    settings.linearTeam = team.value;
+    void save();
+  });
+
+  const copy = h("button", { text: t("Copy") });
+  copy.addEventListener("click", async () => {
+    try {
+      await navigator.clipboard.writeText(LINEAR_MCP_COMMAND);
+      copy.textContent = t("Copied");
+    } catch {
+      // No clipboard access: the command stays selectable next to the button.
+    }
+  });
+  const command = h("code", {
+    class: "hint",
+    style: "flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;user-select:text",
+    text: LINEAR_MCP_COMMAND,
+  });
+  return [
+    teamRow,
+    h("div", { class: "hint", text: t("To let Claude Code drive Linear too, run this command in a terminal: it adds Linear's MCP server (sign-in in the browser).") }),
+    h("div", { class: "row" }, command, copy),
+  ];
+}
 
 /** Everything that shows the declared pills, redrawn when any of them changes. */
 const declaredViews: (() => void)[] = [];
@@ -919,7 +970,7 @@ function integrationsSection(present: Record<string, boolean>): HTMLElement {
         autocomplete: "off",
         spellcheck: "false",
         style: "flex:1 1 auto;min-width:0",
-      }) as HTMLInputElement;
+      });
       const saveBtn = h("button", { text: t("Save") });
       const dotEl = statusDot(present[field.key] ?? false);
       saveBtn.addEventListener("click", async () => {
@@ -943,11 +994,13 @@ function integrationsSection(present: Record<string, boolean>): HTMLElement {
     }
 
     if (def.hint) rows.append(h("div", { class: "hint", text: t(def.hint) }));
-    if (def.id === "integration_spotify") {
-      // As on the Mac's row: said only when there is no Spotify to launch.
+    if (def.id === "integration_linear") rows.append(...linearExtras());
+    if (def.id === "integration_spotify" || def.id === "integration_youtube_music") {
+      // As on the Mac's row: said only when there is no Spotify (Pear Desktop) to launch.
       const hint = h("div", { class: "hint", style: "padding-top:5px" });
       rows.append(hint);
-      void Bridge.spotifyInstalled().then((ok) => {
+      const installed = def.id === "integration_spotify" ? Bridge.spotifyInstalled() : Bridge.youTubeMusicInstalled();
+      void installed.then((ok) => {
         hint.textContent = ok === false ? t("Not installed") : "";
       });
     }
@@ -974,7 +1027,7 @@ function generalSection(): HTMLElement {
   const volume = h("input", {
     type: "range", min: "0", max: "0.2", step: "0.005",
     value: String(settings.soundVolume),
-  }) as HTMLInputElement;
+  });
   volume.addEventListener("input", () => {
     settings.soundVolume = Number(volume.value);
     void save();
@@ -998,7 +1051,7 @@ function generalSection(): HTMLElement {
     type: "number", min: "5", max: "120", step: "1",
     value: String(Math.round(settings.autoCloseInterval)),
     style: "width:72px",
-  }) as HTMLInputElement;
+  });
   autoClose.addEventListener("change", () => {
     settings.autoCloseInterval = Math.max(5, Math.min(120, Number(autoClose.value) || 15));
     autoClose.value = String(settings.autoCloseInterval);
@@ -1011,12 +1064,12 @@ function generalSection(): HTMLElement {
     maxlength: "80",
     spellcheck: "false",
     value: settings.shellWeatherCity,
-  }) as HTMLInputElement;
+  });
   weatherCity.addEventListener("change", () => {
     settings.shellWeatherCity = weatherCity.value.trim();
     void save();
   });
-  const screen = h("select", {}) as HTMLSelectElement;
+  const screen = h("select", {});
   screen.append(
     h("option", { value: "primary", text: t("Main display") }),
     h("option", { value: "cursor", text: t("Display under the cursor") }),
@@ -1117,7 +1170,7 @@ function generalSection(): HTMLElement {
  * Both windows and the tray switch in place, without a restart.
  */
 function languageRow(): HTMLElement {
-  const select = h("select", {}) as HTMLSelectElement;
+  const select = h("select", {});
   select.append(h("option", { value: "", text: t("System") }));
   for (const { code, name } of LANGUAGES) select.append(h("option", { value: code, text: name, lang: code }));
   select.value = LANGUAGES.some((l) => l.code === settings.language) ? settings.language : "";
@@ -1258,7 +1311,7 @@ function shortcutsSection(initial: ShortcutsReport | null): HTMLElement {
       const keycap = h("button", {
         class: "keycap",
         text: binding.keys ? displayKeys(binding.keys) : SHORTCUTS_UI.none,
-      }) as HTMLButtonElement;
+      });
       keycap.disabled = !binding.enabled;
       keycap.addEventListener("click", () => record(d.id, binding, keycap));
       const sw = toggle(binding.enabled, (on) => store(d.id, { keys: binding.keys, enabled: on }));
@@ -1398,7 +1451,7 @@ function recapRows(): HTMLElement[] {
         feedback.textContent = "";
       }, 2400);
     },
-  }) as HTMLButtonElement;
+  });
   return [
     h("div", { class: "row" },
       h("label", { text: T.label }),
@@ -1459,8 +1512,8 @@ async function main() {
     hub?.redraw();
   });
 
-  void onEvent<ShortcutsReport>("shortcuts-status", (fresh) => shortcutsListener?.report(fresh));
-  void onEvent<Settings>("settings-changed", (s) => {
+  void onEvent("shortcuts-status", (fresh) => shortcutsListener?.report(fresh));
+  void onEvent("settings-changed", (s) => {
     const before = `${settings.chatProvider}|${settings.ollamaUrl}|${settings.lmstudioUrl}|${settings.customUrl}`;
     settings = { ...settings, ...s };
     shortcutsListener?.settingsChanged();
@@ -1486,7 +1539,7 @@ async function render() {
 
   const keys = [
     "stripe-api-key", "github-token", "vercel-token",
-    "n8n-url", "n8n-api-key", "resend-api-key", "notion-api-key", "calcom-api-key",
+    "n8n-url", "n8n-api-key", "resend-api-key", "notion-api-key", "calcom-api-key", "linear-api-key",
   ];
   const present: Record<string, boolean> = {};
   for (const k of keys) present[k] = (await Bridge.secretPresent(k)) ?? false;
@@ -1508,7 +1561,7 @@ async function render() {
   };
   const chatKeys: Record<string, boolean> = {};
   for (const def of CLOUD) {
-    const key = providerDef(def.id).key!;
+    const { key } = keyedProvider(def.id);
     chatKeys[key] = (await Bridge.secretPresent(key)) ?? false;
   }
   const customKey = (await Bridge.secretPresent(CUSTOM_SERVER_KEY)) ?? false;

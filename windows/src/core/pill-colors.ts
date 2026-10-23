@@ -18,7 +18,8 @@ export const PILL_PALETTE: readonly string[] = [
 export function normalizeHex(raw: unknown): string | null {
   if (typeof raw !== "string") return null;
   const m = /^#?([0-9a-fA-F]{6})$/.exec(raw.trim());
-  return m ? `#${m[1].toUpperCase()}` : null;
+  const hex = m?.[1];
+  return hex ? `#${hex.toUpperCase()}` : null;
 }
 
 /**
@@ -50,9 +51,7 @@ export function pillColor(id: string, catalogColor: string, colors: unknown): st
 export function withPillColor(
   colors: unknown, id: string, hex: string | null, catalogColor: string,
 ): Record<string, string> {
-  const next = parsePillColors(colors);
+  const { [id]: _previous, ...others } = parsePillColors(colors);
   const picked = normalizeHex(hex);
-  if (picked && picked !== normalizeHex(catalogColor)) next[id] = picked;
-  else delete next[id];
-  return next;
+  return picked && picked !== normalizeHex(catalogColor) ? { ...others, [id]: picked } : others;
 }

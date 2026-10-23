@@ -7,8 +7,7 @@
 // API keys never leave the credential store and file bytes never cross the IPC
 // boundary: the island sends the question and gets the answer's text back.
 
-use std::sync::Mutex;
-
+use parking_lot::Mutex;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use tauri::AppHandle;
@@ -27,6 +26,9 @@ pub enum ChatContext {
     /// The part of the screen the user circled (shell/capture.rs): the image
     /// itself stays in Rust's memory, the page only names it. Claude only.
     Capture,
+    /// The window Mochi was dropped on (look.rs): its picture stays in Rust's
+    /// memory too. Every provider that takes images gets it, the others its name.
+    Look { app_name: String, title: String },
 }
 
 #[derive(Serialize)]
@@ -83,7 +85,7 @@ pub struct Turn {
 
 impl Chat {
     pub fn reset(&self) {
-        let mut c = self.inner.lock().unwrap();
+        let mut c = self.inner.lock();
         let epoch = c.epoch + 1;
         *c = Conversation { epoch, ..Default::default() };
     }
@@ -91,9 +93,10 @@ impl Chat {
     /// Starts a turn with `provider`, converting the history if another
     /// provider answered the previous turns.
     pub fn begin(&self, provider: &str) -> Turn {
-        let mut c = self.inner.lock().unwrap();
+        let mut c = self.inner.lock();
         if c.owner.as_deref() != Some(provider) {
-            c.native = c.plain.clone();
+            let Conversation { native, plain, .. } = &mut *c;
+            native.clone_from(plain);
             c.owner = Some(provider.to_string());
             // Its session lacks what another provider answered meanwhile.
             c.cli_session = None;
@@ -111,7 +114,7 @@ impl Chat {
     /// provider's format, and their plain text. Only a successful turn is
     /// recorded, so the history always matches what the model saw.
     pub fn commit(&self, turn: &Turn, user: Value, assistant: Value, user_text: &str, answer: &str) {
-        let mut c = self.inner.lock().unwrap();
+        let mut c = self.inner.lock();
         if c.epoch != turn.epoch || c.owner.as_deref() != Some(turn.provider.as_str()) {
             return;
         }
@@ -124,7 +127,7 @@ impl Chat {
     /// The Claude Code session a successful subscription turn ran in, for the
     /// next one to resume. Dropped like `commit` after a reset or a switch.
     pub fn set_cli_session(&self, turn: &Turn, id: String) {
-        let mut c = self.inner.lock().unwrap();
+        let mut c = self.inner.lock();
         if c.epoch == turn.epoch && c.owner.as_deref() == Some(turn.provider.as_str()) {
             c.cli_session = Some(id);
         }
@@ -174,6 +177,7 @@ pub fn plain_question(first: bool, context: Option<&ChatContext>, query: &str) -
             format!("{}\n\n{query}", window_line(app_name, title, url.as_deref()))
         }
         Some(ChatContext::Capture) => format!("{CAPTURE_LINE}\n\n{query}"),
+        Some(ChatContext::Look { app_name, title }) => format!("{}\n\n{query}", window_line(app_name, title, None)),
         None => query.to_string(),
     }
 }
@@ -212,6 +216,7 @@ fn checked_context(context: ChatContext) -> Result<ChatContext, String> {
             Ok(ChatContext::File { name, path })
         }
         ChatContext::Capture if crate::shell::capture::peek().is_none() => Err(crate::i18n::t("That capture is gone: circle again.")),
+        ChatContext::Look { .. } if crate::look::peek().is_none() => Err(crate::i18n::t("Mochi couldn't see that window. Try again.")),
         other => Ok(other),
     }
 }
@@ -252,17 +257,37 @@ pub async fn send(
         crate::shell::capture::discard();
         return reply;
     }
+    let look = matches!(context, Some(ChatContext::Look { .. }));
+    let reply = dispatch(app, chat, settings, provider, &model, query, context).await;
+    // Like a capture, the window's picture lives for its one turn, answered or
+    // not: the island never sends the look context again (the bubble is already
+    // in the chat), so a picture kept after a failure would only linger.
+    if look {
+        crate::look::discard();
+    }
+    reply
+}
+
+async fn dispatch(
+    app: &AppHandle,
+    chat: &Chat,
+    settings: &Settings,
+    provider: &str,
+    model: &str,
+    query: String,
+    context: Option<ChatContext>,
+) -> Result<ChatReply, String> {
     if provider == ANTHROPIC || provider.is_empty() {
-        return claude::send(chat, &model, query, context).await;
+        return claude::send(chat, model, query, context).await;
     }
     if provider == ANTHROPIC_SUBSCRIPTION {
-        return claude_cli::chat(chat, &model, query, context, claude_cli::Mode::Chat).await;
+        return claude_cli::chat(chat, model, query, context, claude_cli::Mode::Chat).await;
     }
     if let Some(p) = openai_compat::provider(provider) {
-        return openai_compat::send(chat, p, &model, query, context).await;
+        return openai_compat::send(chat, p, model, query, context).await;
     }
     if let Some(server) = local_chat::server(settings, provider) {
-        return local_chat::send(app, chat, &server, &model, query, context).await;
+        return local_chat::send(app, chat, &server, model, query, context).await;
     }
     Err(format!("Unknown chat provider: {provider}"))
 }
@@ -406,6 +431,9 @@ mod tests {
         let win = ChatContext::Window { app_name: "Code".into(), title: "main.rs".into(), url: None };
         assert_eq!(plain_question(true, Some(&win), "q"), "Context — App: Code, Window: main.rs\n\nq");
         assert_eq!(window_line("Edge", "Docs", Some("https://x.dev")), "Context — App: Edge, Window: Docs, URL: https://x.dev");
+        let look = ChatContext::Look { app_name: "Edge".into(), title: "Docs".into() };
+        assert_eq!(plain_question(true, Some(&look), "q"), "Context — App: Edge, Window: Docs\n\nq");
+        assert_eq!(plain_question(false, Some(&look), "q"), "q");
     }
 
     #[test]

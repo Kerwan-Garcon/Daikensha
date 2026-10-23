@@ -6,6 +6,7 @@
 import { closeCurve } from "../core/anim";
 import { Sound } from "../core/sound";
 import { COMPACT_W, NOTCH_H, NOTCH_W } from "../core/layout";
+import { cyclicAt } from "../core/arrays";
 
 // ── Timing (GT in the Swift file) ─────────────────────────────────────────────
 
@@ -576,7 +577,7 @@ function drawMinis(x: CanvasRenderingContext2D, alpha: number) {
     x.translate(cx + dx, cy + dy);
     const scale = alpha * COMPACT.miniGridScale;
     x.scale(scale, scale);
-    x.fillStyle = MINI_COLORS[i];
+    x.fillStyle = cyclicAt(MINI_COLORS, i);
     x.fill(mochiPath(5.3, 4));
     x.restore();
   });

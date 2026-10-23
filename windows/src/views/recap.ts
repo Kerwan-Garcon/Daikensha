@@ -228,7 +228,8 @@ export function buildRecap(actions: ViewActions): ViewHost {
  */
 async function copyImage(canvas: HTMLCanvasElement): Promise<boolean> {
   const Item = (window as { ClipboardItem?: typeof ClipboardItem }).ClipboardItem;
-  if (!Item || !navigator.clipboard?.write) return false;
+  const clipboard = (navigator as Partial<Navigator>).clipboard as Partial<Clipboard> | undefined;
+  if (!Item || !clipboard?.write) return false;
   await Bridge.focusWindow(true);
   try {
     const blob = await toPngBlob(canvas);

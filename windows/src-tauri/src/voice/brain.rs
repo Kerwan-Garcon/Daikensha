@@ -25,7 +25,7 @@ pub struct Brain {
 
 impl Default for Brain {
     fn default() -> Self {
-        Self { messages: Vec::new(), last: Instant::now(), cli: Default::default(), error: None }
+        Self { messages: Vec::new(), last: Instant::now(), cli: crate::claude_cli::voice::Voice::default(), error: None }
     }
 }
 
@@ -60,11 +60,12 @@ pub(crate) fn coucou_tools() -> Vec<Value> {
         }),
         json!({
             "name": "music",
-            "description": "Control Spotify: play or pause, next, previous, set the volume, or search a song, an artist or a playlist in Spotify.",
+            "description": "Control Spotify or YouTube Music (through Pear Desktop): play or pause, next, previous, set the volume, or search a song, an artist or a playlist. On YouTube Music, search plays the top result; on Spotify it opens the search for the user to pick.",
             "input_schema": {
                 "type": "object",
                 "properties": {
                     "action": { "type": "string", "enum": ["play_pause", "next", "previous", "set_volume", "search"] },
+                    "player": { "type": "string", "enum": ["spotify", "youtube_music"], "description": "Only when the user names one. Otherwise the one playing, else YouTube Music when it is connected, else Spotify." },
                     "query": { "type": "string", "description": "What to search, for search." },
                     "volume": { "type": "integer", "description": "0-100 for set_volume." }
                 },
@@ -73,7 +74,7 @@ pub(crate) fn coucou_tools() -> Vec<Value> {
         }),
         json!({
             "name": "service_info",
-            "description": "Read the user's real data that Coucou already has, as JSON: the active pills, the agent sessions (Claude Code, Codex…) and what they are doing, Claude or Codex plan usage, Spotify now playing, and the services' latest data (Stripe, GitHub, Vercel, Resend, n8n, Notion, Cal.com).",
+            "description": "Read the user's real data that Coucou already has, as JSON: the active pills, the agent sessions (Claude Code, Codex…) and what they are doing, Claude or Codex plan usage, Spotify and YouTube Music now playing, and the services' latest data (Stripe, GitHub, Vercel, Resend, n8n, Notion, Cal.com).",
             "input_schema": { "type": "object", "properties": {} }
         }),
         json!({
@@ -113,7 +114,7 @@ that it is done, and a spoken yes is not a click.\n"
 }
 
 fn shell_on(app: &AppHandle) -> bool {
-    app.try_state::<crate::Shared>().is_some_and(|s| s.settings.lock().unwrap().shell_panel)
+    app.try_state::<crate::Shared>().is_some_and(|s| s.settings.lock().shell_panel)
 }
 
 fn system_prompt(pills: &str, shell: bool) -> String {
@@ -193,7 +194,7 @@ impl Brain {
         let tools: Vec<Value> = tools().into_iter().filter(|t| shell || t["name"].as_str().and_then(crate::shell::voice_tools::level).is_none()).collect();
         let chat_model = app
             .try_state::<crate::Shared>()
-            .map(|s| s.settings.lock().unwrap().model.clone())
+            .map(|s| s.settings.lock().model.clone())
             .unwrap_or_default();
         let mut acted = false;
         let mut spoken = String::new();

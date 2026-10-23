@@ -14,6 +14,9 @@ import { readActivity, readPulse, readStats } from "../core/github";
 import { githubDetail, githubPulseCard } from "./github";
 import { N_, language, t } from "../i18n/i18n";
 import { colorHex } from "../design/tokens";
+import { Sound } from "../core/sound";
+import { itemAt } from "../core/arrays";
+import { errorText, text } from "../core/decode";
 
 /** Same shape as the Swift `timeAgo` computed properties. */
 export function timeAgo(value: unknown): string {
@@ -40,7 +43,7 @@ function listRow(accent: string, first: boolean, ...children: Node[]): HTMLEleme
 }
 
 function get(id: string): Record<string, unknown> {
-  return (State.integrations[id]?.data ?? {}) as Record<string, unknown>;
+  return State.integrations[id]?.data ?? {};
 }
 
 function arr(id: string, key: string): Record<string, unknown>[] {
@@ -56,6 +59,7 @@ const OPEN_URLS: Record<string, string> = {
   integration_github: "https://github.com",
   integration_stripe: "https://dashboard.stripe.com/payments",
   integration_notion: "https://notion.so",
+  integration_linear: "https://linear.app",
   integration_calcom: "https://app.cal.com/bookings",
 };
 
@@ -90,6 +94,7 @@ function idleCard(task: AgentTask, openSettings: () => void): HTMLElement {
   const status = idleStatus(task.id, info, State.settings.model);
 
   const actions = h("div", { class: "int-actions" });
+  const openUrl = OPEN_URLS[task.id];
   if (task.id === "integration_claude") {
     actions.append(
       h("button", {
@@ -117,13 +122,13 @@ function idleCard(task: AgentTask, openSettings: () => void): HTMLElement {
         onclick: () => void Bridge.openN8n(),
       }),
     );
-  } else if (OPEN_URLS[task.id]) {
+  } else if (openUrl) {
     actions.append(
       h("button", {
         class: "link-btn",
         style: `color:${task.color}d9`,
         text: t("Open {name}", { name: task.name }),
-        onclick: () => void Bridge.openUrl(OPEN_URLS[task.id]),
+        onclick: () => void Bridge.openUrl(openUrl),
       }),
     );
   }
@@ -151,7 +156,7 @@ function idleCard(task: AgentTask, openSettings: () => void): HTMLElement {
     { class: "int-card" },
     header(
       task.color,
-      task.id === "integration_claude" ? def!.name : task.name,
+      task.id === "integration_claude" ? (def?.name ?? task.name) : task.name,
       t(def?.subtitle ?? N_("Integration")),
     ),
     h("div", { class: "int-status" }, dot(status.color, 5), h("span", { text: status.label })),
@@ -166,7 +171,7 @@ function vercelCard(onDetail: () => void): HTMLElement {
   const rows = h("div", { class: "int-rows" });
   deployments.slice(0, 3).forEach((d, i) => {
     const accent = d.state === "READY" ? colorHex("--color-success") : colorHex("--color-danger");
-    const name = h("span", { class: "int-name", text: String(d.projectName ?? "") });
+    const name = h("span", { class: "int-name", text: text(d.projectName, "") });
     const ago = h("span", { class: "int-ago", text: timeAgo(d.createdAt) });
     if (i === 0) {
       const more = h(
@@ -188,17 +193,17 @@ function vercelDetail(onBack: () => void): HTMLElement {
   const accent = success ? colorHex("--color-success") : colorHex("--color-danger");
   const status = success ? t("Ready") : d.state === "CANCELED" ? t("Canceled") : t("Error");
   const body = h("div", { class: "int-detail-body" });
-  if (d.commitMessage) body.append(h("div", { class: "int-commit", text: String(d.commitMessage) }));
+  if (d.commitMessage) body.append(h("div", { class: "int-commit", text: text(d.commitMessage) }));
   const meta = h("div", { class: "int-meta" });
-  if (d.branch) meta.append(h("span", { text: String(d.branch) }));
+  if (d.branch) meta.append(h("span", { text: text(d.branch) }));
   meta.append(h("span", { text: t("{time} ago", { time: timeAgo(d.createdAt) }) }));
   body.append(meta);
   if (d.url) {
     body.append(
       h("button", {
         class: "int-link",
-        text: String(d.url),
-        onclick: () => void Bridge.openUrl(`https://${d.url}`),
+        text: text(d.url),
+        onclick: () => void Bridge.openUrl(`https://${text(d.url)}`),
       }),
     );
   }
@@ -210,7 +215,7 @@ function vercelDetail(onBack: () => void): HTMLElement {
       { class: "int-detail-head" },
       h("button", { class: "int-back", onclick: onBack }, svg(ICONS.chevronLeft, 10, { stroke: 2.4 })),
       dot(accent, 6),
-      h("b", { text: String(d.projectName ?? t("Deployment")) }),
+      h("b", { text: text(d.projectName, t("Deployment")) }),
       h("span", { class: "int-badge", style: `color:${accent};background:${accent}24`, text: status }),
     ),
     body,
@@ -224,7 +229,7 @@ function resendCard(): HTMLElement {
   const total = get("integration_resend").total;
   const extra =
     total != null
-      ? h("span", { class: "int-total" }, h("i", { class: "pulse" }), h("span", { text: String(total) }))
+      ? h("span", { class: "int-total" }, h("i", { class: "pulse" }), h("span", { text: text(total) }))
       : undefined;
   const rows = h("div", { class: "int-rows" });
   emails.slice(0, 3).forEach((e, i) => {
@@ -236,7 +241,7 @@ function resendCard(): HTMLElement {
       h("span", { class: "int-name", text: short }),
       h("span", { class: "int-ago", text: timeAgo(e.createdAt) }),
     ];
-    if (i === 0 && e.subject) cells.push(h("span", { class: "int-sub", text: String(e.subject) }));
+    if (i === 0 && e.subject) cells.push(h("span", { class: "int-sub", text: text(e.subject) }));
     rows.append(listRow(accent, i === 0, ...cells));
   });
   return h("div", { class: "int-card" }, header("#22C55E", "Resend", t("Emails"), extra), rows);
@@ -277,7 +282,7 @@ function githubCard(): HTMLElement {
 function stripeCard(): HTMLElement {
   const d = get("integration_stripe");
   const balance = (Number(d.balance ?? 0) / 100).toFixed(2);
-  const currency = String(d.currency ?? "eur").toUpperCase();
+  const currency = text(d.currency, "eur").toUpperCase();
   const rows = h("div", { class: "int-rows tight" });
   for (const p of arr("integration_stripe", "payments")) {
     const success = p.status === "succeeded";
@@ -287,7 +292,7 @@ function stripeCard(): HTMLElement {
         "div",
         { class: "int-row" },
         dot(accent, 5),
-        h("span", { class: "int-name", text: String(p.description ?? t("Payment")) }),
+        h("span", { class: "int-name", text: text(p.description, t("Payment")) }),
         h("span", {
           class: "int-amount",
           style: "color:var(--color-success)",
@@ -321,9 +326,9 @@ function notionCard(): HTMLElement {
           },
         },
         p.emoji
-          ? h("span", { class: "int-emoji", text: String(p.emoji) })
+          ? h("span", { class: "int-emoji", text: text(p.emoji) })
           : h("i", { class: "int-emoji" }, svg(ICONS.doc, 9)),
-        h("span", { class: "int-name", text: String(p.title ?? t("Untitled")) }),
+        h("span", { class: "int-name", text: text(p.title, t("Untitled")) }),
         h("span", { class: "int-ago", text: timeAgo(p.lastEditedAt) }),
       ),
     );
@@ -331,18 +336,165 @@ function notionCard(): HTMLElement {
   return h("div", { class: "int-card" }, header("#E8E8E8", "Notion", t("Recent")), rows);
 }
 
+// ── Linear ────────────────────────────────────────────────────────────────────
+//
+// LinearCardView on macOS: my open issues, a button to each one's next state
+// (named as the team names it), and a field that creates an issue. A poll
+// rebuilds the card, so the draft lives here and the field takes the focus
+// back while it holds something.
+
+const LINEAR = "integration_linear";
+let linearDraft = "";
+let linearCreating = false;
+/**
+ * The new-issue field on screen now. Creating an issue polls Linear, which
+ * rebuilds the card while the request is still pending: the end of the request
+ * must reach this field, not the one it started from.
+ */
+let linearInput: HTMLInputElement | null = null;
+
+/** A state colour from Linear, or a neutral one if it isn't "#rrggbb". */
+function linearColor(v: unknown): string {
+  return typeof v === "string" && /^#[0-9a-fA-F]{6}$/.test(v) ? v : colorHex("--color-text-faint");
+}
+
+function linearCard(): HTMLElement {
+  const issues = arr(LINEAR, "issues");
+  const teams = arr(LINEAR, "teams");
+  const errorLine = h("div", { class: "linear-error" });
+  const fail = (err: unknown) => {
+    errorLine.textContent = errorText(err);
+    Sound.play("error");
+  };
+
+  const rows = h("div", { class: "int-rows tight linear-rows" });
+  if (issues.length === 0) rows.append(h("div", { class: "int-empty", text: t("No open issue assigned to you") }));
+  for (const issue of issues) {
+    const state = (issue.state ?? {}) as Record<string, unknown>;
+    const ring = linearColor(state.color);
+    const open = h(
+      "button",
+      {
+        class: "int-page linear-issue",
+        title: text(state.name, ""),
+        onclick: () => {
+          if (typeof issue.url === "string") void Bridge.openUrl(issue.url);
+        },
+      },
+      h("i", {
+        class: "linear-state",
+        style: `border-color:${ring}` + (state.type === "started" ? `;background:${ring}80` : ""),
+      }),
+      h("span", { class: "linear-id", text: text(issue.identifier, "") }),
+      h("span", { class: "int-name", text: text(issue.title, "") }),
+      h("span", { class: "int-ago", text: timeAgo(issue.updatedAt) }),
+    );
+    const row = h("div", { class: "linear-row" }, open);
+    const next = issue.next as Record<string, unknown> | null | undefined;
+    if (next && typeof next.id === "string" && typeof issue.id === "string") {
+      const tint = linearColor(next.color);
+      const name = text(next.name, "");
+      const button = h("button", {
+        class: "linear-next",
+        style: `color:${tint};background:${tint}24`,
+        title: name,
+        text: name,
+      });
+      const issueId = issue.id;
+      const stateId = next.id;
+      button.addEventListener("click", async () => {
+        button.disabled = true;
+        button.textContent = "…";
+        try {
+          // Rust reads the list again once Linear says yes: the card follows.
+          await Bridge.linearAdvance(issueId, stateId);
+          Sound.play(next.type === "completed" ? "approve" : "tick");
+        } catch (err) {
+          button.disabled = false;
+          button.textContent = name;
+          fail(err);
+        }
+      });
+      row.append(button);
+    }
+    rows.append(row);
+  }
+
+  const card = h("div", { class: "int-card" },
+    header("#5E6AD2", "Linear", t("My issues"),
+      issues.length ? h("span", { class: "int-ago", text: String(issues.length) }) : undefined),
+    rows,
+  );
+
+  if (teams.length > 0) {
+    const picked = teams.find((x) => x.id === State.settings.linearTeam) ?? itemAt(teams, 0);
+    const input = h("input", {
+      class: "linear-input",
+      type: "text",
+      maxlength: "255",
+      spellcheck: "false",
+      autocomplete: "off",
+      placeholder: t("New issue in {team}…", { team: text(picked.key, "") }),
+    });
+    input.value = linearDraft;
+    input.disabled = linearCreating;
+    linearInput = input;
+    const submit = async () => {
+      const title = input.value.trim();
+      if (!title || linearCreating) return;
+      linearCreating = true;
+      input.disabled = true;
+      errorLine.textContent = "";
+      try {
+        await Bridge.linearCreate(title);
+        linearDraft = "";
+        if (linearInput) linearInput.value = "";
+        Sound.play("approve");
+      } catch (err) {
+        fail(err);
+      } finally {
+        linearCreating = false;
+        if (linearInput) linearInput.disabled = false;
+      }
+    };
+    input.addEventListener("input", () => {
+      linearDraft = input.value;
+    });
+    input.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        void submit();
+      } else if (e.key === "Escape" && input.value) {
+        // Clears the draft; an empty field lets Escape close the island.
+        e.stopPropagation();
+        linearDraft = "";
+        input.value = "";
+      }
+    });
+    if (linearDraft) window.setTimeout(() => {
+      if (input.isConnected) {
+        input.focus();
+        input.setSelectionRange(input.value.length, input.value.length);
+      }
+    }, 0);
+    card.append(h("div", { class: "linear-new" }, svg(ICONS.plus, 9), input));
+  }
+  card.append(errorLine);
+  return card;
+}
+
 // ── Cal.com ───────────────────────────────────────────────────────────────────
 
 function calcomCard(): HTMLElement {
   const bookings = arr("integration_calcom", "bookings")
     .slice()
-    .sort((a, b) => new Date(String(a.start)).getTime() - new Date(String(b.start)).getTime());
+    .sort((a, b) => new Date(String(a.start)).getTime() - new Date(text(b.start)).getTime());
   const rows = h("div", { class: "int-rows tight" });
   if (bookings.length === 0) {
     rows.append(h("div", { class: "int-empty", text: t("No calls scheduled") }));
   }
   for (const b of bookings.slice(0, 3)) {
-    const when = new Date(String(b.start));
+    const when = new Date(text(b.start));
     const day = when.toLocaleDateString(language(), { day: "2-digit", month: "2-digit" });
     const time = when.toLocaleTimeString(language(), { hour: "2-digit", minute: "2-digit" });
     rows.append(
@@ -351,7 +503,7 @@ function calcomCard(): HTMLElement {
         { class: "int-row" },
         dot("#C9956A", 4),
         h("span", { class: "int-time", text: `${day} ${time}` }),
-        h("span", { class: "int-name", text: String(b.title ?? t("Meeting")) }),
+        h("span", { class: "int-name", text: text(b.title, t("Meeting")) }),
       ),
     );
   }
@@ -419,9 +571,9 @@ function n8nDetail(task: AgentTask, onBack: () => void): HTMLElement {
 
 export interface IntegrationCardHooks {
   detailOpen: boolean;
-  openDetail(): void;
-  closeDetail(): void;
-  openSettings(): void;
+  openDetail: () => void;
+  closeDetail: () => void;
+  openSettings: () => void;
 }
 
 /** True when this integration has data worth showing instead of the idle card. */
@@ -439,6 +591,8 @@ export function hasIntegrationData(id: string): boolean {
       return info.loaded;
     case "integration_notion":
       return arr(id, "pages").length > 0;
+    case LINEAR:
+      return info.loaded;
     case "integration_calcom":
       return info.loaded;
     default:
@@ -478,6 +632,8 @@ export function renderIntegrationCard(task: AgentTask, hooks: IntegrationCardHoo
       return stripeCard();
     case "integration_notion":
       return notionCard();
+    case LINEAR:
+      return linearCard();
     case "integration_calcom":
       return calcomCard();
     default:

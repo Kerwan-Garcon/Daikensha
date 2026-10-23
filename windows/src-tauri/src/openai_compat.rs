@@ -99,6 +99,13 @@ fn user_message(first: bool, context: Option<&ChatContext>, query: &str) -> Valu
         Some(ChatContext::Window { app_name, title, url }) => {
             prefix = format!("{}\n\n", chat::window_line(app_name, title, url.as_deref()));
         }
+        Some(ChatContext::Look { app_name, title }) => {
+            if let Some(png) = crate::look::peek() {
+                let url = format!("data:image/png;base64,{}", crate::claude::base64_for(&png));
+                image = Some(json!({ "type": "image_url", "image_url": { "url": url } }));
+            }
+            prefix = format!("{}\n{}\n\n", chat::window_line(app_name, title, None), crate::look::LOOK_LINE);
+        }
         // chat::send keeps captures for Claude.
         Some(ChatContext::Capture) | None => {}
     }

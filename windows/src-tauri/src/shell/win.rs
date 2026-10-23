@@ -17,7 +17,7 @@ use super::stats::{display_name, Raw};
 use super::windows_mgr::{move_to_screen, placed, placement, snap_rect, Action, Placement, Rect, Snap, WindowInfo};
 
 fn ft(f: FILETIME) -> u64 {
-    ((f.dwHighDateTime as u64) << 32) | f.dwLowDateTime as u64
+    (u64::from(f.dwHighDateTime) << 32) | u64::from(f.dwLowDateTime)
 }
 
 fn err(e: windows::core::Error) -> String {
@@ -61,14 +61,14 @@ impl Drop for GpuQuery {
 }
 
 fn gpu_open() -> Option<GpuQuery> {
-    use windows::Win32::System::Performance::{PdhAddEnglishCounterW, PdhCloseQuery, PdhCollectQueryData, PdhOpenQueryW};
+    use windows::Win32::System::Performance::{PdhAddEnglishCounterW, PdhCloseQuery, PdhCollectQueryData, PdhOpenQueryW, PDH_HCOUNTER, PDH_HQUERY};
     unsafe {
-        let mut query = Default::default();
-        if PdhOpenQueryW(PCWSTR::null(), 0, &mut query) != 0 {
+        let mut query = PDH_HQUERY::default();
+        if PdhOpenQueryW(PCWSTR::null(), 0, &raw mut query) != 0 {
             return None;
         }
-        let mut counter = Default::default();
-        if PdhAddEnglishCounterW(query, w!("\\GPU Engine(*engtype_3D)\\Utilization Percentage"), 0, &mut counter) != 0 {
+        let mut counter = PDH_HCOUNTER::default();
+        if PdhAddEnglishCounterW(query, w!("\\GPU Engine(*engtype_3D)\\Utilization Percentage"), 0, &raw mut counter) != 0 {
             let _ = PdhCloseQuery(query);
             return None;
         }
@@ -84,14 +84,14 @@ fn gpu_read(g: &GpuQuery) -> Option<f32> {
             return None;
         }
         let (mut size, mut count) = (0u32, 0u32);
-        let _ = PdhGetFormattedCounterArrayW(g.counter, PDH_FMT_DOUBLE, &mut size, &mut count, None);
+        let _ = PdhGetFormattedCounterArrayW(g.counter, PDH_FMT_DOUBLE, &raw mut size, &raw mut count, None);
         if size == 0 {
             return Some(0.0);
         }
         // u64 words keep the items aligned.
         let mut buf = vec![0u64; (size as usize).div_ceil(8)];
-        let items = buf.as_mut_ptr() as *mut PDH_FMT_COUNTERVALUE_ITEM_W;
-        if PdhGetFormattedCounterArrayW(g.counter, PDH_FMT_DOUBLE, &mut size, &mut count, Some(items)) != 0 {
+        let items = buf.as_mut_ptr().cast::<PDH_FMT_COUNTERVALUE_ITEM_W>();
+        if PdhGetFormattedCounterArrayW(g.counter, PDH_FMT_DOUBLE, &raw mut size, &raw mut count, Some(items)) != 0 {
             return None;
         }
         let items = std::slice::from_raw_parts(items, count as usize);
@@ -103,7 +103,7 @@ fn net_bytes() -> (u64, u64) {
     use windows::Win32::NetworkManagement::IpHelper::{FreeMibTable, GetIfTable2, MIB_IF_TABLE2};
     unsafe {
         let mut table: *mut MIB_IF_TABLE2 = std::ptr::null_mut();
-        if GetIfTable2(&mut table).is_err() || table.is_null() {
+        if GetIfTable2(&raw mut table).is_err() || table.is_null() {
             return (0, 0);
         }
         let t = &*table;
@@ -126,19 +126,19 @@ fn processes() -> Vec<(u32, String, u64, u64)> {
     unsafe {
         let Ok(snap) = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0) else { return out };
         let mut e = PROCESSENTRY32W { dwSize: std::mem::size_of::<PROCESSENTRY32W>() as u32, ..Default::default() };
-        let mut more = Process32FirstW(snap, &mut e).is_ok();
+        let mut more = Process32FirstW(snap, &raw mut e).is_ok();
         while more {
             if let Ok(h) = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, false, e.th32ProcessID) {
                 let (mut c, mut x, mut k, mut u) = Default::default();
                 let mut mem = PROCESS_MEMORY_COUNTERS { cb: std::mem::size_of::<PROCESS_MEMORY_COUNTERS>() as u32, ..Default::default() };
-                if GetProcessTimes(h, &mut c, &mut x, &mut k, &mut u).is_ok() {
-                    let _ = K32GetProcessMemoryInfo(h, &mut mem, mem.cb);
+                if GetProcessTimes(h, &raw mut c, &raw mut x, &raw mut k, &raw mut u).is_ok() {
+                    let _ = K32GetProcessMemoryInfo(h, &raw mut mem, mem.cb);
                     let len = e.szExeFile.iter().position(|&ch| ch == 0).unwrap_or(e.szExeFile.len());
                     out.push((e.th32ProcessID, String::from_utf16_lossy(&e.szExeFile[..len]), ft(k) + ft(u), mem.WorkingSetSize as u64));
                 }
                 let _ = CloseHandle(h);
             }
-            more = Process32NextW(snap, &mut e).is_ok();
+            more = Process32NextW(snap, &raw mut e).is_ok();
         }
         let _ = CloseHandle(snap);
     }
@@ -150,13 +150,13 @@ pub fn read_stats(with_top: bool, gpu: &mut Option<GpuQuery>) -> Raw {
     use windows::Win32::System::Threading::GetSystemTimes;
     let mut r = Raw::default();
     let (mut idle, mut kern, mut user) = (FILETIME::default(), FILETIME::default(), FILETIME::default());
-    if unsafe { GetSystemTimes(Some(&mut idle), Some(&mut kern), Some(&mut user)) }.is_ok() {
+    if unsafe { GetSystemTimes(Some(&raw mut idle), Some(&raw mut kern), Some(&raw mut user)) }.is_ok() {
         // Kernel time includes idle time.
         r.cpu_total = ft(kern) + ft(user);
         r.cpu_busy = r.cpu_total.saturating_sub(ft(idle));
     }
     let mut mem = MEMORYSTATUSEX { dwLength: std::mem::size_of::<MEMORYSTATUSEX>() as u32, ..Default::default() };
-    if unsafe { GlobalMemoryStatusEx(&mut mem) }.is_ok() {
+    if unsafe { GlobalMemoryStatusEx(&raw mut mem) }.is_ok() {
         r.mem_total = mem.ullTotalPhys;
         r.mem_used = mem.ullTotalPhys.saturating_sub(mem.ullAvailPhys);
     }
@@ -186,14 +186,14 @@ fn screens() -> Vec<(HMONITOR, Rect)> {
     }
     let mut monitors: Vec<HMONITOR> = Vec::new();
     unsafe {
-        let _ = EnumDisplayMonitors(None, None, Some(each), LPARAM(&mut monitors as *mut _ as isize));
+        let _ = EnumDisplayMonitors(None, None, Some(each), LPARAM(&raw mut monitors as isize));
     }
     monitors
         .into_iter()
         .map(|m| {
             let mut info = MONITORINFO { cbSize: std::mem::size_of::<MONITORINFO>() as u32, ..Default::default() };
             unsafe {
-                let _ = GetMonitorInfoW(m, &mut info);
+                let _ = GetMonitorInfoW(m, &raw mut info);
             }
             (m, rect(info.rcWork))
         })
@@ -208,7 +208,7 @@ fn screen_of(hwnd: HWND, list: &[(HMONITOR, Rect)]) -> usize {
 fn pid_of(hwnd: HWND) -> u32 {
     let mut pid = 0u32;
     unsafe {
-        GetWindowThreadProcessId(hwnd, Some(&mut pid));
+        GetWindowThreadProcessId(hwnd, Some(&raw mut pid));
     }
     pid
 }
@@ -219,7 +219,7 @@ fn exe_of(pid: u32) -> String {
         let Ok(h) = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, false, pid) else { return String::new() };
         let mut buf = [0u16; 1024];
         let mut len = buf.len() as u32;
-        let ok = QueryFullProcessImageNameW(h, PROCESS_NAME_WIN32, windows::core::PWSTR(buf.as_mut_ptr()), &mut len).is_ok();
+        let ok = QueryFullProcessImageNameW(h, PROCESS_NAME_WIN32, windows::core::PWSTR(buf.as_mut_ptr()), &raw mut len).is_ok();
         let _ = CloseHandle(h);
         if ok {
             display_name(&String::from_utf16_lossy(&buf[..len as usize]))
@@ -247,7 +247,7 @@ fn eligible(hwnd: HWND) -> bool {
             return false;
         }
         let mut cloaked = 0u32;
-        let _ = DwmGetWindowAttribute(hwnd, DWMWA_CLOAKED, &mut cloaked as *mut _ as _, 4);
+        let _ = DwmGetWindowAttribute(hwnd, DWMWA_CLOAKED, (&raw mut cloaked).cast(), 4);
         if cloaked != 0 || title_of(hwnd).is_empty() {
             return false;
         }
@@ -263,9 +263,86 @@ fn all_windows() -> Vec<HWND> {
     }
     let mut list: Vec<HWND> = Vec::new();
     unsafe {
-        let _ = EnumWindows(Some(each), LPARAM(&mut list as *mut _ as isize));
+        let _ = EnumWindows(Some(each), LPARAM(&raw mut list as isize));
     }
     list.into_iter().filter(|h| eligible(*h)).collect()
+}
+
+/// The desktop and the taskbars: titled, visible, never something to look at.
+fn is_shell(hwnd: HWND) -> bool {
+    use windows::Win32::UI::WindowsAndMessaging::GetClassNameW;
+    let mut name = [0u16; 64];
+    let len = unsafe { GetClassNameW(hwnd, &mut name) };
+    let class = String::from_utf16_lossy(&name[..len.max(0) as usize]);
+    matches!(class.as_str(), "Progman" | "WorkerW" | "Shell_TrayWnd" | "Shell_SecondaryTrayWnd")
+}
+
+/// The topmost window of another app under (x, y), physical desktop pixels, as
+/// (handle, title, app): the first one, in z order, the Windows tab would list.
+pub(crate) fn window_at(x: i32, y: i32) -> Option<(isize, String, String)> {
+    all_windows()
+        .into_iter()
+        .find(|&h| {
+            let (r, _) = frame(h);
+            !unsafe { IsIconic(h) }.as_bool() && !is_shell(h) && x >= r.x && y >= r.y && x < r.x + r.w && y < r.y + r.h
+        })
+        .map(|h| (h.0 as isize, title_of(h), exe_of(pid_of(h))))
+}
+
+/// That window's own pixels, its visible frame only, as BGRA rows, top-down.
+/// PrintWindow draws it even under other windows (and under Mochi); a window
+/// it can't draw comes out black, and is then read from the screen instead.
+pub(crate) fn capture_window(id: isize) -> Result<(u32, u32, Vec<u8>), String> {
+    use windows::Win32::Graphics::Gdi::{
+        CreateCompatibleBitmap, CreateCompatibleDC, DeleteDC, DeleteObject, GetDC, GetDIBits, ReleaseDC, SelectObject, BITMAPINFO,
+        BITMAPINFOHEADER, BI_RGB, DIB_RGB_COLORS,
+    };
+    use windows::Win32::Storage::Xps::{PrintWindow, PRINT_WINDOW_FLAGS};
+    /// PW_RENDERFULLCONTENT: windows drawn by the GPU (browsers, Electron) too.
+    const FULL_CONTENT: PRINT_WINDOW_FLAGS = PRINT_WINDOW_FLAGS(2);
+
+    let hwnd = HWND(id as *mut _);
+    if !eligible(hwnd) {
+        return Err(crate::i18n::t("Mochi couldn't see that window. Try again."));
+    }
+    let mut outer = RECT::default();
+    unsafe { GetWindowRect(hwnd, &raw mut outer) }.map_err(err)?;
+    let (visible, (left, top, _, _)) = frame(hwnd);
+    let (w, h) = (outer.right - outer.left, outer.bottom - outer.top);
+    if w <= 0 || h <= 0 || w > 16_384 || h > 16_384 || visible.w <= 0 || visible.h <= 0 {
+        return Err(crate::i18n::t("Mochi couldn't see that window. Try again."));
+    }
+    let printed = unsafe {
+        let screen = GetDC(None);
+        let dc = CreateCompatibleDC(Some(screen));
+        let bitmap = CreateCompatibleBitmap(screen, w, h);
+        let old = SelectObject(dc, bitmap.into());
+        let drawn = PrintWindow(hwnd, dc, FULL_CONTENT).as_bool();
+        let mut info = BITMAPINFO {
+            bmiHeader: BITMAPINFOHEADER {
+                biSize: std::mem::size_of::<BITMAPINFOHEADER>() as u32,
+                biWidth: w,
+                biHeight: -h,
+                biPlanes: 1,
+                biBitCount: 32,
+                biCompression: BI_RGB.0,
+                ..Default::default()
+            },
+            ..Default::default()
+        };
+        let mut pixels = vec![0u8; (w as usize) * (h as usize) * 4];
+        SelectObject(dc, old);
+        let lines = if drawn { GetDIBits(dc, bitmap, 0, h as u32, Some(pixels.as_mut_ptr().cast()), &raw mut info, DIB_RGB_COLORS) } else { 0 };
+        let _ = DeleteObject(bitmap.into());
+        let _ = DeleteDC(dc);
+        ReleaseDC(None, screen);
+        (lines == h).then_some(pixels)
+    };
+    let crop = (left.max(0) as u32, top.max(0) as u32, visible.w as u32, visible.h as u32);
+    match printed.map(|px| crate::look::crop(w as u32, h as u32, &px, crop)) {
+        Some(Some(out)) if !crate::look::is_blank(&out.2) => Ok(out),
+        _ => super::win_desk::capture_screen(visible.x, visible.y, visible.w, visible.h),
+    }
 }
 
 pub fn list_windows() -> Vec<WindowInfo> {
@@ -300,8 +377,8 @@ fn frame(hwnd: HWND) -> (Rect, (i32, i32, i32, i32)) {
     let mut outer = RECT::default();
     let mut visible = RECT::default();
     unsafe {
-        let _ = GetWindowRect(hwnd, &mut outer);
-        if DwmGetWindowAttribute(hwnd, DWMWA_EXTENDED_FRAME_BOUNDS, &mut visible as *mut _ as _, std::mem::size_of::<RECT>() as u32).is_err() {
+        let _ = GetWindowRect(hwnd, &raw mut outer);
+        if DwmGetWindowAttribute(hwnd, DWMWA_EXTENDED_FRAME_BOUNDS, (&raw mut visible).cast(), std::mem::size_of::<RECT>() as u32).is_err() {
             visible = outer;
         }
     }
@@ -408,7 +485,7 @@ pub fn list_apps() -> Result<Vec<App>, String> {
             loop {
                 let mut one = [None];
                 let mut fetched = 0u32;
-                if items.Next(&mut one, Some(&mut fetched)).is_err() || fetched == 0 {
+                if items.Next(&mut one, Some(&raw mut fetched)).is_err() || fetched == 0 {
                     break;
                 }
                 let Some(item) = one[0].take() else { break };
@@ -442,7 +519,7 @@ pub fn shell_open(target: &str) -> Result<(), String> {
             nShow: SW_SHOWNORMAL.0,
             ..Default::default()
         };
-        ShellExecuteExW(&mut info).map_err(err)
+        ShellExecuteExW(&raw mut info).map_err(err)
     })?
 }
 
@@ -481,7 +558,7 @@ pub fn read_controls() -> Controls {
     let audio = with_com(|| {
         let v = volume_control().ok();
         let level = v.as_ref().and_then(|v| unsafe { v.GetMasterVolumeLevelScalar() }.ok());
-        let muted = v.as_ref().and_then(|v| unsafe { v.GetMute() }.ok()).map(|m| m.as_bool());
+        let muted = v.as_ref().and_then(|v| unsafe { v.GetMute() }.ok()).map(BOOL::as_bool);
         (level, muted, output_name())
     })
     .unwrap_or((None, None, None));
@@ -562,7 +639,7 @@ fn physical(index: usize) -> Option<Vec<windows::Win32::Devices::Display::PHYSIC
     let (m, _) = *screens().get(index)?;
     unsafe {
         let mut n = 0u32;
-        GetNumberOfPhysicalMonitorsFromHMONITOR(m, &mut n).ok()?;
+        GetNumberOfPhysicalMonitorsFromHMONITOR(m, &raw mut n).ok()?;
         if n == 0 {
             return None;
         }
@@ -588,7 +665,7 @@ fn displays() -> Vec<Display> {
                     name = desc.to_string();
                 }
                 let (mut min, mut cur, mut max) = (0u32, 0u32, 0u32);
-                if unsafe { GetMonitorBrightness(first.hPhysicalMonitor, &mut min, &mut cur, &mut max) } != 0 && max > min {
+                if unsafe { GetMonitorBrightness(first.hPhysicalMonitor, &raw mut min, &raw mut cur, &raw mut max) } != 0 && max > min {
                     brightness = Some(((cur - min) * 100 / (max - min)).min(100));
                 }
                 unsafe {
@@ -605,7 +682,7 @@ pub fn set_brightness(index: usize, value: u32) -> Result<(), String> {
     let list = physical(index).ok_or("no such screen")?;
     let ok = unsafe {
         let (mut min, mut cur, mut max) = (0u32, 0u32, 0u32);
-        let ok = GetMonitorBrightness(list[0].hPhysicalMonitor, &mut min, &mut cur, &mut max) != 0
+        let ok = GetMonitorBrightness(list[0].hPhysicalMonitor, &raw mut min, &raw mut cur, &raw mut max) != 0
             && max > min
             && SetMonitorBrightness(list[0].hPhysicalMonitor, min + (max - min) * value / 100) != 0;
         let _ = DestroyPhysicalMonitors(&list);

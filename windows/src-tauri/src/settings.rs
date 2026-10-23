@@ -1,12 +1,12 @@
 // Preferences, stored as plain JSON in settings.json under platform::config_dir().
 // No secret ever lands here — API keys live in the OS keychain (see secrets.rs).
 
+use parking_lot::{Mutex, MutexGuard};
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
 use std::collections::BTreeMap;
 use std::io::ErrorKind;
 use std::path::{Path, PathBuf};
-use std::sync::{Mutex, MutexGuard, PoisonError};
 
 /// A field the file lacks takes its value from `Default`, so a settings.json
 /// written by an older build still loads, whatever has been added since.
@@ -82,6 +82,10 @@ pub struct Settings {
     /// season), "none" or an outfit id — the Mac's raw values. The island reads
     /// anything it doesn't know as "auto", so the value is stored as it comes.
     pub mochi_outfit: String,
+    /// Mochi's face, switched in the wardrobe: "signature", "portrait", "slime",
+    /// "sage" or "classic" — the Mac's raw values. Kept as it comes, like
+    /// `mochi_outfit`: src/mochi/look.ts reads anything it doesn't know as the default.
+    pub mochi_look: String,
     /// A colour of the user's own for a pill's Mochi, by pill ID ("#RRGGBB"),
     /// picked in Settings → Active pills. Empty means the catalog's colours.
     /// Kept as it comes, like `mochi_outfit`: src/core/pill-colors.ts reads
@@ -91,6 +95,8 @@ pub struct Settings {
     /// ("fr", "pt-BR", "zh-Hans"…). Kept as it comes, like `mochi_outfit`: a
     /// code this build doesn't know reads as "".
     pub language: String,
+    /// Linear: the team new issues go to (its id). Empty: the first team.
+    pub linear_team: String,
     /// Mochi on the desktop: whether he lives there, and his spot. Owned by
     /// the Rust side (desktop.rs) — what a webview sends back is ignored.
     pub desktop_mochi: DesktopMochiPref,
@@ -180,10 +186,12 @@ impl Default for Settings {
             ollama_url: String::new(),
             lmstudio_url: String::new(),
             custom_url: String::new(),
-            shortcuts: Default::default(),
+            shortcuts: BTreeMap::default(),
             mochi_outfit: "auto".into(),
+            mochi_look: "portrait".into(),
             pill_colors: BTreeMap::new(),
             language: String::new(),
+            linear_team: String::new(),
             desktop_mochi: DesktopMochiPref::default(),
             phone_link: false,
             phone_chat: false,
@@ -229,7 +237,7 @@ const MAX_COPIES_PER_SECOND: u32 = 100;
 static NOT_LOADED: Mutex<Vec<PathBuf>> = Mutex::new(Vec::new());
 
 fn not_loaded() -> MutexGuard<'static, Vec<PathBuf>> {
-    NOT_LOADED.lock().unwrap_or_else(PoisonError::into_inner)
+    NOT_LOADED.lock()
 }
 
 /// One line in coucou.log. Tests must never write to the real one.
@@ -401,7 +409,8 @@ fn set_aside_as(
                 }
                 return written.map(|()| copy);
             }
-            Err(err) if err.kind() == ErrorKind::AlreadyExists => continue,
+            // The name is taken: try the next one.
+            Err(err) if err.kind() == ErrorKind::AlreadyExists => {}
             Err(err) => return Err(err),
         }
     }
@@ -477,8 +486,10 @@ mod tests {
   "customUrl": "https://llm.example.com",
   "shortcuts": { "openChat": { "keys": "Ctrl+Shift+K", "enabled": false } },
   "mochiOutfit": "witchHat",
+  "mochiLook": "slime",
   "pillColors": { "integration_claude": "#2DD4BF" },
   "language": "pt-BR",
+  "linearTeam": "team-1",
   "desktopMochi": { "onDesktop": true, "spot": { "x": 1500.5, "y": -300.0, "space": "screen" } },
   "phoneLink": true,
   "phoneChat": true,
@@ -585,6 +596,14 @@ mod tests {
         assert_eq!(loaded.mochi_outfit, "auto");
         assert_eq!(loaded.model, "some-model");
         assert!(!loaded.sound_enabled);
+    }
+
+    #[test]
+    fn a_file_from_before_the_faces_gives_mochi_the_portrait() {
+        let loaded = parse(&custom_with("mochiLook", None)).unwrap();
+        assert_eq!(loaded.mochi_look, "portrait");
+        assert_eq!(loaded.mochi_outfit, "witchHat");
+        assert_eq!(parse(CUSTOM.as_bytes()).unwrap().mochi_look, "slime");
     }
 
     #[test]
@@ -992,8 +1011,10 @@ mod tests {
                 "customUrl",
                 "shortcuts",
                 "mochiOutfit",
+                "mochiLook",
                 "pillColors",
                 "language",
+                "linearTeam",
                 "desktopMochi",
                 "phoneLink",
                 "phoneChat",

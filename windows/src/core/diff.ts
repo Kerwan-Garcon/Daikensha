@@ -8,6 +8,8 @@
 // Also home to `toOneLine` (Claude's final message → one line of plain text)
 // and the diff step encoding the ticker reads.
 
+import { itemAt } from "./arrays";
+
 export type DiffKind = "context" | "added" | "removed";
 
 export interface DiffLine {
@@ -170,11 +172,13 @@ function buildDiffLines(oldLines: string[], newLines: string[]): DiffLine[] {
   // dp[i*w + j] = LCS length of oldLines[0..<i] and newLines[0..<j]. Lengths stay
   // under DIFF_MAX_LINES, so 16 bits are plenty and the table is half the size.
   const dp = new Uint16Array((m + 1) * w);
+  // Every index below is inside the table; the fallback only satisfies the type.
+  const cell = (k: number) => dp[k] ?? 0;
   for (let i = 1; i <= m; i++) {
     for (let j = 1; j <= n; j++) {
       dp[i * w + j] = oldLines[i - 1] === newLines[j - 1]
-        ? dp[(i - 1) * w + j - 1] + 1
-        : Math.max(dp[(i - 1) * w + j], dp[i * w + j - 1]);
+        ? cell((i - 1) * w + j - 1) + 1
+        : Math.max(cell((i - 1) * w + j), cell(i * w + j - 1));
     }
   }
 
@@ -187,7 +191,7 @@ function buildDiffLines(oldLines: string[], newLines: string[]): DiffLine[] {
       matches.push([i - 1, j - 1]);
       i--;
       j--;
-    } else if (dp[(i - 1) * w + j] >= dp[i * w + j - 1]) {
+    } else if (cell((i - 1) * w + j) >= cell(i * w + j - 1)) {
       i--;
     } else {
       j--;
@@ -198,12 +202,12 @@ function buildDiffLines(oldLines: string[], newLines: string[]): DiffLine[] {
   const result: DiffLine[] = [];
   let prevOld = -1;
   let prevNew = -1;
-  const removedLine = (k: number): DiffLine => ({ kind: "removed", text: oldLines[k], origLine: k + 1, newLine: -1 });
-  const addedLine = (k: number): DiffLine => ({ kind: "added", text: newLines[k], origLine: -1, newLine: k + 1 });
+  const removedLine = (k: number): DiffLine => ({ kind: "removed", text: itemAt(oldLines, k), origLine: k + 1, newLine: -1 });
+  const addedLine = (k: number): DiffLine => ({ kind: "added", text: itemAt(newLines, k), origLine: -1, newLine: k + 1 });
   for (const [oi, ni] of matches) {
     for (let k = prevOld + 1; k < oi; k++) result.push(removedLine(k));
     for (let k = prevNew + 1; k < ni; k++) result.push(addedLine(k));
-    result.push({ kind: "context", text: oldLines[oi], origLine: oi + 1, newLine: ni + 1 });
+    result.push({ kind: "context", text: itemAt(oldLines, oi), origLine: oi + 1, newLine: ni + 1 });
     prevOld = oi;
     prevNew = ni;
   }
@@ -313,14 +317,16 @@ export function parseDiffStep(step: string): DiffStep | null {
   if (tab < 0) return null;
   const parts = body.slice(tab + 1).split(":");
   if (parts.length !== 3 || !parts.every((p) => /^-?\d+$/.test(p))) return null;
-  const [added, removed, diffId] = parts.map(Number);
+  // Exactly three integers, checked just above.
+  const [added = 0, removed = 0, diffId = 0] = parts.map(Number);
   return { filename: body.slice(0, tab), added, removed, diffId };
 }
 
 /** The last step that is text, never a diff marker. */
 export function lastTextStep(steps: readonly string[]): string | undefined {
   for (let i = steps.length - 1; i >= 0; i--) {
-    if (!isDiffStep(steps[i])) return steps[i];
+    const step = itemAt(steps, i);
+    if (!isDiffStep(step)) return step;
   }
   return undefined;
 }

@@ -257,6 +257,8 @@ struct OverviewView: View {
             NSWorkspace.shared.open(URL(string: "https://dashboard.stripe.com/payments")!)
         case "integration_notion":
             NSWorkspace.shared.open(URL(string: "https://notion.so")!)
+        case "integration_linear":
+            NSWorkspace.shared.open(URL(string: "https://linear.app")!)
         case "integration_calcom":
             NSWorkspace.shared.open(URL(string: "https://app.cal.com/bookings")!)
         case "agent_cursor":
@@ -297,6 +299,10 @@ struct OverviewView: View {
         case "integration_spotify":
             #if !APPSTORE
             SpotifyController.shared.openSpotify()
+            #endif
+        case "integration_youtube_music":
+            #if !APPSTORE
+            YouTubeMusicController.shared.openYouTubeMusic()
             #endif
         default:
             // Non-integration real tasks
@@ -1409,6 +1415,12 @@ struct PromptView: View {
                 }
 
                 HStack(spacing: 0) {
+                    #if !APPSTORE
+                    // Mochi looked at a window: summary, analysis… one click away.
+                    if state.promptContext?.shot != nil {
+                        LookChips(state: state)
+                    }
+                    #endif
                     Spacer()
                     Button {
                         withAnimation(.spring(response: 0.3, dampingFraction: 0.75)) {
@@ -1767,7 +1779,7 @@ struct SearchingView: View {
 
     var label: String {
         switch state.promptContext {
-        case .window(_, let title, _): return String(format: String(localized: "Claude is reading %@…"), title)
+        case .window(_, let title, _, _): return String(format: String(localized: "Claude is reading %@…"), title)
         case .file(let name, _):       return String(format: String(localized: "Claude is reading %@…"), name)
         case nil:                      return String(localized: "Claude is searching…")
         }
@@ -1963,6 +1975,7 @@ struct IntegrationCardView: View {
         case "integration_github":  return KeychainStore.shared.get("github-token")   != nil
         case "integration_stripe":  return KeychainStore.shared.get("stripe-api-key") != nil
         case "integration_notion":  return KeychainStore.shared.get("notion-api-key") != nil
+        case "integration_linear":  return LinearSettings.hasKey
         case "integration_calcom":  return KeychainStore.shared.get("calcom-api-key") != nil
         default: return false
         }
@@ -1979,6 +1992,7 @@ struct IntegrationCardView: View {
         case "integration_github":  return URL(string: "https://github.com")
         case "integration_stripe":  return URL(string: "https://dashboard.stripe.com/payments")
         case "integration_notion":  return URL(string: "https://notion.so")
+        case "integration_linear":  return URL(string: "https://linear.app")
         case "integration_calcom":  return URL(string: "https://app.cal.com/bookings")
         default: return nil
         }
@@ -2058,6 +2072,15 @@ struct IntegrationCardView: View {
     private var isSpotify: Bool {
         #if !APPSTORE
         return task.id == "integration_spotify"
+        #else
+        return false
+        #endif
+    }
+
+    // YouTube Music: its own card for every state (playing, idle, not installed, not connected)
+    private var isYouTubeMusic: Bool {
+        #if !APPSTORE
+        return task.id == YouTubeMusicController.pillId
         #else
         return false
         #endif
@@ -2195,6 +2218,10 @@ struct IntegrationCardView: View {
         } else if notionHasData {
             NotionCardView()
                 .transition(.opacity)
+        } else if task.id == LinearController.pillId && isConfigured {
+            // Its own card in every state (loading, error, no issue, issues).
+            LinearCardView()
+                .transition(.opacity)
         } else if musicIsActive {
             #if !APPSTORE
             MusicCardView()
@@ -2221,6 +2248,11 @@ struct IntegrationCardView: View {
         } else if isSpotify {
             #if !APPSTORE
             SpotifyCardView()
+                .transition(.opacity)
+            #endif
+        } else if isYouTubeMusic {
+            #if !APPSTORE
+            YouTubeMusicCardView()
                 .transition(.opacity)
             #endif
         } else if agentSessionActive {
@@ -4104,6 +4136,13 @@ struct AgentPillsView: View {
                             SoundEngine.shared.play("blip")
                             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { swapping = false }
                         }
+                    } else if task.id == YouTubeMusicController.pillId {
+                        YouTubeMusicPill(task: task, swapping: $swapping) {
+                            swapping = true
+                            state.setFocus(task.id)
+                            SoundEngine.shared.play("blip")
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { swapping = false }
+                        }
                     } else {
                         AgentPill(task: task, state: state, swapping: $swapping) {
                             swapping = true
@@ -4486,6 +4525,17 @@ struct WardrobeView: View {
                 Text("Wardrobe")
                     .font(.system(size: 12, weight: .semibold))
                     .foregroundColor(Color(hex: "#F5F6F8"))
+                // Mochi's face: signature (mouth, eye glints, pink cheeks, quirks), portrait or classic
+                Button {
+                    state.mochiLook = state.mochiLook.next
+                    SoundEngine.shared.play("pop")
+                } label: {
+                    Text("Face · \(state.mochiLook.displayName)")
+                        .font(.system(size: 11))
+                        .foregroundColor(Color(hex: "#8E939C"))
+                }
+                .buttonStyle(.plain)
+                .help("Signature: a mouth, eye glints, pink cheeks and little quirks. Portrait: the same, with braids, sunglasses and eyebrows for every mood. Classic: the original face.")
                 Spacer(minLength: 4)
                 Text(headerRight)
                     .font(.system(size: 11))
@@ -4844,7 +4894,7 @@ struct ContextChip: View {
 
     var label: String {
         switch context {
-        case .window(let app, _, let url):
+        case .window(let app, _, let url, _):
             if let url = url, let host = URL(string: url)?.host { return "\(app) · \(host)" }
             return app
         case .file(let name, _): return name

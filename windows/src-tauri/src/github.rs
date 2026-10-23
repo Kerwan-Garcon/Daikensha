@@ -22,9 +22,9 @@ impl CiState {
     /// GitHub's `StatusState` (statusCheckRollup.state) → our four states.
     pub fn from_github(raw: Option<&str>) -> Self {
         match raw.map(str::to_ascii_uppercase).as_deref() {
-            Some("PENDING") | Some("EXPECTED") => CiState::Pending,
+            Some("PENDING" | "EXPECTED") => CiState::Pending,
             Some("SUCCESS") => CiState::Success,
-            Some("ERROR") | Some("FAILURE") => CiState::Failure,
+            Some("ERROR" | "FAILURE") => CiState::Failure,
             _ => CiState::Unknown,
         }
     }
@@ -131,7 +131,7 @@ fn pr_basics(node: &Value) -> Option<(String, String, String, String, i64, bool)
     Some((format!("{repo}#{number}"), title, url, repo, number, is_draft))
 }
 
-fn nodes<'a>(parent: Option<&'a Value>) -> &'a [Value] {
+fn nodes(parent: Option<&Value>) -> &[Value] {
     parent
         .and_then(|p| p.get("nodes"))
         .and_then(Value::as_array)
@@ -399,7 +399,7 @@ query {
 }
 "#;
 
-pub const ACTIVITY_QUERY: &str = r#"
+pub const ACTIVITY_QUERY: &str = r"
 query {
   viewer {
     login
@@ -415,7 +415,7 @@ query {
     }
   }
 }
-"#;
+";
 
 /// Number of GraphQL errors in a response, for the log (never their text: it
 /// can quote the query, not secrets, but there is no need for it).

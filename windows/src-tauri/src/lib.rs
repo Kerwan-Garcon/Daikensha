@@ -15,9 +15,11 @@ mod hooks;
 mod i18n;
 mod identity;
 mod integrations;
+mod linear;
 mod island;
 mod local_chat;
 mod log;
+mod look;
 mod net;
 mod notes;
 mod openai_compat;
@@ -35,6 +37,7 @@ mod shortcuts;
 mod sounds;
 mod speech;
 mod spotify;
+mod youtube_music;
 mod tray;
 mod voice;
 #[cfg(windows)]
@@ -42,8 +45,9 @@ mod webview_drop;
 
 use std::process::Command;
 use std::sync::atomic::Ordering;
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 
+use parking_lot::Mutex;
 use serde::Serialize;
 use tauri::{AppHandle, Emitter, Manager, State, WebviewUrl, WebviewWindowBuilder};
 use tauri_plugin_autostart::{ManagerExt, MacosLauncher};
@@ -73,8 +77,8 @@ pub struct BootInfo {
 }
 
 #[tauri::command]
-fn boot(app: AppHandle, shared: State<Shared>) -> BootInfo {
-    let mut settings = shared.settings.lock().unwrap().clone();
+fn boot(app: AppHandle, shared: State<'_, Shared>) -> BootInfo {
+    let mut settings = shared.settings.lock().clone();
     // The real state of ~/.claude/settings.json wins over whatever we stored.
     let hooks_status = hooks::status();
     settings.hooks_installed = hooks_status.installed;
@@ -90,9 +94,9 @@ fn boot(app: AppHandle, shared: State<Shared>) -> BootInfo {
 }
 
 #[tauri::command]
-fn save_settings(app: AppHandle, shared: State<Shared>, settings: Settings) {
+fn save_settings(app: AppHandle, shared: State<'_, Shared>, settings: Settings) {
     let (screen_changed, autostart_changed, shortcuts_changed, top_bar_changed, account_changed) = {
-        let mut current = shared.settings.lock().unwrap();
+        let mut current = shared.settings.lock();
         let top_bar_changed = shell::appbar::wanted(&current) != shell::appbar::wanted(&settings);
         let screen_changed = current.screen != settings.screen;
         let autostart_changed = current.autostart != settings.autostart;
@@ -107,16 +111,16 @@ fn save_settings(app: AppHandle, shared: State<Shared>, settings: Settings) {
         settings.phone_answers = current.phone_answers;
         settings.phone_diffs = current.phone_diffs;
         settings.phone_usage = current.phone_usage;
-        settings.phone_services = current.phone_services.clone();
+        settings.phone_services.clone_from(&current.phone_services);
         settings.phone_relay = current.phone_relay;
-        settings.phone_relay_url = current.phone_relay_url.clone();
-        settings.phone_chat_models = current.phone_chat_models.clone();
+        settings.phone_relay_url.clone_from(&current.phone_relay_url);
+        settings.phone_chat_models.clone_from(&current.phone_chat_models);
         claude_cli::set_enabled(settings.claude_subscription);
         let account_changed = current.claude_subscription != settings.claude_subscription;
         *current = settings;
         (screen_changed, autostart_changed, shortcuts_changed, top_bar_changed, account_changed)
     };
-    let settings = shared.settings.lock().unwrap().clone();
+    let settings = shared.settings.lock().clone();
     if let Err(err) = settings::save(&settings) {
         log::line(format!("could not save settings: {err}"));
     }
@@ -136,6 +140,7 @@ fn save_settings(app: AppHandle, shared: State<Shared>, settings: Settings) {
     }
     integrations::settings_saved(&app, &settings.active_integrations);
     spotify::sync(&app, &settings.active_integrations);
+    youtube_music::sync(&app, &settings.active_integrations);
     shell::settings_saved(&app, &settings);
     if shortcuts_changed || top_bar_changed {
         shortcuts::apply(&app, &shell::appbar::bindings(&settings));
@@ -172,8 +177,8 @@ fn language_changed(app: &AppHandle) {
 /// Hidden island → shrink the window to the invisible wake strip and park the
 /// cursor poll; anything else → full panel and 60 Hz polling.
 #[tauri::command]
-fn set_collapsed(app: AppHandle, shared: State<Shared>, collapsed: bool) {
-    let pref = shared.settings.lock().unwrap().screen.clone();
+fn set_collapsed(app: AppHandle, shared: State<'_, Shared>, collapsed: bool) {
+    let pref = shared.settings.lock().screen.clone();
     shared.gate.collapsed.store(collapsed, Ordering::Relaxed);
     island::apply_geometry(&app, &pref, collapsed);
     // The wake strip must always take the mouse, and a resize invalidates the flag.
@@ -185,10 +190,10 @@ fn set_collapsed(app: AppHandle, shared: State<Shared>, collapsed: bool) {
 /// « Coucou Shell »'s panel opens or closes: the window grows for it, and goes
 /// back to the usual panel after (shell/).
 #[tauri::command]
-fn set_shell_open(app: AppHandle, shared: State<Shared>, open: bool) {
-    let open = open && shared.settings.lock().unwrap().shell_panel;
+fn set_shell_open(app: AppHandle, shared: State<'_, Shared>, open: bool) {
+    let open = open && shared.settings.lock().shell_panel;
     island::set_shell_open(open);
-    let pref = shared.settings.lock().unwrap().screen.clone();
+    let pref = shared.settings.lock().screen.clone();
     let collapsed = shared.gate.collapsed.load(Ordering::Relaxed);
     island::apply_geometry(&app, &pref, collapsed);
     island::refresh_click_through(&app, &shared.gate);
@@ -196,7 +201,7 @@ fn set_shell_open(app: AppHandle, shared: State<Shared>, open: bool) {
 
 /// The front end pushes the island shape; Rust decides click-through from it.
 #[tauri::command]
-fn set_island_rect(app: AppHandle, shared: State<Shared>, x: f64, y: f64, width: f64, height: f64) {
+fn set_island_rect(app: AppHandle, shared: State<'_, Shared>, x: f64, y: f64, width: f64, height: f64) {
     shared.gate.set_rect(island::IslandRect { x, y, w: width, h: height });
     // Without the cursor poll the input region is the click-through: it follows the island.
     if !platform::CURSOR_POLL {
@@ -214,8 +219,8 @@ fn focus_window(app: AppHandle, focused: bool) {
 }
 
 #[tauri::command]
-fn reposition(app: AppHandle, shared: State<Shared>) {
-    let pref = shared.settings.lock().unwrap().screen.clone();
+fn reposition(app: AppHandle, shared: State<'_, Shared>) {
+    let pref = shared.settings.lock().screen.clone();
     let collapsed = shared.gate.collapsed.load(Ordering::Relaxed);
     island::apply_geometry(&app, &pref, collapsed);
 }
@@ -227,8 +232,8 @@ fn reposition(app: AppHandle, shared: State<Shared>) {
 fn fit_zoom(app: AppHandle, dpr: f64) -> bool {
     let Some(win) = island::window(&app) else { return false };
     let scale = win.scale_factor().unwrap_or(1.0);
-    static ZOOM: std::sync::Mutex<f64> = std::sync::Mutex::new(1.0);
-    let mut zoom = ZOOM.lock().unwrap();
+    static ZOOM: parking_lot::Mutex<f64> = parking_lot::Mutex::new(1.0);
+    let mut zoom = ZOOM.lock();
     if let Some(new_zoom) = island::calculate_zoom_correction(*zoom, scale, dpr) {
         *zoom = new_zoom;
         log::line(format!("webview dpr {dpr} != window scale {scale} — setting zoom {new_zoom:.3}"));
@@ -238,7 +243,6 @@ fn fit_zoom(app: AppHandle, dpr: f64) -> bool {
         false
     }
 }
-
 
 /// The displays the island can be pinned to, for Settings.
 #[tauri::command]
@@ -381,7 +385,7 @@ fn hooks_preview(install: bool) -> Result<HookPreview, String> {
 #[tauri::command]
 fn hooks_apply(
     app: AppHandle,
-    shared: State<Shared>,
+    shared: State<'_, Shared>,
     install: bool,
     fingerprint: String,
 ) -> Result<String, String> {
@@ -389,7 +393,7 @@ fn hooks_apply(
     // settings.json that changed in between is refused rather than overwritten.
     let backup = hooks::write(install, &fingerprint)?;
     let updated = {
-        let mut current = shared.settings.lock().unwrap();
+        let mut current = shared.settings.lock();
         current.hooks_installed = install;
         if let Err(err) = settings::save(&current) {
             log::line(format!("could not save settings: {err}"));
@@ -436,13 +440,13 @@ fn status_line_preview(install: bool) -> Result<HookPreview, String> {
 #[tauri::command]
 fn status_line_apply(
     app: AppHandle,
-    shared: State<Shared>,
+    shared: State<'_, Shared>,
     install: bool,
     fingerprint: String,
 ) -> Result<String, String> {
     let backup = hooks::status_line_write(install, &fingerprint)?;
     let updated = {
-        let mut current = shared.settings.lock().unwrap();
+        let mut current = shared.settings.lock();
         current.plan_relay_installed = install;
         // As on the Mac: taking the relay out turns the pill off with it.
         if !install {
@@ -518,7 +522,7 @@ async fn chat_send(
     query: String,
     context: Option<ChatContext>,
 ) -> Result<ChatReply, String> {
-    let settings = shared.settings.lock().unwrap().clone();
+    let settings = shared.settings.lock().clone();
     chat::send(&app, &chat, &settings, query, context).await
 }
 
@@ -526,7 +530,7 @@ async fn chat_send(
 /// once the user picked that provider, and only with its key or address.
 #[tauri::command]
 async fn chat_models(shared: State<'_, Shared>, provider: String) -> Result<Vec<ModelInfo>, String> {
-    let settings = shared.settings.lock().unwrap().clone();
+    let settings = shared.settings.lock().clone();
     chat::models(&settings, &provider).await
 }
 
@@ -544,8 +548,10 @@ fn local_set_key(url: String, key: String) -> Result<(), String> {
 }
 
 #[tauri::command]
-fn chat_reset(chat: State<Chat>) {
+fn chat_reset(chat: State<'_, Chat>) {
     chat.reset();
+    // A new chat forgets the window Mochi looked at, too.
+    look::discard();
     if claude_cli::enabled() {
         claude_cli::forget(claude_cli::Mode::Chat);
     }
@@ -578,6 +584,9 @@ fn secret_set(app: AppHandle, key: String, value: String) -> Result<(), String> 
     }
     let before = (key == "github-token").then(|| secrets::get(&key));
     secrets::set(&key, &value)?;
+    if key == linear::KEY {
+        linear::key_changed(&app);
+    }
     if key == claude::KEY {
         voice::sync(&app);
     }
@@ -593,6 +602,9 @@ fn secret_set(app: AppHandle, key: String, value: String) -> Result<(), String> 
 fn secret_clear(app: AppHandle, key: String) -> Result<(), String> {
     let had = key == "github-token" && secrets::present(&key);
     secrets::clear(&key)?;
+    if key == linear::KEY {
+        linear::key_changed(&app);
+    }
     if key == claude::KEY {
         voice::sync(&app);
     }
@@ -608,6 +620,24 @@ fn open_n8n() {
     if let Some(url) = secrets::get("n8n-url") {
         open_url(url);
     }
+}
+
+/// The Linear card's buttons: move an issue to its next state, create one.
+/// Each one follows a click in the island.
+#[tauri::command]
+async fn linear_advance(app: AppHandle, issue_id: String, state_id: String) -> Result<(), String> {
+    linear::advance(app, issue_id, state_id).await
+}
+
+#[tauri::command]
+async fn linear_create(app: AppHandle, title: String) -> Result<(), String> {
+    linear::create(app, title).await
+}
+
+/// Teams the Linear key can see, for the settings window's team picker.
+#[tauri::command]
+async fn linear_teams() -> Vec<linear::Team> {
+    linear::teams().await
 }
 
 /// Refresh buttons in the integration cards.
@@ -640,11 +670,11 @@ fn shortcuts_status(app: AppHandle) -> shortcuts::Report {
 /// Settings is recording a new combination: let go of ours meanwhile, so the
 /// keys reach the recorder instead of running an action. `false` takes them back.
 #[tauri::command]
-fn shortcuts_suspend(app: AppHandle, shared: State<Shared>, suspended: bool) {
+fn shortcuts_suspend(app: AppHandle, shared: State<'_, Shared>, suspended: bool) {
     if suspended {
         shortcuts::suspend(&app);
     } else {
-        let stored = shell::appbar::bindings(&shared.settings.lock().unwrap());
+        let stored = shell::appbar::bindings(&shared.settings.lock());
         shortcuts::apply(&app, &stored);
     }
 }
@@ -865,6 +895,9 @@ pub fn run() {
             secret_set,
             secret_clear,
             refresh_integration,
+            linear_advance,
+            linear_create,
+            linear_teams,
             github_refresh,
             open_n8n,
             open_settings_window,
@@ -923,6 +956,11 @@ pub fn run() {
             spotify::spotify_control,
             spotify::spotify_open,
             spotify::spotify_installed,
+            youtube_music::youtube_music_refresh,
+            youtube_music::youtube_music_connect,
+            youtube_music::youtube_music_control,
+            youtube_music::youtube_music_open,
+            youtube_music::youtube_music_installed,
             flow::flow_status,
             flow::flow_set_prefs,
             flow::flow_history,
@@ -1016,6 +1054,7 @@ pub fn run() {
             phone_link::start_if_enabled(&handle);
             integrations::start(handle.clone());
             spotify::sync(&handle, &loaded.active_integrations);
+            youtube_music::sync(&handle, &loaded.active_integrations);
             // A taskbar left hidden by a crash comes back first; settings_saved hides it again if asked.
             shell::appbar::recover();
             shell::settings_saved(&handle, &loaded);
@@ -1026,7 +1065,7 @@ pub fn run() {
                 // writing it again adds it, so the window stays hidden at login.
                 let _ = handle.autolaunch().enable();
             }
-            let open_window = flow::get(&handle).map(|f| f.store.lock().unwrap().prefs.open_at_launch).unwrap_or(true);
+            let open_window = flow::get(&handle).map(|f| f.store.lock().prefs.open_at_launch).unwrap_or(true);
             if open_window && !launched_at_login() {
                 show_hub(&handle, None);
             }

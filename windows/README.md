@@ -56,6 +56,7 @@ You can also [build it yourself](#build-it-yourself).
 | Rest the pointer on Mochi for two seconds | Hearts |
 | Right-click Mochi | The wardrobe: rest the pointer on an outfit to try it on, click to keep it. **Auto** dresses him for the season (witch hat in October, Santa hat in December…) |
 | Drag Mochi out of the island | He moves onto your desktop and hangs out there, in his outfit, watching your cursor. Drop him back on the island to bring him home |
+| Drag Mochi onto a window *(Windows)* | He looks at it, comes back, and the chat opens with a summary and an analysis of what he saw. **Summary**, **Analysis**, **Key points** and **Translate** under the chat ask for more. Hold `Alt` while dropping to put him on the desktop there instead |
 | On the desktop: click / right-click / double-click Mochi | Poke him / the wardrobe / he flies home. Drag him to move him |
 | Drag a file onto the island | Mochi turns into a box, swallows it, then offers to answer questions about it |
 | Click a file in the session ticker | Its diff opens in the island; ↗ opens the file in VS Code, ‹ or `Esc` goes back |
@@ -143,7 +144,7 @@ against its SHA-256, kept in Coucou's data folder under `Models`).
 | Tap the key twice | Hands-free: speak as long as you like, tap once to paste. `Esc` cancels |
 | Hover the pill at the bottom of the screen | Dictate, record a call, open Coucou. Put the pill on the left or right edge in Flow → Settings |
 | Click **Record a call** | Your microphone and what the computer plays, transcribed live, then written person by person with a summary and to-dos by Claude (your key). The audio is deleted once the transcript is written |
-| Say **« OK Coucou »**, then ask | Claude (your key) answers in the pill and out loud: pills, Spotify, your services' numbers, your agents, web search, open an app, an email prepared in your mail app. Turn it on in Notch → OK Coucou |
+| Say **« OK Coucou »**, then ask | Claude (your key) answers in the pill and out loud: pills, Spotify and YouTube Music, your services' numbers, your agents, web search, open an app, an email prepared in your mail app. Turn it on in Notch → OK Coucou |
 
 Your voice never leaves the computer. With Claude's clean-up (Flow → Styles),
 a call's summary or « OK Coucou », the text — never the audio — goes to
@@ -335,6 +336,22 @@ minute while a CI is running, and as soon as you open the card on data older
 than a minute; contributions every 30 minutes. Nothing is fetched while the pill
 is off or Coucou is paused.
 
+## Linear
+
+With a personal API key (`lin_api_…`, from Linear → Settings → Security &
+access → Personal API keys) in **Settings… → Integrations → Linear**, the
+Linear pill lists the open issues assigned to you. Click a row to open the
+issue; the button at its end moves it to its next state, named as your team
+names it ("In Progress", then "Done"). The field at the bottom creates an issue
+assigned to you, in the team picked under the key (else your first team).
+Nothing changes in Linear without a click. The list is read every 2 minutes,
+only while the pill is on and Coucou isn't paused.
+
+To let Claude Code drive Linear too, Settings shows the command that adds
+Linear's MCP server (`claude mcp add --transport http linear
+https://mcp.linear.app/mcp`) with a **Copy** button. Coucou never runs it and
+never touches Claude Code's configuration.
+
 ## Build it yourself
 
 You need [Rust](https://rustup.rs), [Node 20+](https://nodejs.org), and the
@@ -479,7 +496,8 @@ own window.
   the Mac's speech recognizer, so it understands Parakeet's 25 languages.
   Emails open in your default mail app through a `mailto:` link, with no
   contact lookup and no attachment; « play » something on Spotify opens its
-  search rather than starting a track; apps open from the Start menu's
+  search rather than starting a track (on YouTube Music it plays the top
+  result, through Pear Desktop's search); apps open from the Start menu's
   shortcuts or Linux's `.desktop` entries. The system voice is the webview's;
   where WebKitGTK has none, `spd-say` (speech-dispatcher) or `espeak-ng`
   speaks if installed.
@@ -511,10 +529,22 @@ own window.
   its `spotify:` link, and without Spotify **Get Spotify** opens its download
   page. Windows gives no Spotify link for the track, so an ad is told apart by
   having a title and no artist or album.
-- Not in this version: sending a dropped file by email and dragging Mochi onto
-  a window to attach it as context. On the Mac, email goes through Resend or
-  Apple Mail's scripting; neither has a safe equivalent that attaches a file
-  here, and the drop card would need a third button it doesn't have.
+- **YouTube Music** (Settings → Integrations) goes through
+  [Pear Desktop](https://github.com/pear-devs/pear-desktop) and its **API
+  Server** plugin, as on Linux and the Mac: see
+  [docs/YOUTUBE_MUSIC.md](../docs/YOUTUBE_MUSIC.md). **Open YouTube Music**
+  starts `YouTube Music.exe` from where Pear's installer puts it
+  (`%LOCALAPPDATA%\Programs\youtube-music`, or Program Files).
+- Not in this version: sending a dropped file by email. On the Mac, email goes
+  through Resend or Apple Mail's scripting; neither has a safe equivalent that
+  attaches a file here, and the drop card would need a third button it doesn't have.
+- Dragging Mochi onto a window to have him look at it works on Windows only:
+  the window is drawn with PrintWindow (read from the screen when it can't be),
+  kept in memory, never on disk, sent with the first question only and dropped
+  after it, answered or not (or on New chat). Claude,
+  OpenAI, Google and OpenRouter get the picture; a local model server gets the
+  window's name and title. On Linux he lands on the desktop as before. No
+  browser URL is read, unlike the Mac.
 - Cal.com shows the next bookings as a list rather than the Mac's calendar.
 - The Cursor pill carries both Cursor Agent's own hooks and Claude Code running
   in Cursor's terminal.
@@ -673,6 +703,10 @@ What changes on Linux:
   Spotify builds that don't report the position over MPRIS show the bar
   from where the track started; the Mac's Automation prompt has no
   equivalent here.
+- **YouTube Music** goes through Pear Desktop's **API Server** plugin, the
+  same as on Windows ([docs/YOUTUBE_MUSIC.md](../docs/YOUTUBE_MUSIC.md));
+  **Open YouTube Music** starts `youtube-music` from your `PATH` (the .deb,
+  .rpm and AUR packages) or `/opt/YouTube Music`.
 - **Plan usage**: the status line relay is `~/.local/share/coucou/bin/coucou-hook
   --statusline` and runs your previous status line with `/bin/sh -c`, like Claude
   Code. Codex is found on `$PATH`, in `~/.local/bin`, npm's global prefix, Volta,

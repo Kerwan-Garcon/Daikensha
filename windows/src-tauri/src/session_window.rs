@@ -17,7 +17,8 @@
 // The OS calls live in platform/; this file is the logic, tested on fixtures.
 
 use std::collections::HashMap;
-use std::sync::Mutex;
+
+use parking_lot::Mutex;
 
 /// One process as a snapshot lists it.
 #[derive(Debug, Clone)]
@@ -173,7 +174,7 @@ pub fn remember(session: &str, mut owners: Vec<u32>) {
         return;
     }
     owners.truncate(MAX_DEPTH);
-    let mut list = SESSIONS.lock().unwrap_or_else(|e| e.into_inner());
+    let mut list = SESSIONS.lock();
     list.retain(|(s, _)| s != session);
     list.push((session.to_string(), owners));
     let excess = list.len().saturating_sub(MAX_SESSIONS);
@@ -182,18 +183,18 @@ pub fn remember(session: &str, mut owners: Vec<u32>) {
 
 /// True once the session has been looked at, window found or not.
 pub fn known(session: &str) -> bool {
-    let list = SESSIONS.lock().unwrap_or_else(|e| e.into_inner());
+    let list = SESSIONS.lock();
     list.iter().any(|(s, _)| s == session)
 }
 
 /// The processes that may own the session's window, nearest first, if any.
 pub fn lookup(session: &str) -> Option<Vec<u32>> {
-    let list = SESSIONS.lock().unwrap_or_else(|e| e.into_inner());
+    let list = SESSIONS.lock();
     list.iter().find(|(s, _)| s == session).map(|(_, pids)| pids.clone()).filter(|pids| !pids.is_empty())
 }
 
 pub fn forget(session: &str) {
-    SESSIONS.lock().unwrap_or_else(|e| e.into_inner()).retain(|(s, _)| s != session);
+    SESSIONS.lock().retain(|(s, _)| s != session);
 }
 
 #[cfg(test)]

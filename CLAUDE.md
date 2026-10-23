@@ -12,6 +12,9 @@ Coucou is a native macOS app (`NotchBuddy/`); `windows/` is the Tauri version fo
 - `docs/*.html` — the GitHub Pages site (privacy, terms, support, legal notice).
 - `relay/` — the Coucou relay, a stateless Cloudflare Worker that forwards the iPhone Live Activity pushes (it holds the APNs key, which must never ship in an app). See `relay/README.md`.
 
+## Agent skills
+`.claude/skills/` vendors [Superpowers](https://github.com/obra/superpowers) (brainstorming, writing-plans, test-driven-development, systematic-debugging, verification-before-completion, code review…), `karpathy-guidelines` and `i-have-adhd` (opt-in: `/i-have-adhd`). Invoke them by their plain name. Start with `using-superpowers`; follow `karpathy-guidelines` when writing or reviewing code. Never edit them by hand: bump the pinned commit in `scripts/sync-agent-skills.sh` and re-run it (`--check` detects drift).
+
 ## Build
 ```
 cd NotchBuddy && xcodegen && xcodebuild -scheme NotchBuddy -configuration Debug build
@@ -30,6 +33,7 @@ Windows and Linux: `cd windows && npm install && npm run tauri dev`
 - Keep the bundle identifier `fr.louisraille.NotchBuddy` (Keychain items, preferences and permissions depend on it).
 - Never restyle what already ships (pills, cards, Settings, chat…): existing views stay exactly as they are in `main`, which is the App Store build. Change the look of an existing view only when explicitly asked.
 - Pill IDs are stable contract values (Keychain, UserDefaults, hook routing): never rename an existing pill ID.
+- Always think of Windows and Linux too: every feature, integration or fix made on the Mac gets its counterpart in `windows/` in the same change (Rust in `src-tauri/`, TypeScript in `src/`, its tests). If something truly can't exist there (an Apple-only API), say so and note it in `windows/README.md`.
 - Windows/Linux: no colour or font written in a stylesheet or in view code — use a token from `windows/src/design/tokens.css` (add one there if needed); pages link their stylesheets, code never imports CSS (`tests/design-tokens.test.mjs` checks it).
 - New views follow the existing app style. `design/prototype/notch-buddy.html` and `design/captures/` are references for new work, not a reason to change existing views.
 - Every release adds its CHANGELOG.md section, a row in the README Versions table, and commits the regenerated Info.plist with the new version.

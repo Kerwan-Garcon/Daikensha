@@ -6,6 +6,7 @@ import { BotEngine } from "../mochi/engine";
 import { formatCount, formatDuration, weekRangeLabel, type WeeklySummary } from "./summary";
 import { t } from "../i18n/i18n";
 import { SCRIPT_FONTS } from "../core/fonts";
+import { itemAt } from "../core/arrays";
 
 export const SHARE_W = 1080;
 export const SHARE_H = 1920;
@@ -67,14 +68,14 @@ function spaced(x: Ctx, text: string, cx: number, y: number, spacing: number, ma
     return;
   }
   shrinkToFit(x, text, maxW, spacing);
-  const chars = [...text];
+  const chars = Array.from(text);
   const widths = chars.map((c) => x.measureText(c).width);
   const total = widths.reduce((a, b) => a + b, 0) + spacing * (chars.length - 1);
   let at = cx - total / 2;
   x.textAlign = "left";
   chars.forEach((c, i) => {
     x.fillText(c, at, y);
-    at += widths[i] + spacing;
+    at += itemAt(widths, i) + spacing;
   });
 }
 
@@ -85,7 +86,7 @@ function shrinkToFit(x: Ctx, text: string, maxW: number, spacing = 0) {
   if (!match) return;
   const [, weight, sizeText, family] = match;
   const size = Number(sizeText);
-  const extra = spacing * Math.max(0, [...text].length - 1);
+  const extra = spacing * Math.max(0, Array.from(text).length - 1);
   let s = size;
   while (x.measureText(text).width + extra > maxW && s > size * 0.6) {
     s -= 1;

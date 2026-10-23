@@ -90,6 +90,16 @@ pub(crate) fn user_content(first: bool, context: Option<&ChatContext>, query: &s
                 }
                 content.push(json!({ "type": "text", "text": chat::CAPTURE_LINE }));
             }
+            Some(ChatContext::Look { app_name, title }) => {
+                if let Some(png) = crate::look::peek() {
+                    content.push(json!({
+                        "type": "image",
+                        "source": { "type": "base64", "media_type": "image/png", "data": base64(&png) },
+                    }));
+                }
+                let line = chat::window_line(app_name, title, None);
+                content.push(json!({ "type": "text", "text": format!("{line}\n{}", crate::look::LOOK_LINE) }));
+            }
             None => {}
         }
     }
@@ -325,7 +335,7 @@ fn base64(bytes: &[u8]) -> String {
     let mut out = String::with_capacity(bytes.len().div_ceil(3) * 4);
     for chunk in bytes.chunks(3) {
         let b = [chunk[0], *chunk.get(1).unwrap_or(&0), *chunk.get(2).unwrap_or(&0)];
-        let n = ((b[0] as u32) << 16) | ((b[1] as u32) << 8) | b[2] as u32;
+        let n = (u32::from(b[0]) << 16) | (u32::from(b[1]) << 8) | u32::from(b[2]);
         out.push(TABLE[(n >> 18) as usize & 63] as char);
         out.push(TABLE[(n >> 12) as usize & 63] as char);
         out.push(if chunk.len() > 1 { TABLE[(n >> 6) as usize & 63] as char } else { '=' });

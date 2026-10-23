@@ -241,6 +241,20 @@ Priorité : failure > review demandée > success. Un seul badge/son par cycle.
 
 Permissions : Enregistrement de l'écran (capture) et Automatisation (navigateur). Si refusées : on continue sans capture ou sans URL, et on le dit en une ligne dans la vue.
 
+### Mochi regarde la fenêtre (`WindowLook`, hors App Store)
+
+Par défaut, lâcher Mochi sur une fenêtre ne fait pas qu'attacher : il **regarde** et commente.
+
+1. La fenêtre sous le point (numéro `kCGWindowNumber`, titre `kCGWindowName`) est capturée seule avec `screencapture -l<id> -x -o` (même recouverte), réduite à 1568 px de côté max, en JPEG, dans `$TMPDIR/CoucouLooks` (10 dernières gardées).
+2. Nouvelle conversation dans la vue `prompt` : bulle « Regarde cette fenêtre », émote `listening`, `gulp` quand l'image est prise, puis l'IA du chat reçoit la capture et la consigne : une phrase sur ce que c'est, un résumé, une analyse (ce qui ressort, ce qui cloche, quoi faire ensuite), dans la langue de l'app.
+3. Sous le chat, à gauche de la puce de modèle, quatre puces relancent dans la même conversation : **Résumé**, **Analyse**, **Points clés**, **Traduire**. On peut aussi écrire normalement.
+4. Images : Anthropic (bloc image), OpenAI et Google (`image_url` en data URL, gardée dans l'historique pour les relances). Les autres fournisseurs ne reçoivent que l'app, le titre et l'URL.
+5. Sans la permission Enregistrement de l'écran : macOS la demande, la vue `note` explique où l'accorder, rien n'est envoyé.
+
+**⌥ + lâcher** : l'ancien comportement, la fenêtre est seulement attachée au chat (pastille), sans capture ni question.
+
+**Windows** (`windows/src-tauri/src/look.rs`, `windows/src/core/look.ts`) : Mochi sorti de l'île et lâché sur la fenêtre d'une autre app (pas le bureau ni la barre des tâches, même filtre que l'onglet Fenêtres du Shell) rentre dans l'île et la regarde. La fenêtre est dessinée seule avec `PrintWindow(PW_RENDERFULLCONTENT)`, lue à l'écran si elle sort noire, réduite à 1280 px, gardée **en mémoire** (jamais sur le disque) et envoyée avec la première question seulement, puis oubliée une fois la réponse arrivée. Claude (API et abonnement), OpenAI, Google et OpenRouter reçoivent l'image ; un serveur local ne reçoit que l'app et le titre. Mêmes puces sous le chat. **Alt + lâcher** : il se pose sur le bureau à cet endroit, comme avant. Linux : inchangé, pas de regard.
+
 ---
 
 ## 5. API Claude (recherche)
@@ -338,6 +352,21 @@ Pas d'API WhatsApp pour un compte perso : Coucou parle à une **passerelle local
 
 ---
 
+## 6ter. Linear
+
+**Plateforme** : macOS (les deux builds), Windows et Linux. Pill `integration_linear` (#5E6AD2), catégorie Services. Fichiers : Mac `LinearController.swift` (API, modèles, réglages), `LinearViews.swift` (carte) ; Windows/Linux `src-tauri/src/linear.rs` (API, état suivant, commandes `linear_advance`, `linear_create`, `linear_teams`), carte dans `src/views/integrations.ts`, réglages dans `src/settings/main.ts` (équipe dans `linearTeam` de settings.json).
+
+- **Clé** : Réglages → Integrations → Linear. Clé d'API personnelle (`lin_api_…`, Linear → Settings → Security & access → Personal API keys), envoyée telle quelle dans `Authorization` ; tout autre jeton (OAuth) part en `Bearer`. Stockée dans le Trousseau, ou le Gestionnaire d'identification Windows / Secret Service (`linear-api-key`). Changer la clé repart de zéro.
+- **API** : GraphQL, `POST https://api.linear.app/graphql`. Le texte saisi passe toujours par les `variables`, jamais dans la requête.
+- **Lecture** : toutes les 2 min (et à l'ouverture de la carte si la dernière lecture a plus de 30 s), **seulement quand la pill est active** : rien sur le réseau sinon. Une requête : `viewer.assignedIssues` (20, triés par mise à jour, sans `completed` ni `canceled`) + `teams` avec leurs états.
+- **Carte** : mes tickets ouverts (pastille de l'état à sa couleur Linear, identifiant, titre, âge). Clic sur la ligne → le ticket dans le navigateur (`safeWebURL`). Bouton en bout de ligne, au nom de l'état suivant tel que l'équipe le nomme (« In Progress », « Done »…) : `backlog`/`unstarted`/`triage` → premier `started`, `started` → premier `completed` (la ligne disparaît). Sur Windows/Linux, Rust calcule cet état (`next`) et relit la liste après chaque action. Champ du bas → `issueCreate` dans l'équipe choisie (Réglages, sinon la première), assigné à moi ; Entrée crée, Échap vide. Un brouillon garde l'île ouverte (Mac) ; sur Windows/Linux il survit à une relecture de la liste et le champ reprend le focus.
+- **Écritures** : seulement `issueUpdate` (état) et `issueCreate`, chacune après un clic. Jamais de suppression.
+- **Erreurs** : 401 ou erreur d'authentification → « Invalid API key (401) » ; sinon le `userPresentableMessage` de Linear, affiché sous la carte.
+- **MCP** : l'app n'embarque pas de client MCP. Pour que Claude Code pilote aussi Linear, les Réglages montrent et copient `claude mcp add --transport http linear https://mcp.linear.app/mcp` (connexion OAuth dans le navigateur, gérée par Claude Code). Coucou n'écrit rien dans la config de Claude Code.
+- **Voix** : « ajoute Linear » / « enlève Linear » via `EntityResolver`.
+
+---
+
 ## 7. Permissions macOS demandées (récapitulatif pour Louis)
 
 | Permission | Pourquoi | Quand |
@@ -346,6 +375,7 @@ Pas d'API WhatsApp pour un compte perso : Coucou parle à une **passerelle local
 | Automatisation → Terminal / iTerm / navigateur | sauter au bon onglet, lire l'URL | première utilisation |
 | Automatisation → Musique *(GitHub only)* | contrôler la lecture Apple Music | première commande depuis le notch |
 | Automatisation → Spotify *(GitHub only)* | lire la position, le shuffle, le volume ; piloter la lecture | activation de la pill Spotify, ou première ouverture de sa carte |
+| Aucune permission macOS — « Autoriser » dans Pear Desktop *(YouTube Music, GitHub only)* | piloter YouTube Music via le plugin API Server de Pear, sur `127.0.0.1:26538` uniquement (docs/YOUTUBE_MUSIC.md) | clic sur « Connecter… » dans la carte YouTube Music |
 | Enregistrement de l'écran | capturer la fenêtre attrapée | première attache |
 | Micro + Reconnaissance vocale (optionnel) | dictée | premier clic sur le micro |
 | État de Concentration *(GitHub only)* | WhatsApp reste discret pendant une Concentration | activation de WhatsApp, si « Rester discret pendant une Concentration » est coché |

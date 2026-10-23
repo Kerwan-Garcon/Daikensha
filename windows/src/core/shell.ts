@@ -3,6 +3,7 @@
 // search ranks, where a gauge's arc ends and how a sparkline is drawn.
 
 import type { ShellApp, ShellCapabilities, ShellWhen } from "./bridge";
+import { cyclicAt } from "./arrays";
 
 export type ShellTab = "controls" | "today" | "stats" | "clipboard" | "apps" | "wallpapers" | "power" | "windows";
 
@@ -62,7 +63,7 @@ export function searchApps(apps: readonly ShellApp[], query: string, limit = 8):
 
 /** The tile letter of an app: its first letter or digit. */
 export function initial(name: string): string {
-  const m = name.match(/[\p{L}\p{N}]/u);
+  const m = /[\p{L}\p{N}]/u.exec(name);
   return m ? m[0].toUpperCase() : "?";
 }
 
@@ -71,7 +72,7 @@ export function tileColor(name: string): string {
   const palette = ["#60a5fa", "#34d399", "#f5a524", "#f472b6", "#a78bfa", "#22d3ee", "#fb923c", "#e5e7eb"];
   let h = 0;
   for (const c of name) h = (h * 31 + c.charCodeAt(0)) >>> 0;
-  return palette[h % palette.length];
+  return cyclicAt(palette, h);
 }
 
 /** The tile colours of the mockup's usual apps (keys are fold()ed names); other apps get tileColor(). */
@@ -191,7 +192,7 @@ export function fromLocalMinutes(minutes: number): Date {
  */
 export function whenText(when: ShellWhen, lang: string, dayName: (d: number) => string, everyDay: string): string {
   if (when.kind === "once") {
-    const [y, m, d] = when.date.split("-").map(Number);
+    const [y = NaN, m, d] = when.date.split("-").map(Number);
     const date = new Date(y, (m || 1) - 1, d || 1);
     return `${date.toLocaleDateString(lang, { weekday: "short", day: "numeric", month: "short" })} · ${when.time}`;
   }

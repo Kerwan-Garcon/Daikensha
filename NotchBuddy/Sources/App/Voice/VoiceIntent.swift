@@ -7,6 +7,7 @@ import Foundation
 enum MusicTarget: Equatable {
     case appleMusic   // force Apple Music
     case spotify      // force Spotify
+    case youTubeMusic // force YouTube Music (Pear Desktop)
 }
 
 // MARK: - VoiceIntent

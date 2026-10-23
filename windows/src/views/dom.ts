@@ -88,7 +88,7 @@ export function h<K extends keyof HTMLElementTagNameMap>(
     if (k === "class") el.className = String(v);
     else if (k === "text") el.textContent = String(v);
     else if (k.startsWith("on") && typeof v === "function") {
-      el.addEventListener(k.slice(2).toLowerCase(), v as EventListener);
+      el.addEventListener(k.slice(2).toLowerCase(), v);
     } else if (k === "style") el.setAttribute("style", String(v));
     else el.setAttribute(k, v === true ? "" : String(v));
   }

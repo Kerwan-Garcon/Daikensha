@@ -7,6 +7,61 @@ version = "0.5.0"
 edition = "2021"
 license = "MIT"
 
+# Lint policy for both crates (each opts in with `[lints] workspace = true`).
+# CI runs `cargo clippy --all-targets -- -D warnings` on Linux and Windows, so a
+# warning here is a failing build there. Thresholds live in clippy.toml.
+[workspace.lints.rust]
+rust_2018_idioms = { level = "warn", priority = -1 }
+unsafe_op_in_unsafe_fn = "warn"
+
+[workspace.lints.clippy]
+pedantic = { level = "warn", priority = -1 }
+# Restriction lints worth having: no panicking shortcuts outside tests
+# (clippy.toml allows them in tests), no debugging leftovers.
+unwrap_used = "warn"
+dbg_macro = "warn"
+todo = "warn"
+# Pedantic lints this codebase opts out of, and why:
+# - Tauri commands take their arguments and State by value.
+needless_pass_by_value = "allow"
+# - Pixel, audio and timing math converts between numeric types on purpose,
+#   with the ranges checked where they matter (clamp, min/max).
+cast_possible_truncation = "allow"
+cast_precision_loss = "allow"
+cast_sign_loss = "allow"
+cast_possible_wrap = "allow"
+# - Doc comments are prose about the product (Claude Code, WebView2, Wayland…),
+#   not API references to backtick.
+doc_markdown = "allow"
+# - An application crate, not a library: no public API contract to document.
+must_use_candidate = "allow"
+missing_errors_doc = "allow"
+missing_panics_doc = "allow"
+module_name_repetitions = "allow"
+# - Settings and wire structs mirror JSON documents field for field.
+struct_excessive_bools = "allow"
+struct_field_names = "allow"
+# - Long match-driven functions (event routers) read better whole.
+too_many_lines = "allow"
+similar_names = "allow"
+many_single_char_names = "allow"
+# - Style preferences, not defects: `x.map(f).unwrap_or(d)`, `if !c {} else {}`,
+#   a `match` with one arm and an else, arms kept apart for their comments,
+#   a helper declared where it is used.
+map_unwrap_or = "allow"
+if_not_else = "allow"
+single_match_else = "allow"
+match_same_arms = "allow"
+items_after_statements = "allow"
+# - Exact float comparisons in tests of deterministic arithmetic; `use super::*`
+#   in inline test and platform modules; signatures kept in step with sibling
+#   callbacks and commands; `format!` into a String outside hot paths.
+float_cmp = "allow"
+wildcard_imports = "allow"
+unnecessary_wraps = "allow"
+format_push_string = "allow"
+format_collect = "allow"
+
 # Release profile shared by the app and the hook relay: the hook must start fast
 # (Claude Code spawns it on every event), so we optimise for size and speed.
 [profile.release]

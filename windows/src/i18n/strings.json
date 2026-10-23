@@ -354,6 +354,17 @@
    "ru": "Разрешите Coucou в Системных настройках → Конфиденциальность и безопасность → Запись экрана и сделайте снимок снова.",
    "id": "Izinkan Coucou di Pengaturan Sistem → Privasi & Keamanan → Rekaman Layar, lalu tangkap lagi."
   },
+  "Allow Coucou in System Settings → Privacy & Security → Screen Recording, then drop Mochi on the window again.": {
+   "zh-Hans": "请在“系统设置 → 隐私与安全性 → 录屏”中允许 Coucou，然后再把 Mochi 拖到窗口上。",
+   "hi": "System Settings → Privacy & Security → Screen Recording में Coucou को अनुमति दें, फिर मोची को दोबारा विंडो पर छोड़ें।",
+   "es": "Permite Coucou en Ajustes del Sistema → Privacidad y seguridad → Grabación de pantalla y vuelve a soltar a Mochi sobre la ventana.",
+   "ar": "اسمح لـ Coucou في إعدادات النظام ← الخصوصية والأمن ← تسجيل الشاشة، ثم أفلت موتشي على النافذة مرة أخرى.",
+   "fr": "Autorise Coucou dans Réglages Système → Confidentialité et sécurité → Enregistrement de l'écran, puis relâche Mochi sur la fenêtre.",
+   "bn": "System Settings → Privacy & Security → Screen Recording-এ Coucou-কে অনুমতি দিন, তারপর মোচিকে আবার উইন্ডোর ওপর ছেড়ে দিন।",
+   "pt-BR": "Permita o Coucou em Ajustes do Sistema → Privacidade e Segurança → Gravação da Tela e solte o Mochi na janela de novo.",
+   "ru": "Разрешите Coucou в Системных настройках → Конфиденциальность и безопасность → Запись экрана и снова отпустите Мочи на окно.",
+   "id": "Izinkan Coucou di Pengaturan Sistem → Privasi & Keamanan → Rekaman Layar, lalu lepaskan Mochi di jendela itu lagi."
+  },
   "Allow Coucou to control Music": {
    "zh-Hans": "允许 Coucou 控制音乐",
    "hi": "Coucou को Music नियंत्रित करने दें",
@@ -375,6 +386,17 @@
    "pt-BR": "Permitir que o Coucou controle o Spotify",
    "ru": "Разрешить Coucou управлять Spotify",
    "id": "Izinkan Coucou mengontrol Spotify"
+  },
+  "Allow Coucou to control YouTube Music": {
+   "zh-Hans": "允许 Coucou 控制 YouTube Music",
+   "hi": "Coucou को YouTube Music नियंत्रित करने दें",
+   "es": "Permite que Coucou controle YouTube Music",
+   "ar": "اسمح لـ Coucou بالتحكم في YouTube Music",
+   "fr": "Autorisez Coucou à piloter YouTube Music",
+   "bn": "Coucou-কে YouTube Music নিয়ন্ত্রণ করতে দিন",
+   "pt-BR": "Permita que o Coucou controle o YouTube Music",
+   "ru": "Разрешите Coucou управлять YouTube Music",
+   "id": "Izinkan Coucou mengontrol YouTube Music"
   },
   "Already active": {
    "zh-Hans": "已激活",
@@ -419,6 +441,28 @@
    "pt-BR": "Uma instrução enviada pelo iPhone usa o modelo aberto no momento no chat. O prompt de sistema e o histórico de conversa se aplicam. Instruções enviadas enquanto o Coucou não está em execução ficam na fila e são executadas no próximo início.",
    "ru": "Инструкция, отправленная с iPhone, использует модель, открытую в чате. Системный промпт и история разговора применяются. Инструкции, отправленные пока Coucou не запущен, ставятся в очередь и выполняются при следующем запуске.",
    "id": "Instruksi yang dikirim dari iPhone menggunakan model yang sedang terbuka di chat. Prompt sistem dan riwayat percakapan berlaku. Instruksi yang dikirim saat Coucou tidak berjalan dimasukkan ke antrean dan dijalankan saat peluncuran berikutnya."
+  },
+  "Analysis": {
+   "zh-Hans": "分析",
+   "hi": "विश्लेषण",
+   "es": "Análisis",
+   "ar": "تحليل",
+   "fr": "Analyse",
+   "bn": "বিশ্লেষণ",
+   "pt-BR": "Análise",
+   "ru": "Анализ",
+   "id": "Analisis"
+  },
+  "Analyze what's in this window in depth: what's good, what's wrong, what to do.": {
+   "zh-Hans": "深入分析这个窗口里的内容：哪里好，哪里有问题，该怎么做。",
+   "hi": "इस विंडो में जो है उसका गहराई से विश्लेषण करो: क्या अच्छा है, क्या गलत है, क्या करना चाहिए।",
+   "es": "Analiza a fondo lo que hay en esta ventana: lo bueno, lo que falla y qué hacer.",
+   "ar": "حلّل ما في هذه النافذة بعمق: ما الجيد، وما الخطأ، وما الذي يجب فعله.",
+   "fr": "Analyse en détail ce qu'il y a dans cette fenêtre : ce qui va, ce qui ne va pas, quoi faire.",
+   "bn": "এই উইন্ডোতে যা আছে তা গভীরভাবে বিশ্লেষণ করো: কী ভালো, কী ভুল, কী করা উচিত।",
+   "pt-BR": "Analise a fundo o que tem nesta janela: o que está bom, o que está errado, o que fazer.",
+   "ru": "Подробно разбери, что в этом окне: что хорошо, что не так, что делать.",
+   "id": "Analisis isi jendela ini secara mendalam: apa yang bagus, apa yang salah, apa yang harus dilakukan."
   },
   "Annotate": {
    "zh-Hans": "标注",
@@ -1080,6 +1124,17 @@
    "ru": "Очистить историю",
    "id": "Hapus riwayat"
   },
+  "Click Allow in YouTube Music": {
+   "zh-Hans": "在 YouTube Music 中点击「允许」",
+   "hi": "YouTube Music में «अनुमति दें» पर क्लिक करें",
+   "es": "Haz clic en «Permitir» en YouTube Music",
+   "ar": "انقر على «السماح» في YouTube Music",
+   "fr": "Cliquez sur « Autoriser » dans YouTube Music",
+   "bn": "YouTube Music-এ «অনুমতি দিন» চাপুন",
+   "pt-BR": "Clique em «Permitir» no YouTube Music",
+   "ru": "Нажмите «Разрешить» в YouTube Music",
+   "id": "Klik «Izinkan» di YouTube Music"
+  },
   "Close": {
    "zh-Hans": "关闭",
    "hi": "बंद करें",
@@ -1288,6 +1343,17 @@
    "pt-BR": "Conectando…",
    "ru": "Подключение…",
    "id": "Menghubungkan…"
+  },
+  "Connect…": {
+   "zh-Hans": "连接…",
+   "hi": "कनेक्ट करें…",
+   "es": "Conectar…",
+   "ar": "اتصال…",
+   "fr": "Connecter…",
+   "bn": "সংযুক্ত করুন…",
+   "pt-BR": "Conectar…",
+   "ru": "Подключить…",
+   "id": "Hubungkan…"
   },
   "Contact": {
    "zh-Hans": "联系人",
@@ -2092,6 +2158,17 @@
    "ru": "Получает",
    "id": "Mengambil"
   },
+  "First team": {
+   "zh-Hans": "第一个团队",
+   "hi": "पहली टीम",
+   "es": "Primer equipo",
+   "ar": "الفريق الأول",
+   "fr": "Première équipe",
+   "bn": "প্রথম টিম",
+   "pt-BR": "Primeira equipe",
+   "ru": "Первая команда",
+   "id": "Tim pertama"
+  },
   "Fix the line": {
    "zh-Hans": "修改这一行",
    "hi": "पंक्ति ठीक करें",
@@ -2213,6 +2290,17 @@
    "ru": "Основные",
    "id": "Umum"
   },
+  "Get Pear Desktop": {
+   "zh-Hans": "获取 Pear Desktop",
+   "hi": "Pear Desktop पाएँ",
+   "es": "Obtener Pear Desktop",
+   "ar": "تنزيل Pear Desktop",
+   "fr": "Installer Pear Desktop",
+   "bn": "Pear Desktop নিন",
+   "pt-BR": "Obter o Pear Desktop",
+   "ru": "Скачать Pear Desktop",
+   "id": "Dapatkan Pear Desktop"
+  },
   "Get Spotify": {
    "zh-Hans": "获取 Spotify",
    "hi": "Spotify पाएँ",
@@ -2245,6 +2333,17 @@
    "pt-BR": "Um segundo — voltando ao trabalho em três segundos.",
    "ru": "Секунду — вернусь к работе через три секунды.",
    "id": "Satu detik — kembali bekerja dalam tiga detik."
+  },
+  "Give me the key points as a list.": {
+   "zh-Hans": "用列表列出要点。",
+   "hi": "मुख्य बातें एक सूची में दो।",
+   "es": "Dame los puntos clave en una lista.",
+   "ar": "أعطني النقاط الرئيسية في قائمة.",
+   "fr": "Donne-moi les points clés sous forme de liste.",
+   "bn": "মূল বিষয়গুলো একটা তালিকায় দাও।",
+   "pt-BR": "Me dê os pontos-chave em uma lista.",
+   "ru": "Перечисли главное списком.",
+   "id": "Beri aku poin-poin pentingnya dalam daftar."
   },
   "Global shortcuts — active from any app": {
    "zh-Hans": "全局快捷键 — 在任何应用中有效",
@@ -2906,6 +3005,17 @@
    "ru": "Позволять iPhone отправлять инструкции в Claude Code",
    "id": "Biarkan iPhone saya mengirim instruksi ke Claude Code"
   },
+  "Linear → Settings → Security & access → Personal API keys. Coucou shows your open issues, moves them to the next state and creates new ones, only when you click.": {
+   "zh-Hans": "Linear → Settings → Security & access → Personal API keys。Coucou 显示你未完成的事项，将其推进到下一状态并新建事项，仅在你点击时执行。",
+   "hi": "Linear → Settings → Security & access → Personal API keys. Coucou आपके खुले इश्यू दिखाता है, उन्हें अगली स्थिति में ले जाता है और नए बनाता है, केवल जब आप क्लिक करें।",
+   "es": "Linear → Settings → Security & access → Personal API keys. Coucou muestra tus incidencias abiertas, las pasa al siguiente estado y crea nuevas, solo cuando haces clic.",
+   "ar": "Linear ← Settings ← Security & access ← Personal API keys. يعرض Coucou مهامك المفتوحة، وينقلها إلى الحالة التالية، وينشئ مهام جديدة، فقط عندما تنقر.",
+   "fr": "Linear → Settings → Security & access → Personal API keys. Coucou affiche tes tickets ouverts, les passe à l'état suivant et en crée, seulement quand tu cliques.",
+   "bn": "Linear → Settings → Security & access → Personal API keys। Coucou আপনার খোলা ইস্যু দেখায়, সেগুলো পরের অবস্থায় নেয় এবং নতুন তৈরি করে, শুধু আপনি ক্লিক করলে।",
+   "pt-BR": "Linear → Settings → Security & access → Personal API keys. O Coucou mostra suas issues abertas, passa-as para o próximo estado e cria novas, só quando você clica.",
+   "ru": "Linear → Settings → Security & access → Personal API keys. Coucou показывает ваши открытые задачи, переводит их в следующий статус и создаёт новые — только по вашему клику.",
+   "id": "Linear → Settings → Security & access → Personal API keys. Coucou menampilkan isu terbukamu, memindahkannya ke status berikutnya, dan membuat yang baru, hanya saat kamu mengeklik."
+  },
   "Listening…": {
    "zh-Hans": "我在听…",
    "hi": "सुन रहा हूँ…",
@@ -3048,6 +3158,17 @@
    "pt-BR": "Sessão mais longa",
    "ru": "Самая долгая сессия",
    "id": "Sesi terpanjang"
+  },
+  "Look at this window": {
+   "zh-Hans": "看看这个窗口",
+   "hi": "इस विंडो को देखो",
+   "es": "Mira esta ventana",
+   "ar": "انظر إلى هذه النافذة",
+   "fr": "Regarde cette fenêtre",
+   "bn": "এই উইন্ডোটা দেখো",
+   "pt-BR": "Olha esta janela",
+   "ru": "Посмотри на это окно",
+   "id": "Lihat jendela ini"
   },
   "Looking for the latest GOWA…": {
    "zh-Hans": "正在查找最新版 GOWA…",
@@ -3247,6 +3368,17 @@
    "ru": "Мочи и ваш Mac",
    "id": "Mochi dan Mac-mu"
   },
+  "Mochi couldn't see that window. Try again.": {
+   "zh-Hans": "Mochi 没能看到这个窗口，请再试一次。",
+   "hi": "मोची वह विंडो नहीं देख पाया। फिर से कोशिश करें।",
+   "es": "Mochi no pudo ver esa ventana. Inténtalo de nuevo.",
+   "ar": "لم يتمكن موتشي من رؤية هذه النافذة. جرّب مرة أخرى.",
+   "fr": "Mochi n'a pas réussi à voir cette fenêtre. Réessaie.",
+   "bn": "মোচি এই উইন্ডোটা দেখতে পায়নি। আবার চেষ্টা করুন।",
+   "pt-BR": "O Mochi não conseguiu ver essa janela. Tente de novo.",
+   "ru": "Мочи не смог разглядеть это окно. Попробуйте ещё раз.",
+   "id": "Mochi tidak bisa melihat jendela itu. Coba lagi."
+  },
   "Mochi reacts to your Mac": {
    "zh-Hans": "Mochi 会对你的 Mac 做出反应",
    "hi": "मोची आपके Mac पर प्रतिक्रिया देता है",
@@ -3368,6 +3500,17 @@
    "ru": "Мои PR",
    "id": "PR saya"
   },
+  "My issues": {
+   "zh-Hans": "我的事项",
+   "hi": "मेरे इश्यू",
+   "es": "Mis incidencias",
+   "ar": "مهامي",
+   "fr": "Mes tickets",
+   "bn": "আমার ইস্যু",
+   "pt-BR": "Minhas issues",
+   "ru": "Мои задачи",
+   "id": "Isu saya"
+  },
   "Name": {
    "zh-Hans": "名字",
    "hi": "नाम",
@@ -3444,6 +3587,17 @@
    "pt-BR": "Novo email",
    "ru": "Новое письмо",
    "id": "Email baru"
+  },
+  "New issue in {team}…": {
+   "zh-Hans": "在 {team} 中新建事项…",
+   "hi": "{team} में नया इश्यू…",
+   "es": "Nueva incidencia en {team}…",
+   "ar": "مهمة جديدة في {team}…",
+   "fr": "Nouveau ticket dans {team}…",
+   "bn": "{team}-এ নতুন ইস্যু…",
+   "pt-BR": "Nova issue em {team}…",
+   "ru": "Новая задача в {team}…",
+   "id": "Isu baru di {team}…"
   },
   "New snippet": {
    "zh-Hans": "新片段",
@@ -3631,6 +3785,17 @@
    "pt-BR": "Nenhuma mensagem nova",
    "ru": "Нет новых сообщений",
    "id": "Tidak ada pesan baru"
+  },
+  "No open issue assigned to you": {
+   "zh-Hans": "没有分配给你的未完成事项",
+   "hi": "आपको सौंपा गया कोई खुला इश्यू नहीं",
+   "es": "No tienes incidencias abiertas asignadas",
+   "ar": "لا توجد مهام مفتوحة مسندة إليك",
+   "fr": "Aucun ticket ouvert à ton nom",
+   "bn": "আপনাকে দেওয়া কোনো খোলা ইস্যু নেই",
+   "pt-BR": "Nenhuma issue aberta atribuída a você",
+   "ru": "Нет открытых задач, назначенных вам",
+   "id": "Tidak ada isu terbuka untukmu"
   },
   "No other open app": {
    "zh-Hans": "没有其他打开的 App",
@@ -4192,6 +4357,17 @@
    "pt-BR": "Abrir Visual Studio Code",
    "ru": "Открыть Visual Studio Code",
    "id": "Buka Visual Studio Code"
+  },
+  "Open YouTube Music": {
+   "zh-Hans": "打开 YouTube Music",
+   "hi": "YouTube Music खोलें",
+   "es": "Abrir YouTube Music",
+   "ar": "فتح YouTube Music",
+   "fr": "Ouvrir YouTube Music",
+   "bn": "YouTube Music খুলুন",
+   "pt-BR": "Abrir YouTube Music",
+   "ru": "Открыть YouTube Music",
+   "id": "Buka YouTube Music"
   },
   "Open chat": {
    "zh-Hans": "打开聊天",
@@ -5810,6 +5986,17 @@
    "ru": "Краткие итоги",
    "id": "Ringkasan"
   },
+  "Summarize what's in this window for me.": {
+   "zh-Hans": "帮我总结一下这个窗口里的内容。",
+   "hi": "इस विंडो में जो है उसका सारांश दो।",
+   "es": "Resúmeme lo que hay en esta ventana.",
+   "ar": "لخّص لي ما في هذه النافذة.",
+   "fr": "Fais-moi un résumé de ce qu'il y a dans cette fenêtre.",
+   "bn": "এই উইন্ডোতে যা আছে তার সারাংশ দাও।",
+   "pt-BR": "Resuma para mim o que tem nesta janela.",
+   "ru": "Кратко перескажи, что в этом окне.",
+   "id": "Ringkas isi jendela ini untukku."
+  },
   "Summary": {
    "zh-Hans": "摘要",
    "hi": "सारांश",
@@ -5886,6 +6073,17 @@
    "pt-BR": "Tarefas",
    "ru": "Задачи",
    "id": "Tugas"
+  },
+  "Team for new issues": {
+   "zh-Hans": "新事项所属团队",
+   "hi": "नए इश्यू के लिए टीम",
+   "es": "Equipo para nuevas incidencias",
+   "ar": "الفريق للمهام الجديدة",
+   "fr": "Équipe des nouveaux tickets",
+   "bn": "নতুন ইস্যুর টিম",
+   "pt-BR": "Equipe para novas issues",
+   "ru": "Команда для новых задач",
+   "id": "Tim untuk isu baru"
   },
   "Test connection": {
    "zh-Hans": "测试连接",
@@ -6184,6 +6382,17 @@
    "ru": "Исправленные слова запоминаются для следующих звонков.",
    "id": "Kata yang kamu perbaiki diingat untuk panggilan berikutnya."
   },
+  "This key can't see any Linear team": {
+   "zh-Hans": "此密钥看不到任何 Linear 团队",
+   "hi": "इस कुंजी से कोई Linear टीम नहीं दिखती",
+   "es": "Esta clave no ve ningún equipo de Linear",
+   "ar": "هذا المفتاح لا يرى أي فريق في Linear",
+   "fr": "Cette clé ne voit aucune équipe Linear",
+   "bn": "এই কী দিয়ে কোনো Linear টিম দেখা যায় না",
+   "pt-BR": "Esta chave não vê nenhuma equipe do Linear",
+   "ru": "Этот ключ не видит ни одной команды Linear",
+   "id": "Kunci ini tidak bisa melihat tim Linear mana pun"
+  },
   "This model is not available.": {
    "zh-Hans": "此模型不可用。",
    "hi": "यह मॉडल उपलब्ध नहीं है।",
@@ -6227,6 +6436,17 @@
    "pt-BR": "A fazer",
    "ru": "Задачи",
    "id": "Tugas"
+  },
+  "To let Claude Code drive Linear too, run this command in a terminal: it adds Linear's MCP server (sign-in in the browser).": {
+   "zh-Hans": "若想让 Claude Code 也能操作 Linear，请在终端运行此命令：它会添加 Linear 的 MCP 服务器（在浏览器中登录）。",
+   "hi": "Claude Code से भी Linear चलाने के लिए, यह कमांड टर्मिनल में चलाएँ: यह Linear का MCP सर्वर जोड़ता है (ब्राउज़र में साइन-इन)।",
+   "es": "Para que Claude Code también maneje Linear, ejecuta este comando en una terminal: añade el servidor MCP de Linear (inicio de sesión en el navegador).",
+   "ar": "لكي يتحكم Claude Code في Linear أيضًا، شغّل هذا الأمر في الطرفية: يضيف خادم MCP الخاص بـ Linear (تسجيل الدخول في المتصفح).",
+   "fr": "Pour que Claude Code pilote aussi Linear, lance cette commande dans un terminal : elle ajoute le serveur MCP de Linear (connexion dans le navigateur).",
+   "bn": "Claude Code দিয়েও Linear চালাতে, টার্মিনালে এই কমান্ডটি চালান: এটি Linear-এর MCP সার্ভার যোগ করে (ব্রাউজারে সাইন-ইন)।",
+   "pt-BR": "Para o Claude Code também controlar o Linear, rode este comando em um terminal: ele adiciona o servidor MCP do Linear (login no navegador).",
+   "ru": "Чтобы Claude Code тоже управлял Linear, выполните эту команду в терминале: она добавит MCP-сервер Linear (вход в браузере).",
+   "id": "Agar Claude Code juga bisa mengendalikan Linear, jalankan perintah ini di terminal: perintah ini menambahkan server MCP Linear (masuk lewat browser)."
   },
   "To review": {
    "zh-Hans": "待审查",
@@ -6327,6 +6547,17 @@
    "ru": "Расшифровка",
    "id": "Transkrip"
   },
+  "Translate": {
+   "zh-Hans": "翻译",
+   "hi": "अनुवाद",
+   "es": "Traducir",
+   "ar": "ترجمة",
+   "fr": "Traduire",
+   "bn": "অনুবাদ",
+   "pt-BR": "Traduzir",
+   "ru": "Перевести",
+   "id": "Terjemahkan"
+  },
   "Translate into": {
    "zh-Hans": "翻译成",
    "hi": "अनुवाद करें",
@@ -6337,6 +6568,28 @@
    "pt-BR": "Traduzir para",
    "ru": "Переводить на",
    "id": "Terjemahkan ke"
+  },
+  "Translate the text in this window into English.": {
+   "zh-Hans": "把这个窗口里的文字翻译成中文。",
+   "hi": "इस विंडो के टेक्स्ट का हिंदी में अनुवाद करो।",
+   "es": "Traduce al español el texto de esta ventana.",
+   "ar": "ترجم نص هذه النافذة إلى العربية.",
+   "fr": "Traduis en français le texte de cette fenêtre.",
+   "bn": "এই উইন্ডোর লেখা বাংলায় অনুবাদ করো।",
+   "pt-BR": "Traduza para o português o texto desta janela.",
+   "ru": "Переведи текст этого окна на русский.",
+   "id": "Terjemahkan teks di jendela ini ke bahasa Indonesia."
+  },
+  "Try again": {
+   "zh-Hans": "重试",
+   "hi": "फिर से कोशिश करें",
+   "es": "Reintentar",
+   "ar": "إعادة المحاولة",
+   "fr": "Réessayer",
+   "bn": "আবার চেষ্টা করুন",
+   "pt-BR": "Tentar novamente",
+   "ru": "Повторить",
+   "id": "Coba lagi"
   },
   "Try demo mode": {
    "zh-Hans": "试用演示模式",
@@ -6359,6 +6612,17 @@
    "pt-BR": "Ativar o ditado",
    "ru": "Включить диктовку",
    "id": "Aktifkan dikte"
+  },
+  "Turn on the API Server plugin in YouTube Music": {
+   "zh-Hans": "在 YouTube Music 中开启 API Server 插件",
+   "hi": "YouTube Music में API Server प्लगइन चालू करें",
+   "es": "Activa el plugin API Server en YouTube Music",
+   "ar": "فعّل إضافة API Server في YouTube Music",
+   "fr": "Activez le plugin API Server dans YouTube Music",
+   "bn": "YouTube Music-এ API Server প্লাগইন চালু করুন",
+   "pt-BR": "Ative o plugin API Server no YouTube Music",
+   "ru": "Включите плагин API Server в YouTube Music",
+   "id": "Aktifkan plugin API Server di YouTube Music"
   },
   "Turned off in Settings": {
    "zh-Hans": "已在设置中关闭",
@@ -7020,6 +7284,28 @@
    "ru": "Ты говоришь",
    "id": "Kamu berbicara"
   },
+  "YouTube Music not installed": {
+   "zh-Hans": "未安装 YouTube Music",
+   "hi": "YouTube Music इंस्टॉल नहीं है",
+   "es": "YouTube Music no está instalado",
+   "ar": "YouTube Music غير مثبت",
+   "fr": "YouTube Music n'est pas installé",
+   "bn": "YouTube Music ইনস্টল নেই",
+   "pt-BR": "YouTube Music não está instalado",
+   "ru": "YouTube Music не установлен",
+   "id": "YouTube Music belum terpasang"
+  },
+  "YouTube Music refused the connection": {
+   "zh-Hans": "YouTube Music 拒绝了连接",
+   "hi": "YouTube Music ने कनेक्शन अस्वीकार कर दिया",
+   "es": "YouTube Music rechazó la conexión",
+   "ar": "رفض YouTube Music الاتصال",
+   "fr": "YouTube Music a refusé la connexion",
+   "bn": "YouTube Music সংযোগ প্রত্যাখ্যান করেছে",
+   "pt-BR": "O YouTube Music recusou a conexão",
+   "ru": "YouTube Music отклонил подключение",
+   "id": "YouTube Music menolak koneksi"
+  },
   "Your GOWA gateway is set up": {
    "zh-Hans": "你的 GOWA 网关已设置",
    "hi": "आपका GOWA गेटवे सेट है",
@@ -7481,6 +7767,17 @@
    "pt-BR": "{0} — abrir o Spotify",
    "ru": "{0} — открыть Spotify",
    "id": "{0} — buka Spotify"
+  },
+  "{0} — open YouTube Music": {
+   "zh-Hans": "{0} — 打开 YouTube Music",
+   "hi": "{0} — YouTube Music खोलें",
+   "es": "{0} — abrir YouTube Music",
+   "ar": "{0} — فتح YouTube Music",
+   "fr": "{0} — ouvrir YouTube Music",
+   "bn": "{0} — YouTube Music খুলুন",
+   "pt-BR": "{0} — abrir YouTube Music",
+   "ru": "{0} — открыть YouTube Music",
+   "id": "{0} — buka YouTube Music"
   },
   "{0} → {1}": {
    "zh-Hans": "{0} → {1}",

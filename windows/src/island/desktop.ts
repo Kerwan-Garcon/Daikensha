@@ -12,6 +12,8 @@ import {
   DESKTOP_EVENTS, DesktopMochiController, alertActive, type DesktopSnapshot,
 } from "../mochi/desktop-logic";
 import { SeasonCache, parseOutfit } from "../mochi/wardrobe";
+import type { Looked } from "../core/look";
+import { parseLook } from "../mochi/look";
 
 /** Label of the desktop Mochi's window (desktop.rs LABEL). */
 const WINDOW = "mochi";
@@ -24,6 +26,8 @@ export interface DesktopHost {
   wardrobeFromDesktop(): void;
   /** Three pokes on the desktop Mochi. */
   dizzyFromDesktop(): void;
+  /** Dropped on a window: he is back and has looked at it (core/look.ts). */
+  looked(look: Looked): void;
 }
 
 export class DesktopLink {
@@ -70,14 +74,15 @@ export class DesktopLink {
     this.mode = info.mode;
     this.controller.enabled = info.onDesktop;
 
-    await onEvent<{ from: "island" | "desktop"; home: boolean }>(DESKTOP_EVENTS.dropped, (e) =>
-      this.onDropped(e.from, e.home),
-    );
-    await onEvent<null>(DESKTOP_EVENTS.home, () => void this.controller.flyHome());
-    await onEvent<null>(DESKTOP_EVENTS.wardrobe, () => this.host.wardrobeFromDesktop());
-    await onEvent<null>(DESKTOP_EVENTS.dizzy, () => this.host.dizzyFromDesktop());
+    await onEvent(DESKTOP_EVENTS.dropped, (e) => {
+      this.onDropped(e.from, e.home);
+      if (e.look) this.host.looked(e.look);
+    });
+    await onEvent(DESKTOP_EVENTS.home, () => void this.controller.flyHome());
+    await onEvent(DESKTOP_EVENTS.wardrobe, () => this.host.wardrobeFromDesktop());
+    await onEvent(DESKTOP_EVENTS.dizzy, () => this.host.dizzyFromDesktop());
     // The window's page (re)loaded: it knows nothing yet.
-    await onEvent<null>(DESKTOP_EVENTS.ready, () => {
+    await onEvent(DESKTOP_EVENTS.ready, () => {
       this.pushed = "";
       this.push();
     });
@@ -168,10 +173,11 @@ export class DesktopLink {
     const snapshot: DesktopSnapshot = {
       state: State.effectiveState,
       outfit: State.wardrobePreview ?? this.seasons.get(parseOutfit(State.settings.mochiOutfit)),
+      look: parseLook(State.settings.mochiLook),
       soundEnabled: State.settings.soundEnabled,
       soundVolume: State.settings.soundVolume,
       paused: State.paused,
-      dancing: desktopDances(State.spotifyPlaying, State.effectiveState),
+      dancing: desktopDances(State.spotifyPlaying || State.youTubeMusicPlaying, State.effectiveState),
     };
     const key = JSON.stringify(snapshot);
     if (key === this.pushed) return;

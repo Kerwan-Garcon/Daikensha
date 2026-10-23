@@ -29,9 +29,9 @@
 
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicU64, Ordering};
-use std::sync::Mutex;
 use std::time::Duration;
 
+use parking_lot::Mutex;
 use serde_json::{json, Value};
 use tauri::{AppHandle, Emitter, Manager};
 use tokio::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt};
@@ -140,13 +140,10 @@ pub fn start(app: AppHandle) {
         let _ = std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o600));
         let uid = unsafe { libc::getuid() };
         loop {
-            let stream = match listener.accept().await {
-                Ok((stream, _)) => stream,
-                Err(_) => {
+            let Ok((stream, _)) = listener.accept().await else {
                     tokio::time::sleep(Duration::from_millis(200)).await;
                     continue;
-                }
-            };
+                };
             // Only the relay run by our own user may drive the island.
             if !matches!(stream.peer_cred(), Ok(c) if c.uid() == uid) {
                 log::line("refused a relay connection from another user");
@@ -242,7 +239,7 @@ async fn handle(app: AppHandle, mut pipe: impl Relay) {
     let (tx, mut rx) = mpsc::channel::<Reply>(4);
     {
         let pending = app.state::<Pending>();
-        pending.0.lock().unwrap().insert(id.clone(), tx);
+        pending.0.lock().insert(id.clone(), tx);
     }
     crate::recap::note_request(&app, &id, &payload);
     payload["request_id"] = json!(id);
@@ -250,7 +247,7 @@ async fn handle(app: AppHandle, mut pipe: impl Relay) {
     let _ = app.emit_to(WINDOW_LABEL, "hook", payload);
 
     let decision = wait_for_decision(&id, &mut rx).await;
-    app.state::<Pending>().0.lock().unwrap().remove(&id);
+    app.state::<Pending>().0.lock().remove(&id);
 
     // No decision: say nothing at all. coucou-hook then writes nothing to stdout
     // and Claude Code asks in the terminal, exactly as if Coucou were closed.
@@ -264,7 +261,7 @@ async fn handle(app: AppHandle, mut pipe: impl Relay) {
 /// A Stop from Claude Code itself (no other agent's tag) with the option on.
 fn holds_for_reply(app: &AppHandle, payload: &Value) -> bool {
     payload.get("coucou_agent").is_none()
-        && app.try_state::<crate::Shared>().is_some_and(|s| s.settings.lock().unwrap().reply_from_island)
+        && app.try_state::<crate::Shared>().is_some_and(|s| s.settings.lock().reply_from_island)
 }
 
 /// The longest reply handed to Claude Code.
@@ -279,7 +276,7 @@ pub fn reply_line(text: &str) -> Option<String> {
 async fn hold_for_reply(app: AppHandle, mut pipe: impl Relay, mut payload: Value) {
     let id = format!("{}-{}", std::process::id(), COUNTER.fetch_add(1, Ordering::Relaxed));
     let (tx, mut rx) = mpsc::channel::<Reply>(4);
-    app.state::<Pending>().0.lock().unwrap().insert(id.clone(), tx);
+    app.state::<Pending>().0.lock().insert(id.clone(), tx);
     payload["reply_id"] = json!(id);
     log::line(format!("hook Stop id={id} (reply from the island)"));
     let _ = app.emit_to(WINDOW_LABEL, "hook", payload);
@@ -307,7 +304,7 @@ async fn hold_for_reply(app: AppHandle, mut pipe: impl Relay, mut payload: Value
             }
         }
     }
-    app.state::<Pending>().0.lock().unwrap().remove(&id);
+    app.state::<Pending>().0.lock().remove(&id);
     pipe.finish();
 }
 
@@ -386,7 +383,7 @@ fn loggable(decision: &str) -> &str {
 fn send(app: &AppHandle, request_id: &str, reply: Reply, keep: bool) {
     let sender = {
         let pending = app.state::<Pending>();
-        let mut map = pending.0.lock().unwrap();
+        let mut map = pending.0.lock();
         if keep { map.get(request_id).cloned() } else { map.remove(request_id) }
     };
     match sender {

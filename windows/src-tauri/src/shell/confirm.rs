@@ -8,9 +8,9 @@
 // The pure parts serve the Windows code; elsewhere only the tests use them.
 #![cfg_attr(not(windows), allow(dead_code))]
 
-use std::sync::Mutex;
 use std::time::{Duration, Instant};
 
+use parking_lot::Mutex;
 use serde::Serialize;
 
 use super::power::PowerAction;
@@ -83,13 +83,13 @@ pub fn prepare(action: Action) -> Result<Card, String> {
             steps: r.steps.iter().map(super::routines::step_summary).collect(),
         },
     };
-    *PENDING.lock().unwrap_or_else(|e| e.into_inner()) = Some(Pending { token: token.clone(), action, at: Instant::now() });
+    *PENDING.lock() = Some(Pending { token: token.clone(), action, at: Instant::now() });
     Ok(Card { token, body })
 }
 
 /// The card's action, once, if `token` is the card's and still fresh.
 pub fn take(token: &str) -> Result<Action, String> {
-    let mut pending = PENDING.lock().unwrap_or_else(|e| e.into_inner());
+    let mut pending = PENDING.lock();
     match pending.take() {
         Some(p) if p.token == token && p.at.elapsed() < CARD_VALID_FOR => Ok(p.action),
         _ => Err(crate::i18n::t("This card has expired. Ask again.")),
@@ -97,7 +97,7 @@ pub fn take(token: &str) -> Result<Action, String> {
 }
 
 pub fn cancel() {
-    *PENDING.lock().unwrap_or_else(|e| e.into_inner()) = None;
+    *PENDING.lock() = None;
 }
 
 /// Runs the card's action: only the card's button calls this.

@@ -45,7 +45,7 @@ export function modelsControl(ctx: HubContext, onReady?: () => void): HTMLElemen
     }
   };
   draw(ctx.status.models);
-  void onEvent<ModelsStatus>("speech-models", (models) => {
+  void onEvent("speech-models", (models) => {
     if (!el.isConnected) return;
     const wasReady = ctx.status.models.parakeet.state === "ready";
     ctx.status.models = models;

@@ -5,6 +5,7 @@
 // No DOM, no Tauri: tests/recap.test.mjs runs it as it is.
 
 import { N_, dayMonth, t } from "../i18n/i18n";
+import { itemAt } from "../core/arrays";
 
 /** One finished turn, as recap.rs stores it. Times are Unix seconds. */
 export interface RecapTurn {
@@ -191,7 +192,7 @@ export function summarize(history: RecapHistory, weekStart: Date): WeeklySummary
     permissionsDenied: decisions.filter((d) => d.decision === "deny").length,
     topAgent: topAgent === null ? null : agentName(topAgent),
     topProject: topKey(byProject, byName),
-    busiestDay: busiest === null ? null : DAY_NAMES[busiest],
+    busiestDay: busiest === null ? null : itemAt(DAY_NAMES, busiest),
     longestSessionMinutes: Math.floor(longest / 60),
   };
 }

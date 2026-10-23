@@ -14,6 +14,7 @@
 import { Ease } from "../core/anim";
 import type { Outfit, OutfitSelection } from "./wardrobe";
 import { SCRIPT_FONTS } from "../core/fonts";
+import { itemAt, lastOf } from "../core/arrays";
 
 const EXP = 2.7;
 const VIEW_TILT = -0.3;
@@ -82,15 +83,16 @@ function frontSilhouette(pts: P3[]): P3[] {
   let minI = 0;
   let maxI = 0;
   for (let i = 1; i < n; i++) {
-    if (pts[i].x < pts[minI].x) minI = i;
-    if (pts[i].x > pts[maxI].x) maxI = i;
+    const x = itemAt(pts, i).x;
+    if (x < itemAt(pts, minI).x) minI = i;
+    if (x > itemAt(pts, maxI).x) maxI = i;
   }
-  if (minI === maxI) return [pts[minI]];
+  if (minI === maxI) return [itemAt(pts, minI)];
   const walk = (step: number) => {
     const out: P3[] = [];
     let i = minI;
     for (;;) {
-      out.push(pts[i]);
+      out.push(itemAt(pts, i));
       if (i === maxI || out.length > n) break;
       i = (i + step + n) % n;
     }
@@ -119,9 +121,10 @@ function capClip(H: Head, y: number, s: number, extraTop = 3): Path2D {
   const arc = frontArc(H, y, s);
   const p = new Path2D();
   if (arc.length === 0) return p;
-  p.moveTo(arc[0].x - H.rx, arc[0].y);
+  const first = itemAt(arc, 0);
+  p.moveTo(first.x - H.rx, first.y);
   for (const q of arc) p.lineTo(q.x, q.y);
-  const last = arc[arc.length - 1];
+  const last = lastOf(arc);
   p.lineTo(last.x + H.rx, last.y);
   p.lineTo(H.rx * 2, -H.ry * extraTop);
   p.lineTo(-H.rx * 2, -H.ry * extraTop);
@@ -177,6 +180,14 @@ function polyline(ctx: Ctx, pts: Pt[]) {
   pts.forEach((q, i) => (i ? ctx.lineTo(q.x, q.y) : ctx.moveTo(q.x, q.y)));
 }
 
+/** Continues `path` through `pts` from the last point back to the first. */
+function lineToReversed(path: Path2D, pts: readonly Pt[]) {
+  for (let i = pts.length - 1; i >= 0; i--) {
+    const q = itemAt(pts, i);
+    path.lineTo(q.x, q.y);
+  }
+}
+
 function roundRect(ctx: Ctx, x: number, y: number, w: number, h: number, r: number) {
   const rr = Math.max(0, Math.min(r, w / 2, h / 2));
   ctx.beginPath();
@@ -202,8 +213,8 @@ export interface EyeFrame {
 }
 
 /** Where the engine draws the eyes — the glasses sit on these. */
-export function eyeFrames(H: Head): EyeFrame[] {
-  return [-1, 1].map((sd) => {
+export function eyeFrames(H: Head): readonly [EyeFrame, EyeFrame] {
+  const frame = (sd: -1 | 1): EyeFrame => {
     const eyeYaw = sd * EYE_SP + H.yaw;
     const eyePitch = EYE_P + H.pitch;
     const cp = Math.cos(eyePitch);
@@ -217,7 +228,8 @@ export function eyeFrames(H: Head): EyeFrame[] {
       w: H.R * EYE_W,
       h: H.R * EYE_H,
     };
-  });
+  };
+  return [frame(-1), frame(1)];
 }
 
 // ── Soft bits ─────────────────────────────────────────────────────────────────
@@ -259,7 +271,7 @@ function fuzzyBand(ctx: Ctx, arc: Pt[], thick: number, base = "#FFFFFF", shade =
   ctx.stroke();
   const step = Math.max(2, Math.floor(arc.length / 16));
   for (let i = 0; i < arc.length; i += step) {
-    const q = arc[i];
+    const q = itemAt(arc, i);
     const r = thick * (0.32 + 0.1 * Math.sin(i * 1.7));
     ctx.fillStyle = rad(ctx, q.x - r * 0.3, q.y - thick * 0.35 - r * 0.3, 0, r * 1.2, [[0, base], [1, shade]]);
     ctx.beginPath();
@@ -351,8 +363,8 @@ function santaHat(ctx: Ctx, H: Head, body: Path2D) {
   const yEdge = 0.52;
   const arc = frontArc(H, yEdge, s);
   if (arc.length === 0) return;
-  const L = arc[0];
-  const Rt = arc[arc.length - 1];
+  const L = itemAt(arc, 0);
+  const Rt = lastOf(arc);
   const crown = proj(H, [0, 1.05, 0]);
   // the tip flops to the right and down, plus the spring lag
   const tip = { x: crown.x + H.rx * (0.95 + H.physDx * 0.35), y: crown.y + H.ry * (0.05 + H.physDy * 0.2) };
@@ -363,7 +375,7 @@ function santaHat(ctx: Ctx, H: Head, body: Path2D) {
   bag.quadraticCurveTo(tip.x - H.rx * 0.05, peak.y - H.ry * 0.02, tip.x, tip.y);
   bag.quadraticCurveTo(tip.x - H.rx * 0.12, tip.y - H.ry * 0.22, peak.x + H.rx * 0.18, peak.y + H.ry * 0.32);
   bag.bezierCurveTo(Rt.x + H.rx * 0.05, peak.y + H.ry * 0.45, Rt.x + H.rx * 0.08, Rt.y - H.ry * 0.35, Rt.x, Rt.y);
-  for (let i = arc.length - 1; i >= 0; i--) bag.lineTo(arc[i].x, arc[i].y);
+  lineToReversed(bag, arc);
   bag.closePath();
 
   ctx.save();
@@ -381,7 +393,7 @@ function santaHat(ctx: Ctx, H: Head, body: Path2D) {
   ctx.clip(bag);
   ctx.lineCap = "round";
   ctx.strokeStyle = "rgba(90,0,0,0.20)";
-  for (const [a, b, w] of [[0.15, 0.55, 0.1], [0.45, 0.85, 0.08]]) {
+  for (const [a, b, w] of [[0.15, 0.55, 0.1], [0.45, 0.85, 0.08]] as const) {
     ctx.beginPath();
     ctx.moveTo(peak.x - H.rx * 0.1 + (Rt.x - L.x) * a * 0.3, peak.y + H.ry * 0.15);
     ctx.quadraticCurveTo(peak.x + H.rx * 0.35, peak.y + H.ry * (0.05 + a * 0.3), tip.x - H.rx * (0.45 - b * 0.3), tip.y - H.ry * 0.12);
@@ -419,7 +431,7 @@ function partyHat(ctx: Ctx, H: Head, simple: boolean) {
   cone.quadraticCurveTo((left.x + apex.x) / 2 - H.rx * 0.06, (left.y + apex.y) / 2, apex.x - H.R * 0.05, apex.y + H.R * 0.06);
   cone.quadraticCurveTo(apex.x, apex.y - H.R * 0.03, apex.x + H.R * 0.05, apex.y + H.R * 0.06);
   cone.quadraticCurveTo((right.x + apex.x) / 2 + H.rx * 0.06, (right.y + apex.y) / 2, right.x, right.y);
-  for (let i = front.length - 1; i >= 0; i--) cone.lineTo(front[i].x, front[i].y);
+  lineToReversed(cone, front);
   cone.closePath();
   ctx.fillStyle = lin(ctx, left.x, apex.y, right.x, left.y, [[0, "#FF9BD0"], [0.5, "#F15BAE"], [1, "#C2187A"]]);
   ctx.fill(cone);
@@ -428,7 +440,7 @@ function partyHat(ctx: Ctx, H: Head, simple: boolean) {
   ctx.clip(cone);
   if (!simple) {
     ctx.fillStyle = "rgba(255,255,255,0.92)";
-    const dots = [[0.25, -0.35], [0.3, 0.3], [0.55, -0.05], [0.72, 0.28], [0.8, -0.3], [0.45, 0.6], [0.48, -0.65]];
+    const dots = [[0.25, -0.35], [0.3, 0.3], [0.55, -0.05], [0.72, 0.28], [0.8, -0.3], [0.45, 0.6], [0.48, -0.65]] as const;
     for (const [t, u] of dots) {
       const bx = left.x + (right.x - left.x) * (0.5 + u * 0.5);
       const by = left.y + (right.y - left.y) * (0.5 + u * 0.5);
@@ -482,7 +494,7 @@ function crownPart(ctx: Ctx, H: Head, side: number, simple: boolean) {
   keep.sort((a, b) => a.b.x - b.b.x);
   const shape = new Path2D();
   keep.forEach((q, i) => (i ? shape.lineTo(q.tt.x, q.tt.y) : shape.moveTo(q.tt.x, q.tt.y)));
-  for (let i = keep.length - 1; i >= 0; i--) shape.lineTo(keep[i].b.x, keep[i].b.y);
+  lineToReversed(shape, keep.map((q) => q.b));
   shape.closePath();
 
   const dark = side < 0;
@@ -517,7 +529,7 @@ function crownPart(ctx: Ctx, H: Head, side: number, simple: boolean) {
     const gr = H.R * 0.075;
     ctx.beginPath();
     ctx.ellipse(mid.x, mid.y, gr * Math.max(0.35, mid.z), gr, 0, 0, Math.PI * 2);
-    ctx.fillStyle = gems[k % gems.length];
+    ctx.fillStyle = itemAt(gems, k % gems.length);
     ctx.fill();
     ctx.beginPath();
     ctx.arc(mid.x - gr * 0.25 * mid.z, mid.y - gr * 0.35, gr * 0.28, 0, Math.PI * 2);
@@ -604,7 +616,7 @@ function witchHatFront(ctx: Ctx, H: Head, body: Path2D) {
   cone.quadraticCurveTo(top.x + H.rx * 0.25, top.y - H.ry * 0.08, tip.x, tip.y);
   cone.quadraticCurveTo(top.x + H.rx * 0.22, top.y + H.ry * 0.08, top.x + H.rx * 0.14, top.y + H.ry * 0.22);
   cone.bezierCurveTo(br.x - H.rx * 0.18, c.y - H.ry * 0.45, br.x - H.rx * 0.02, br.y - H.ry * 0.2, br.x, br.y);
-  for (let i = capFront.length - 1; i >= 0; i--) cone.lineTo(capFront[i].x, capFront[i].y);
+  lineToReversed(cone, capFront);
   cone.closePath();
   ctx.fillStyle = lin(ctx, bl.x, top.y, br.x, bl.y, [[0, "#7C3AED"], [0.55, "#4C1D95"], [1, "#2E1065"]]);
   ctx.fill(cone);
@@ -750,7 +762,7 @@ function scarf(ctx: Ctx, H: Head) {
   if (top.length === 0 || bot.length === 0) return;
   const band = new Path2D();
   top.forEach((q, i) => (i ? band.lineTo(q.x, q.y) : band.moveTo(q.x, q.y)));
-  for (let i = bot.length - 1; i >= 0; i--) band.lineTo(bot[i].x, bot[i].y);
+  lineToReversed(band, bot);
   band.closePath();
 
   ctx.save();
@@ -827,7 +839,7 @@ function pumpkin(ctx: Ctx, H: Head, body: Path2D, simple: boolean) {
         if (q.z > 0) pts.push(q);
       }
       if (pts.length < 2) continue;
-      const zz = pts[Math.floor(pts.length / 2)].z;
+      const zz = itemAt(pts, Math.floor(pts.length / 2)).z;
       polyline(ctx, pts);
       ctx.strokeStyle = `rgba(150,50,0,${0.22 * zz})`;
       ctx.lineWidth = H.R * 0.12;

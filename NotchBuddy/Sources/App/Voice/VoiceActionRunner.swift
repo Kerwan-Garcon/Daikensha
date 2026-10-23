@@ -3,10 +3,12 @@ import Foundation
 
 // MARK: - Protocols (injectable for tests)
 
-/// Abstraction over Apple Music + Spotify playback.
+/// Abstraction over Apple Music, Spotify and YouTube Music playback.
 protocol MusicControlling: Sendable {
     var isMusicRunning: Bool { get }
     var isSpotifyRunning: Bool { get }
+    /// Pear Desktop answers on its API Server with Coucou's token.
+    var isYouTubeMusicConnected: Bool { get }
     @MainActor func play()
     @MainActor func pause()
     @MainActor func nextTrack()
@@ -18,7 +20,17 @@ protocol MusicControlling: Sendable {
     @MainActor func playPlaylist(_ name: String) async -> Bool
     @MainActor func launchAndPlay() async
     @MainActor func launchSpotify() async
+    /// Opens Pear Desktop (and plays once it is connected).
+    @MainActor func launchYouTubeMusic() async
     @MainActor func openSearch(_ name: String)
+}
+
+extension MusicControlling {
+    var isYouTubeMusicConnected: Bool { false }
+    @MainActor func launchYouTubeMusic() async {}
+
+    /// One of the three players can take a command.
+    var anyPlayerReady: Bool { isMusicRunning || isSpotifyRunning || isYouTubeMusicConnected }
 }
 
 /// Abstraction over AppState pill management.
@@ -141,8 +153,12 @@ final class VoiceActionRunner {
                 if !music.isMusicRunning { await music.launchAndPlay() }
                 else { music.play() }
                 return ok("voice.music-playing")
+            case .youTubeMusic:
+                if !music.isYouTubeMusicConnected { await music.launchYouTubeMusic() }
+                else { music.play() }
+                return ok("voice.music-playing")
             case nil:
-                if music.isMusicRunning || music.isSpotifyRunning {
+                if music.anyPlayerReady {
                     music.play()
                     return ok("voice.music-playing")
                 }
@@ -151,28 +167,28 @@ final class VoiceActionRunner {
             }
 
         case .musicPause:
-            guard music.isMusicRunning || music.isSpotifyRunning else {
+            guard music.anyPlayerReady else {
                 return fail("voice.no-music-app")
             }
             music.pause()
             return ok("voice.music-paused")
 
         case .musicNext:
-            guard music.isMusicRunning || music.isSpotifyRunning else {
+            guard music.anyPlayerReady else {
                 return fail("voice.no-music-app")
             }
             music.nextTrack()
             return ok("voice.music-next")
 
         case .musicPrevious:
-            guard music.isMusicRunning || music.isSpotifyRunning else {
+            guard music.anyPlayerReady else {
                 return fail("voice.no-music-app")
             }
             music.previousTrack()
             return ok("voice.music-prev")
 
         case .musicVolumeUp:
-            guard music.isMusicRunning || music.isSpotifyRunning else {
+            guard music.anyPlayerReady else {
                 return fail("voice.no-music-app")
             }
             volumeCommandExecuted = true
@@ -180,7 +196,7 @@ final class VoiceActionRunner {
             return ok("voice.music-vol-up")
 
         case .musicVolumeDown:
-            guard music.isMusicRunning || music.isSpotifyRunning else {
+            guard music.anyPlayerReady else {
                 return fail("voice.no-music-app")
             }
             volumeCommandExecuted = true
@@ -188,7 +204,7 @@ final class VoiceActionRunner {
             return ok("voice.music-vol-down")
 
         case .musicSetVolume(let pct):
-            guard music.isMusicRunning || music.isSpotifyRunning else {
+            guard music.anyPlayerReady else {
                 return fail("voice.no-music-app")
             }
             volumeCommandExecuted = true
@@ -197,7 +213,7 @@ final class VoiceActionRunner {
             return .init(outcome: .success, message: fmt.contains("%") ? String(format: fmt, pct) : "\(pct)%")
 
         case .musicPlaySearch(let name):
-            if !music.isMusicRunning && !music.isSpotifyRunning {
+            if !music.anyPlayerReady {
                 await music.launchAndPlay()
             }
             let found = await music.playSearch(name)
@@ -212,7 +228,7 @@ final class VoiceActionRunner {
             return ask(.whichPlaylist, "voice.ask-which-playlist")
 
         case .musicPlayPlaylist(let name):
-            if !music.isMusicRunning && !music.isSpotifyRunning {
+            if !music.anyPlayerReady {
                 await music.launchAndPlay()
             }
             let found = await music.playPlaylist(name)

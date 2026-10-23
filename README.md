@@ -73,10 +73,11 @@ Flow dictation and the Notetaker are on the Mac for now; Windows and Linux are n
 - 📋 **Declare the tools you use** — open Settings → Active pills and pick your main workspace tool (VS Code, Cursor, Codex or Antigravity), then toggle up to 4 more: Gemini CLI, Anthropic, Google AI, OpenAI, Ollama, LM Studio and service integrations *(macOS)*.
 - 📎 **Drop a file on the notch** — Mochi turns into a box and swallows it, then ask a question about it or send it by email *(email: macOS, Mail.app)*.
 - 🖥️ **Mochi on the desktop** — drag Mochi out of the island to set him loose on your desktop: he floats as a 120 pt companion, follows your cursor, wears his outfit, reacts to alerts by flying home and flying back, and comes back where you left him on next launch.
-- 🪟 **Drag Mochi onto any window** — attach that window as context for Claude *(macOS)*.
-- 🔌 **Integrations** — Stripe payments, n8n workflows, GitHub (open PRs, reviews requested, CI status), Vercel deployments, Resend emails, Notion, Cal.com. Each one gets its own little colored Mochi.
+- 🪟 **Drag Mochi onto any window** — he looks at it and tells you what he sees: a summary and an analysis in the island's chat, with one-click Summary, Analysis, Key points and Translate to dig further. Hold ⌥ while dropping to only attach the window as context *(macOS GitHub build, and Windows — Alt there puts him on the desktop)*.
+- 🔌 **Integrations** — Stripe payments, n8n workflows, GitHub (open PRs, reviews requested, CI status), Vercel deployments, Resend emails, Notion, Cal.com, Linear (your open issues: start them, close them, create new ones from the notch). Each one gets its own little colored Mochi.
 - 🎵 **Apple Music pill** *(macOS, GitHub build)* — add the Apple Music pill in Settings → Active pills to see what's playing and control playback from the notch; Mochi dances while it plays.
 - 🎧 **Spotify pill** *(macOS, GitHub build)* — add the Spotify pill in Settings → Active pills: album cover, title and artist, a progress bar you drag to seek, play/pause, previous/next, shuffle, repeat and volume, right from the notch; Mochi dances while it plays.
+- ▶️ **YouTube Music pill** *(macOS GitHub build, Windows, Linux)* — the same card and pill for YouTube Music, through [Pear Desktop](https://github.com/pear-devs/pear-desktop) (the open-source YouTube Music desktop app) and its **API Server** plugin. Click **Connect…** on the card once, then **Allow** in Pear. Coucou only talks to `127.0.0.1`. See [docs/YOUTUBE_MUSIC.md](docs/YOUTUBE_MUSIC.md).
 - 👗 **Dress Mochi up** — right-click him for the wardrobe. He also dresses up for the seasons on his own.
 - ⌨️ **Keyboard shortcuts** — open the chat, jump to an alert or a terminal, switch pills, mute, send Mochi to the desktop or open the wardrobe from anywhere; all customizable in Settings → Shortcuts.
 - 🎭 **A real character** — idle breathing, blinks, eyes on a sphere that follow your mouse, emotes, 28 handcrafted sounds, a greeting on launch.
@@ -317,7 +318,7 @@ On the Mac, open Coucou from the Dock or the menu bar: its window has every sett
 | **Active pills** *(macOS)* | choose which tools and agents appear in the island | Settings → Active pills |
 | **Flow dictation** *(macOS, GitHub build)* | hold a key, speak, the words are pasted | Coucou → Flow → Settings · the Accessibility and Microphone permissions |
 | **Parakeet** *(macOS, Apple silicon)* | offline dictation, more accurate | Coucou → Flow → Settings → Recognition → **Download** (about 650 MB) |
-| Stripe, n8n, GitHub, Vercel, Resend, Notion, Cal.com | the service pills | Keychain / Windows Credential Manager / Secret Service, all optional |
+| Stripe, n8n, GitHub, Vercel, Resend, Notion, Cal.com, Linear | the service pills | Keychain / Windows Credential Manager / Secret Service, all optional |
 | **WhatsApp** *(macOS, GitHub build, experimental)* | your WhatsApp messages in the notch, and replies | Settings → Integrations → WhatsApp · a gateway on your Mac, see [WhatsApp (experimental)](#whatsapp-experimental) |
 
 If Coucou isn't running, the hook exits immediately: **Claude Code is never blocked.**

@@ -9,6 +9,11 @@ import { Sound } from "../core/sound";
 import type { BotEmoteName, BotStateName } from "../core/layout";
 import { PUMPKIN_BODY, drawOutfitBehind, drawOutfitFront, makeHead } from "./outfits";
 import type { Outfit } from "./wardrobe";
+import {
+  DEFAULT_LOOK, browPose, easeBrows, isCharacterLook, mouthForEyes,
+  type Brows, type MochiLook, type MochiMouth,
+} from "./look";
+import { itemAt } from "../core/arrays";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -33,13 +38,13 @@ interface Tween {
   index: number;
   from: number;
   startMs: number;
-  onComplete?: () => void;
+  onComplete: (() => void) | undefined;
 }
 
 type PropKey =
   | "yaw" | "pitch" | "roll" | "tilt" | "open" | "sx" | "sy"
   | "oy" | "ox" | "tint" | "morph" | "hands" | "blush" | "es" | "badgeS"
-  | "outfitPresence";
+  | "outfitPresence" | "shadesDrop";
 
 interface BotStateCfg {
   color: RGB;
@@ -71,6 +76,21 @@ const BASE_TOP: RGB = [0.929, 0.929, 0.937]; // #EDEDEF
 const BASE_BOTTOM: RGB = [0.769, 0.773, 0.792]; // #C4C5CA
 const INK = "rgb(26,20,18)"; // #1A1412
 const MINI_INK = "rgb(16,19,26)"; // #10131A
+
+// The looks' palettes (./look.ts) — drawings keep their own colours (docs/DESIGN_SYSTEM.md).
+const PORTRAIT = {
+  skinTop: "#EBBB93", skinBottom: "#C98D62",
+  hair: "#2A211D", braidLine: "#4A3B33", parting: "#6B4A38",
+  clip: "#E2554B", clipDark: "#B83A33",
+  frame: "#1B1716", lensTop: "#A3A6AC", lensBottom: "#46484D",
+  tee: "#1F1B1A", teeRib: "#3A3433", teeth: "#F6E6D3",
+};
+const SLIME = {
+  skinTop: "#F8EDE6", skinBottom: "#E2CABD", eye: "#A3172F", brow: "#3E86B4",
+  hairTop: "#9ADBF2", hairBottom: "#4B9FD0", strand: "rgba(196,238,250,0.8)",
+  cloth: "#FBFCFE", clothShade: "#D3DAE6", fold: "#B9C3D3",
+};
+const SAGE = { bodyTop: "#FFF1BE", bodyBottom: "#E8A93C", eye: "#4A2600", gold: "#FFB52E" };
 
 const C = {
   idle: [0.902, 0.914, 0.933] as RGB,
@@ -211,6 +231,20 @@ export class BotEngine {
   outfitPresence = 0;
   private outfitTarget: Outfit = "none";
 
+  /**
+   * Classic face, signature traits (mouth, eye glints, pink cheeks, quirks), or a
+   * character on top of them: portrait, slime, sage (./look.ts). Main Mochi only.
+   */
+  look: MochiLook = DEFAULT_LOOK;
+  private nextQuirk = now() + 20 + Math.random() * 20;
+  /** Portrait and slime: the brows ease from pose to pose instead of snapping. */
+  private brows: Brows = { lift: 0, angle: 0.05, arch: 0.22, asym: 0 };
+  /** Portrait: 0 = sunglasses up on his head, 1 = dropped onto his eyes. */
+  shadesDrop = 0;
+  /** Sage: how far the rune circles have turned, and how fast they turn now. */
+  private sagePhase = 0;
+  private sageSpin = 0.35;
+
   // Spring lag of the soft parts (pompoms, hat tips, scarf end), −1…1.
   physDx = 0;
   physDy = 0;
@@ -286,6 +320,8 @@ export class BotEngine {
       case "finished":
         this.doRoll(950, 1);
         setTimeout(() => this.emit("spark", 5), 500);
+        // Portrait: job done, sunglasses on — after the roll
+        setTimeout(() => { if (this.state === "finished") this.dropShades(1.6); }, 1100);
         break;
       case "error":
         this.anim("ox", [
@@ -450,6 +486,7 @@ export class BotEngine {
         break;
       case "proud":
         this.emit("star", 5);
+        this.dropShades(Math.max(0.4, duration - 0.7));
         this.anim("tilt", [
           [-0.14, 220, Ease.out], [-0.14, (duration - 0.5) * 1000, Ease.lin], [0, 280, Ease.inOut],
         ]);
@@ -555,7 +592,11 @@ export class BotEngine {
       Math.abs(this.col[0] - this.colT[0]) > 0.003 ||
       Math.abs(this.col[1] - this.colT[1]) > 0.003 ||
       Math.abs(this.col[2] - this.colT[2]) > 0.003 ||
-      (this.outfit !== "none" && (Math.abs(this.physVx) > 0.01 || Math.abs(this.physVy) > 0.01))
+      (this.outfit !== "none" && (Math.abs(this.physVx) > 0.01 || Math.abs(this.physVy) > 0.01)) ||
+      // The looks: the sage's circles always turn; braids, locks and brows settle.
+      this.hasSage ||
+      (this.hasCharacter && (Math.abs(this.physVx) > 0.01 || Math.abs(this.physVy) > 0.01 ||
+        this.browsMoving))
     );
   }
 
@@ -575,7 +616,7 @@ export class BotEngine {
     const nowMs = performance.now();
 
     for (const tw of [...this.tweens.values()]) {
-      const k = tw.keys[tw.index];
+      const k = itemAt(tw.keys, tw.index);
       const p = Math.min(1, Math.max(0, (nowMs - tw.startMs) / k[1]));
       this[tw.prop] = tw.from + (k[0] - tw.from) * k[2](p);
       if (p >= 1) {
@@ -645,6 +686,22 @@ export class BotEngine {
 
     if (this.isMini && n > this.miniNextBehavior) this.doMiniBehaviorLoop();
 
+    // Signature looks: now and then, a little quirk of his own while he rests.
+    if (this.hasSignature && n > this.nextQuirk) this.doQuirk(n);
+
+    // Portrait and slime: the brows ease towards the pose of the moment.
+    if (this.hasCharacter) {
+      this.brows = easeBrows(this.brows, browPose(this.state, this.shownEye, t), 1 - Math.pow(0.0004, dt));
+    }
+
+    // Sage: the circles turn faster while he works, slow down at rest.
+    if (this.hasSage) {
+      const busy = this.state === "working" || this.state === "thinking" || this.state === "searching";
+      const target = busy ? 1.4 : this.state === "sleeping" ? 0.12 : 0.35;
+      this.sageSpin += (target - this.sageSpin) * (1 - Math.pow(0.05, dt));
+      this.sagePhase = (this.sagePhase + this.sageSpin * dt) % (Math.PI * 200);
+    }
+
     const kLook = 1 - Math.pow(0.0025, dt);
     if (!this.locks.has("yaw")) this.yaw += (this.tgYaw - this.yaw) * kLook;
     if (!this.locks.has("pitch")) this.pitch += (this.tgPitch - this.pitch) * kLook;
@@ -672,6 +729,8 @@ export class BotEngine {
       this.lastAmbient = n;
       if (this.cfg.zz) this.emit("z", 1);
       if (!this.isMini && this.cfg.sweat && Math.random() < 0.5) this.emit("sweat", 1);
+      // Sage: a golden spark now and then
+      if (this.hasSage && Math.random() < 0.45) this.emit("spark", 1);
     }
 
     for (const p of this.particles) p.age += dt;
@@ -799,9 +858,19 @@ export class BotEngine {
     if (head) drawOutfitBehind(x, this.outfit, head, outfitState);
 
     const body = this.bodyPath(rx, ry, R);
+    // Behind the body: the portrait's braids, the slime's hood and locks, the sage's circles.
+    this.drawBraids(x, R, rx, ry);
+    this.drawHoodBack(x, body, R, rx);
+    this.drawSageAura(x, R);
     this.drawBody(x, body, R, rx, ry);
+    this.drawSageGlow(x, body, R);
+    // On the face: beard and tee, hair and clip; the slime's robe, fringe and hood.
+    this.drawBeardAndTee(x, body, R, rx, ry);
+    this.drawHair(x, body, R, rx, ry);
+    this.drawSlimeFront(x, body, R, rx, ry);
 
-    const blushVal = Math.max(this.blush, this.tint * 0.5) * (1 - this.morph);
+    // Signature looks: his rice-cake cheeks stay a little pink.
+    const blushVal = Math.max(this.blush, this.tint * 0.5, this.hasSignature ? 0.38 : 0) * (1 - this.morph);
     if (blushVal > 0.01) {
       x.save();
       x.clip(body);
@@ -817,6 +886,9 @@ export class BotEngine {
 
     this.drawEyes(x, body, R, rx, ry);
     if (this.morph > 0.05) this.drawMouth(x, body, R);
+    else if (this.hasSignature) this.drawFaceMouth(x, body, R, rx, ry);
+    this.drawBrows(x, body, R, rx, ry);
+    this.drawShades(x, R, rx, ry);
 
     if (head) drawOutfitFront(x, this.outfit, head, outfitState);
 
@@ -871,9 +943,10 @@ export class BotEngine {
       x.fill(body);
       if (pumpkin <= 0.001) return;
     } else {
+      const skin = this.skinColors;
       const g = x.createLinearGradient(rx * 0.7, -ry * 0.85, -rx * 0.8, ry * 0.9);
-      g.addColorStop(0, rgba(BASE_TOP));
-      g.addColorStop(1, rgba(BASE_BOTTOM));
+      g.addColorStop(0, skin ? skin[0] : rgba(BASE_TOP));
+      g.addColorStop(1, skin ? skin[1] : rgba(BASE_BOTTOM));
       x.fillStyle = g;
       x.fill(body);
     }
@@ -889,7 +962,8 @@ export class BotEngine {
       x.globalAlpha = this.bodyColor ? pumpkin : 1;
     }
 
-    const effectiveTint = this.tint * (1 - this.morph);
+    // Light on skin: the state's colour must not paint him blue or purple.
+    const effectiveTint = this.tint * (1 - this.morph) * (this.skinColors ? 0.4 : 1);
     if (effectiveTint > 0.01) {
       const tg = x.createLinearGradient(0, ry, 0, -ry);
       tg.addColorStop(0, rgba(this.col, 0.72 * effectiveTint));
@@ -913,7 +987,8 @@ export class BotEngine {
     x.restore();
   }
 
-  private drawEyes(x: CanvasRenderingContext2D, body: Path2D, R: number, rx: number, ry: number) {
+  /** The eyes he shows this frame (state, emote, dance, mailbox). The mouth and brows read them too. */
+  private get shownEye(): EyeShape {
     let shape: EyeShape = this.eyeOverride ?? this.cfg.eye;
     // Dancing: happy eyes in the calm states.
     if (this.isDancing && this.dancingLevel > 0.15 && !this.isMini && (this.state === "idle" || this.state === "finished")) {
@@ -923,10 +998,17 @@ export class BotEngine {
       if (this.isChewing) shape = "happy";
       else if (this.slotHTarget > 0.05 || this.slotH > 0.1) shape = "cup";
     }
+    // Portrait and slime: cross with his eyes open, the brows and teeth say it.
+    if (this.hasCharacter && shape === "flat") shape = "pill";
+    return shape;
+  }
+
+  private drawEyes(x: CanvasRenderingContext2D, body: Path2D, R: number, rx: number, ry: number) {
+    const shape = this.shownEye;
 
     x.save();
     x.clip(body);
-    const ink = this.isMini ? MINI_INK : INK;
+    const ink = this.eyeInk;
     x.fillStyle = ink;
     x.strokeStyle = ink;
 
@@ -968,6 +1050,7 @@ export class BotEngine {
         const hh = Math.max(h * this.open, w * 0.3);
         roundRectPath(x, -w / 2, -hh / 2, w, hh, Math.min(w / 2, hh / 2));
         x.fill();
+        this.drawCatchlights(x, w, hh, ink);
         break;
       }
       case "dot":
@@ -1037,6 +1120,7 @@ export class BotEngine {
           const hh = Math.max(h * this.open, w * 0.3);
           roundRectPath(x, -w / 2, -hh / 2, w, hh, Math.min(w / 2, hh / 2));
           x.fill();
+          this.drawCatchlights(x, w, hh, ink);
         } else {
           x.lineWidth = w * 0.5;
           x.lineCap = "round";
@@ -1061,6 +1145,618 @@ export class BotEngine {
         break;
       }
     }
+  }
+
+  // ── Looks (./look.ts) ───────────────────────────────────────────────────────
+
+  private get hasSignature(): boolean { return this.look !== "classic" && !this.isMini; }
+  private get hasPortrait(): boolean { return this.look === "portrait" && !this.isMini; }
+  private get hasSlime(): boolean { return this.look === "slime" && !this.isMini; }
+  private get hasSage(): boolean { return this.look === "sage" && !this.isMini; }
+  private get hasCharacter(): boolean { return isCharacterLook(this.look) && !this.isMini; }
+
+  private get browsMoving(): boolean {
+    const to = browPose(this.state, this.shownEye, now() - this.t0);
+    const b = this.brows;
+    return Math.abs(to.lift - b.lift) + Math.abs(to.angle - b.angle) + Math.abs(to.arch - b.arch) +
+      Math.abs(to.asym - b.asym) > 0.004;
+  }
+
+  /** The body's gradient for the looks that change it (null: Mochi's own grey). */
+  private get skinColors(): readonly [string, string] | null {
+    if (this.isMini) return null;
+    switch (this.look) {
+      case "portrait": return [PORTRAIT.skinTop, PORTRAIT.skinBottom];
+      case "slime": return [SLIME.skinTop, SLIME.skinBottom];
+      case "sage": return [SAGE.bodyTop, SAGE.bodyBottom];
+      default: return null;
+    }
+  }
+
+  /** The eyes' colour: red for the slime, amber for the sage, ink otherwise. */
+  private get eyeInk(): string {
+    if (this.isMini) return MINI_INK;
+    if (this.look === "slime") return SLIME.eye;
+    if (this.look === "sage") return SAGE.eye;
+    return INK;
+  }
+
+  /** Where the front of his head is, along x: everything on his face turns with it. */
+  private faceX(rx: number, k: number): number { return Math.sin(this.yaw) * rx * k; }
+
+  /** Two glints in an open pill eye, lit from the upper right; they fade as it closes. */
+  private drawCatchlights(x: CanvasRenderingContext2D, w: number, hh: number, ink: string) {
+    if (!this.hasSignature || hh <= w * 0.75) return;
+    const a = Math.min(1, (hh / w - 0.75) / 0.25);
+    x.fillStyle = `rgba(255,255,255,${0.92 * a})`;
+    x.beginPath();
+    x.arc(w * 0.14, -hh * 0.2, w * 0.2, 0, Math.PI * 2);
+    x.fill();
+    x.fillStyle = `rgba(255,255,255,${0.55 * a})`;
+    x.beginPath();
+    x.arc(-w * 0.14, hh * 0.22, w * 0.08, 0, Math.PI * 2);
+    x.fill();
+    x.fillStyle = ink;
+  }
+
+  /** A small mouth below the eyes, on the same sphere: it turns with his head and hides in a roll. */
+  private drawFaceMouth(x: CanvasRenderingContext2D, body: Path2D, R: number, rx: number, ry: number) {
+    const mouth: MochiMouth = this.hasCharacter && this.state === "error" && !this.eyeOverride
+      ? "grit"
+      : mouthForEyes(this.shownEye, false, this.hasCharacter);
+    if (mouth === "none") return;
+
+    const mouthP = EYE_P - 0.22 + this.pitch;
+    let seenP = mouthP + (this.rigidRoll ? 0 : this.roll);
+    seenP = (((seenP + Math.PI) % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2) - Math.PI;
+    if (Math.cos(this.yaw) * Math.cos(seenP) <= 0.04) return;
+    const cp = Math.cos(mouthP);
+
+    x.save();
+    x.clip(body);
+    x.translate(Math.sin(this.yaw) * cp * rx, -Math.sin(mouthP) * ry);
+    x.scale(Math.max(0.18, Math.cos(this.yaw)), Math.max(0.18, cp));
+    const m = R * 0.11;
+    x.fillStyle = INK;
+    x.strokeStyle = INK;
+    x.lineWidth = m * 0.42;
+    x.lineCap = "round";
+    x.lineJoin = "round";
+    x.beginPath();
+    switch (mouth) {
+      case "cat":
+        x.moveTo(-m * 1.1, -m * 0.1);
+        x.quadraticCurveTo(-m * 0.55, m * 0.95, 0, -m * 0.1);
+        x.quadraticCurveTo(m * 0.55, m * 0.95, m * 1.1, -m * 0.1);
+        x.stroke();
+        break;
+      case "smile": {
+        const d = new Path2D();
+        d.moveTo(-m * 1.15, -m * 0.35);
+        d.lineTo(m * 1.15, -m * 0.35);
+        d.quadraticCurveTo(0, m * 2.0, -m * 1.15, -m * 0.35);
+        d.closePath();
+        x.fill(d);
+        x.clip(d);
+        x.fillStyle = "#FF7A93";
+        x.beginPath();
+        x.ellipse(0, m * 0.7, m * 0.6, m * 0.45, 0, 0, Math.PI * 2);
+        x.fill();
+        break;
+      }
+      case "oh":
+        x.ellipse(0, 0, m * 0.42, m * 0.5, 0, 0, Math.PI * 2);
+        x.fill();
+        break;
+      case "gasp":
+        x.ellipse(0, 0, m * 0.6, m * 0.7, 0, 0, Math.PI * 2);
+        x.fill();
+        break;
+      case "smirk":
+        x.moveTo(-m * 0.8, m * 0.1);
+        x.quadraticCurveTo(m * 0.2, m * 0.8, m * 1.0, -m * 0.35);
+        x.stroke();
+        break;
+      case "flat":
+        x.moveTo(-m * 0.8, 0);
+        x.lineTo(m * 0.8, 0);
+        x.stroke();
+        break;
+      case "wavy":
+        for (let i = 0; i <= 16; i++) {
+          const f = i / 16;
+          x.lineTo(-m * 1.1 + m * 2.2 * f, Math.sin(f * Math.PI * 4) * m * 0.28);
+        }
+        x.lineWidth = m * 0.36;
+        x.stroke();
+        break;
+      case "content":
+        x.moveTo(-m * 0.6, -m * 0.1);
+        x.quadraticCurveTo(0, m * 0.7, m * 0.6, -m * 0.1);
+        x.stroke();
+        break;
+      case "talking": {
+        const h = m * (0.3 + 0.9 * Math.abs(Math.sin((now() - this.t0) * Math.PI * 3.5)));
+        x.ellipse(0, 0, m * 0.65, h / 2, 0, 0, Math.PI * 2);
+        x.fill();
+        break;
+      }
+      case "grit": {
+        // Lopsided open mouth, teeth showing
+        const g = m * 1.3;
+        const d = new Path2D();
+        d.moveTo(-g * 1.15, g * 0.25);
+        d.quadraticCurveTo(0, -g * 0.8, g * 1.1, -g * 0.15);
+        d.quadraticCurveTo(-g * 0.1, g * 1.0, -g * 1.15, g * 0.25);
+        d.closePath();
+        x.fill(d);
+        x.translate(0, -g * 0.04);
+        x.scale(0.8, 0.62);
+        x.fillStyle = PORTRAIT.teeth;
+        x.fill(d);
+        break;
+      }
+    }
+    x.restore();
+  }
+
+  /** One of his quirks, at rest only: never over a state's animation, a greeting, a dance or an emote. */
+  private doQuirk(n: number) {
+    this.nextQuirk = n + 22 + Math.random() * 26;
+    if (this.state !== "idle" || this.eyeOverride || this.isDancing || this.hands >= 0.01 ||
+        this.morph >= 0.01 || this.locks.has("sy") || this.locks.has("oy") || this.locks.has("yaw")) return;
+    const pick = Math.floor(Math.random() * 3);
+    if (pick === 0) {
+      // Mochi stretch: pulled up like rice dough, then snaps back and wobbles
+      this.eyeOverride = "happy";
+      this.eyeOverrideUntil = n + 1.0;
+      this.anim("sy", [[1.14, 380, Ease.inOut], [1.14, 160, Ease.lin], [0.86, 110, Ease.out], [1.04, 160, Ease.inOut], [1, 200, Ease.back]]);
+      this.anim("sx", [[0.9, 380, Ease.inOut], [0.9, 160, Ease.lin], [1.12, 110, Ease.out], [0.98, 160, Ease.inOut], [1, 200, Ease.back]]);
+    } else if (pick === 1) {
+      // Curious peek: glances aside, eyes a touch wider, then back to you
+      const side = Math.random() < 0.5 ? 1 : -1;
+      this.anim("yaw", [[0.5 * side, 260, Ease.out], [0.5 * side, 600, Ease.lin], [0, 320, Ease.inOut]]);
+      this.anim("es", [[1.1, 240, Ease.out], [1.1, 620, Ease.lin], [1, 320, Ease.inOut]]);
+      setTimeout(() => this.blink(), 1200);
+    } else {
+      this.triggerEmote("wink", 0.9);
+    }
+  }
+
+  // Portrait ───────────────────────────────────────────────────────────────────
+
+  /** Two braids hanging from the sides; each bead lags the one above, they hang with gravity. */
+  private drawBraids(x: CanvasRenderingContext2D, R: number, rx: number, ry: number) {
+    if (!this.hasPortrait || this.morph >= 0.05) return;
+    const t = now() - this.t0;
+    const length = R * 0.72;
+    x.save();
+    for (const sd of [-1, 1]) {
+      const baseX = sd * rx * 0.97 + this.faceX(rx, 0.25);
+      for (let i = 0; i < 5; i++) {
+        const f = i / 4;
+        const drift = Math.sin(t * 1.6 + f * 1.3 + sd) * R * 0.018 * f;
+        const bx = baseX + sd * R * 0.02 * f
+          + this.physDx * R * 0.16 * f * f   // swings behind his moves, the tip most
+          + Math.sin(this.tilt) * length * f   // hangs straight down when he tilts
+          + drift;
+        const by = ry * 0.2 + f * length * Math.cos(this.tilt) + this.physDy * R * 0.1 * f * f;
+        const r = R * (0.11 - 0.015 * f);
+        x.fillStyle = PORTRAIT.hair;
+        x.beginPath();
+        x.ellipse(bx, by, r, r * 1.15, 0, 0, Math.PI * 2);
+        x.fill();
+        x.strokeStyle = PORTRAIT.braidLine;
+        x.lineWidth = Math.max(0.5, r * 0.25);
+        x.beginPath();
+        x.moveTo(bx - r * 0.6, by - r * 0.5);
+        x.quadraticCurveTo(bx, by + r * 0.3, bx + r * 0.6, by - r * 0.2);
+        x.stroke();
+      }
+    }
+    x.restore();
+  }
+
+  /** Cornrows over the top of his head, their partings meeting at the forehead, and a red clip. */
+  private drawHair(x: CanvasRenderingContext2D, body: Path2D, R: number, rx: number, ry: number) {
+    if (!this.hasPortrait || this.morph >= 0.95) return;
+    x.save();
+    x.clip(body);
+    x.globalAlpha = 1 - this.morph;
+    const x0 = this.faceX(rx, 0.85);
+
+    // Everything above the hairline; it comes down at the temples like a fade.
+    const cap = new Path2D();
+    cap.moveTo(-rx * 1.3, -ry * 1.3);
+    cap.lineTo(rx * 1.3, -ry * 1.3);
+    cap.lineTo(rx * 1.3, -R * 0.05);
+    cap.quadraticCurveTo(x0 + rx * 0.55, -R * 0.56, x0, -R * 0.48);
+    cap.quadraticCurveTo(x0 - rx * 0.55, -R * 0.56, -rx * 1.3, -R * 0.05);
+    cap.closePath();
+    x.fillStyle = PORTRAIT.hair;
+    x.fill(cap);
+
+    x.save();
+    x.clip(cap);
+    x.strokeStyle = PORTRAIT.parting;
+    x.lineWidth = Math.max(0.5, R * 0.03);
+    x.lineCap = "round";
+    for (let i = -2; i <= 2; i++) {
+      x.beginPath();
+      x.moveTo(x0 + i * R * 0.08, -R * 0.44);
+      x.quadraticCurveTo(x0 * 0.7 + i * rx * 0.28, -ry * 0.72, x0 * 0.4 + i * rx * 0.48, -ry * 1.05);
+      x.stroke();
+    }
+    x.restore();
+
+    // The red clip, on his left temple (the viewer's right)
+    x.translate(x0 + rx * 0.58, -R * 0.58);
+    x.fillStyle = PORTRAIT.clip;
+    for (const sd of [-1, 1]) {
+      x.save();
+      x.rotate(sd * 0.9 + 0.3);
+      x.beginPath();
+      x.ellipse(0, -R * 0.075, R * 0.045, R * 0.065, 0, 0, Math.PI * 2);
+      x.fill();
+      x.restore();
+    }
+    x.fillStyle = PORTRAIT.clipDark;
+    x.beginPath();
+    x.arc(0, 0, R * 0.03, 0, Math.PI * 2);
+    x.fill();
+    x.restore();
+  }
+
+  /** Portrait: drops the sunglasses onto his eyes, holds, puts them back up. */
+  dropShades(holdSeconds: number) {
+    if (!this.hasPortrait || this.outfit !== "none") return;
+    this.anim("shadesDrop", [[1, 260, Ease.back], [1, holdSeconds * 1000, Ease.lin], [0, 420, Ease.inOut]]);
+    setTimeout(() => this.squash(), 260);
+  }
+
+  /** A point on his head, `a` round from the front and `p` up from the middle — the eyes' sphere. */
+  private headPoint(a: number, p: number, rx: number, ry: number): { x: number; y: number } {
+    const ya = a + this.yaw;
+    const pa = p + this.pitch;
+    return { x: Math.sin(ya) * Math.cos(pa) * rx, y: -Math.sin(pa) * ry };
+  }
+
+  /**
+   * Sunglasses on the crown of his head, bobbing on the head's spring; now and then
+   * (done, proud) they drop onto his eyes. Off when he wears an outfit.
+   */
+  private drawShades(x: CanvasRenderingContext2D, R: number, rx: number, ry: number) {
+    if (!this.hasPortrait || this.morph >= 0.05 || this.outfit !== "none") return;
+    const d = this.shadesDrop;
+    const onHead = this.headPoint(0, 1.05, rx, ry);
+    const onEyes = this.headPoint(0, EYE_P, rx, ry);
+    x.save();
+    x.translate(lerp(onHead.x, onEyes.x, d), lerp(onHead.y, onEyes.y, d) + this.physDy * R * 0.06 * (1 - d));
+    x.rotate((this.physDx * 0.12 - this.tilt * 0.3) * (1 - d));
+    x.scale(Math.max(0.5, Math.cos(this.yaw)), lerp(0.9, 1, d));
+    const lw = R * lerp(0.4, 0.5, d);
+    const lh = R * lerp(0.24, 0.32, d);
+    const gap = R * lerp(0.06, 0.1, d);
+    const rim = R * 0.035;
+
+    x.strokeStyle = PORTRAIT.frame;
+    x.lineWidth = R * 0.05;
+    x.lineCap = "round";
+    x.beginPath();
+    x.moveTo(-gap - rim, -lh * 0.1);
+    x.quadraticCurveTo(0, -lh * 0.4, gap + rim, -lh * 0.1);
+    x.stroke();
+
+    // The glint slides across the lenses as he turns
+    const glintShift = -Math.sin(this.yaw) * lw * 0.25;
+    for (const sd of [-1, 1]) {
+      const lx = sd < 0 ? -gap - lw : gap;
+      roundRectPath(x, lx - rim, -lh / 2 - rim, lw + rim * 2, lh + rim * 2, lh * 0.5 + rim);
+      x.fillStyle = PORTRAIT.frame;
+      x.fill();
+      const glass = x.createLinearGradient(0, -lh / 2, 0, lh / 2);
+      glass.addColorStop(0, PORTRAIT.lensTop);
+      glass.addColorStop(1, PORTRAIT.lensBottom);
+      roundRectPath(x, lx, -lh / 2, lw, lh, lh * 0.5);
+      x.fillStyle = glass;
+      x.fill();
+      x.save();
+      x.clip();
+      x.strokeStyle = "rgba(255,255,255,0.6)";
+      x.lineWidth = Math.max(0.5, lh * 0.14);
+      x.beginPath();
+      x.moveTo(lx + lw / 2 + lw * 0.02 + glintShift, -lh / 2 + lh * 0.3);
+      x.lineTo(lx + lw / 2 + lw * 0.22 + glintShift, -lh / 2 + lh * 0.3);
+      x.stroke();
+      x.restore();
+    }
+    x.restore();
+  }
+
+  /** A light beard shadow on his chin and the collar of a black tee. */
+  private drawBeardAndTee(x: CanvasRenderingContext2D, body: Path2D, R: number, rx: number, ry: number) {
+    if (!this.hasPortrait || this.morph >= 0.05) return;
+    x.save();
+    x.clip(body);
+    const x0 = this.faceX(rx, 0.8);
+    const beard = x.createRadialGradient(x0, R * 0.5, 0, x0, R * 0.5, R * 0.5);
+    beard.addColorStop(0, "rgba(42,33,29,0.28)");
+    beard.addColorStop(1, "rgba(42,33,29,0)");
+    x.fillStyle = beard;
+    x.beginPath();
+    x.ellipse(x0, R * 0.5, R * 0.5, R * 0.16, 0, 0, Math.PI * 2);
+    x.fill();
+
+    const top = ry * 0.68;
+    const neckline = new Path2D();
+    neckline.moveTo(-rx * 1.3, top - R * 0.04);
+    neckline.quadraticCurveTo(this.faceX(rx, 0.5), top + R * 0.12, rx * 1.3, top - R * 0.04);
+    const tee = new Path2D(neckline);
+    tee.lineTo(rx * 1.3, ry * 1.3);
+    tee.lineTo(-rx * 1.3, ry * 1.3);
+    tee.closePath();
+    x.fillStyle = PORTRAIT.tee;
+    x.fill(tee);
+    x.strokeStyle = PORTRAIT.teeRib;
+    x.lineWidth = Math.max(0.5, R * 0.035);
+    x.stroke(neckline);
+    x.restore();
+  }
+
+  /** Eyebrows above each eye, easing between poses and lagging a hop (portrait and slime). */
+  private drawBrows(x: CanvasRenderingContext2D, body: Path2D, R: number, rx: number, ry: number) {
+    if (!this.hasCharacter || this.morph >= 0.05) return;
+    const pose = this.brows;
+    x.save();
+    x.clip(body);
+    // The slime's are finer, the blue of his hair
+    x.strokeStyle = this.hasSlime ? SLIME.brow : PORTRAIT.hair;
+    x.lineWidth = R * (this.hasSlime ? 0.05 : 0.075);
+    x.lineCap = "round";
+    for (const sd of [-1, 1]) {
+      const eyeYaw = sd * EYE_SP + this.yaw;
+      let seenP = EYE_P + this.pitch + (this.rigidRoll ? 0 : this.roll);
+      seenP = (((seenP + Math.PI) % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2) - Math.PI;
+      if (Math.cos(eyeYaw) * Math.cos(seenP) <= 0.04) continue;
+      const cp = Math.cos(EYE_P + this.pitch);
+      const ex = Math.sin(eyeYaw) * cp * rx;
+      const ey = -Math.sin(EYE_P + this.pitch) * ry;
+      const lift = pose.lift + (sd > 0 ? pose.asym : 0) - this.physDy * 0.04;
+      x.save();
+      x.translate(ex, ey - R * (0.2 + lift));
+      x.scale(Math.max(0.18, Math.cos(eyeYaw)), Math.max(0.18, cp));
+      // The inner end is the one towards his nose: + angle brings it down.
+      x.rotate(-sd * pose.angle);
+      const len = R * 0.3;
+      x.beginPath();
+      x.moveTo(-len / 2, 0);
+      x.quadraticCurveTo(0, -len * pose.arch, len / 2, 0);
+      x.stroke();
+      x.restore();
+    }
+    x.restore();
+  }
+
+  // Slime ──────────────────────────────────────────────────────────────────────
+
+  /** Behind the body: the hood, wider than his head, and the blue locks along his cheeks. */
+  private drawHoodBack(x: CanvasRenderingContext2D, body: Path2D, R: number, rx: number) {
+    if (!this.hasSlime || this.morph >= 0.05) return;
+    const ry = R * 0.88;
+    x.save();
+    x.translate(this.faceX(rx, 0.1) + this.physDx * R * 0.03, -R * 0.1);
+    x.scale(1.14, 1.12);
+    const cloth = x.createLinearGradient(0, -ry, 0, ry);
+    cloth.addColorStop(0, SLIME.cloth);
+    cloth.addColorStop(1, SLIME.clothShade);
+    x.fillStyle = cloth;
+    x.fill(body);
+    x.restore();
+
+    const t = now() - this.t0;
+    x.save();
+    const hair = x.createLinearGradient(0, -R * 0.1, 0, R * 0.72);
+    hair.addColorStop(0, SLIME.hairTop);
+    hair.addColorStop(1, SLIME.hairBottom);
+    x.fillStyle = hair;
+    for (const sd of [-1, 1]) {
+      const x0 = sd * rx * 0.9 + this.faceX(rx, 0.2);
+      const swing = this.physDx * R * 0.12 + Math.sin(t * 1.4 + sd) * R * 0.015;
+      x.beginPath();
+      x.moveTo(x0 - sd * R * 0.12, -R * 0.1);
+      x.quadraticCurveTo(x0 + sd * R * 0.2, R * 0.3, x0 + sd * R * 0.06 + swing, R * 0.72);
+      x.quadraticCurveTo(x0 + swing * 0.5, R * 0.45, x0 - sd * R * 0.1, R * 0.2);
+      x.closePath();
+      x.fill();
+    }
+    x.restore();
+  }
+
+  /** On the face: the white robe, the blue fringe falling between his eyes, the hood's front. */
+  private drawSlimeFront(x: CanvasRenderingContext2D, body: Path2D, R: number, rx: number, ry: number) {
+    if (!this.hasSlime || this.morph >= 0.95) return;
+    x.save();
+    x.clip(body);
+    x.globalAlpha = 1 - this.morph;
+    const x0 = this.faceX(rx, 0.85);
+
+    // Robe, draped across him
+    const top = ry * 0.66;
+    x.fillStyle = SLIME.cloth;
+    x.beginPath();
+    x.moveTo(-rx * 1.3, top - R * 0.06);
+    x.quadraticCurveTo(this.faceX(rx, 0.5), top + R * 0.14, rx * 1.3, top - R * 0.02);
+    x.lineTo(rx * 1.3, ry * 1.3);
+    x.lineTo(-rx * 1.3, ry * 1.3);
+    x.closePath();
+    x.fill();
+    x.strokeStyle = SLIME.fold;
+    x.lineWidth = Math.max(0.5, R * 0.03);
+    x.lineCap = "round";
+    x.beginPath();
+    x.moveTo(-rx * 0.7, top);
+    x.quadraticCurveTo(-rx * 0.05, top + R * 0.12, rx * 0.5, ry * 1.05);
+    x.moveTo(rx * 0.2, top + R * 0.06);
+    x.quadraticCurveTo(rx * 0.6, top + R * 0.12, rx * 0.95, ry * 0.95);
+    x.stroke();
+
+    // Fringe: strands ending in points between and over the eyes, longer at the sides.
+    const tips: [number, number][] = [
+      [-1.25, 0.55], [-0.92, 0.18], [-0.6, -0.02], [-0.28, -0.1], [0.02, -0.04],
+      [0.32, -0.12], [0.62, 0.0], [0.92, 0.18], [1.25, 0.55],
+    ];
+    const fringe = new Path2D();
+    fringe.moveTo(-rx * 1.3, -ry * 1.3);
+    fringe.lineTo(-rx * 1.3, R * 0.55);
+    let prev = { x: -rx * 1.3, y: R * 0.55 };
+    tips.forEach(([tx, ty], i) => {
+      const pt = { x: x0 * (1 - Math.abs(tx) * 0.5) + tx * rx, y: ty * R };
+      if (i > 0) {
+        // A sharp notch up between two pointed strands
+        const notch = { x: (prev.x + pt.x) / 2, y: Math.min(prev.y, pt.y) - R * 0.14 };
+        fringe.lineTo(notch.x, notch.y);
+        fringe.lineTo(pt.x, pt.y);
+      } else {
+        fringe.lineTo(pt.x, pt.y);
+      }
+      prev = pt;
+    });
+    fringe.lineTo(rx * 1.3, R * 0.55);
+    fringe.lineTo(rx * 1.3, -ry * 1.3);
+    fringe.closePath();
+    const hair = x.createLinearGradient(0, -ry, 0, R * 0.3);
+    hair.addColorStop(0, SLIME.hairTop);
+    hair.addColorStop(1, SLIME.hairBottom);
+    x.fillStyle = hair;
+    x.fill(fringe);
+    x.save();
+    x.clip(fringe);
+    x.strokeStyle = SLIME.strand;
+    x.lineWidth = Math.max(0.5, R * 0.025);
+    for (const k of [-0.5, -0.1, 0.3, 0.65]) {
+      x.beginPath();
+      x.moveTo(x0 * 0.6 + k * rx, -R * 0.55);
+      x.quadraticCurveTo(x0 * 0.7 + (k + 0.05) * rx, -R * 0.32, x0 * 0.8 + (k - 0.04) * rx, -R * 0.12);
+      x.stroke();
+    }
+    x.restore();
+
+    // Hood front: over the crown, down the sides, its rim in shadow.
+    const rim = new Path2D();
+    rim.moveTo(rx * 1.3, R * 0.35);
+    rim.quadraticCurveTo(x0 + rx * 0.9, -R * 0.75, x0, -R * 0.6);
+    rim.quadraticCurveTo(x0 - rx * 0.9, -R * 0.75, -rx * 1.3, R * 0.35);
+    const hood = new Path2D();
+    hood.moveTo(-rx * 1.3, -ry * 1.3);
+    hood.lineTo(rx * 1.3, -ry * 1.3);
+    hood.lineTo(rx * 1.3, R * 0.35);
+    hood.quadraticCurveTo(x0 + rx * 0.9, -R * 0.75, x0, -R * 0.6);
+    hood.quadraticCurveTo(x0 - rx * 0.9, -R * 0.75, -rx * 1.3, R * 0.35);
+    hood.closePath();
+    const cloth = x.createLinearGradient(rx * 0.5, -ry, -rx * 0.6, R * 0.3);
+    cloth.addColorStop(0, SLIME.cloth);
+    cloth.addColorStop(1, SLIME.clothShade);
+    x.fillStyle = cloth;
+    x.fill(hood);
+    x.strokeStyle = SLIME.fold;
+    x.lineWidth = Math.max(0.5, R * 0.035);
+    x.stroke(rim);
+    x.restore();
+  }
+
+  // Sage ───────────────────────────────────────────────────────────────────────
+
+  /** Behind the body: light rays, a glow, and rune circles turning both ways. */
+  private drawSageAura(x: CanvasRenderingContext2D, R: number) {
+    if (!this.hasSage || this.morph >= 0.05) return;
+    const ph = this.sagePhase;
+    const pulse = 0.5 + 0.5 * Math.sin(ph * 2.2);
+    x.save();
+    x.scale(Math.max(0.75, Math.cos(this.yaw * 0.6)), 1);
+
+    const glow = x.createRadialGradient(0, 0, R * 0.6, 0, 0, R * 1.5);
+    glow.addColorStop(0, "rgba(255,230,154,0.55)");
+    glow.addColorStop(1, "rgba(255,230,154,0)");
+    x.fillStyle = glow;
+    x.beginPath();
+    x.arc(0, 0, R * 1.5, 0, Math.PI * 2);
+    x.fill();
+
+    // Rays
+    x.strokeStyle = `rgba(255,230,154,${0.25 + 0.25 * pulse})`;
+    x.lineWidth = Math.max(0.5, R * 0.022);
+    x.lineCap = "round";
+    for (let i = 0; i < 16; i++) {
+      const a = (i / 16) * Math.PI * 2 + ph * 0.3;
+      const r2 = R * (i % 2 === 0 ? 1.55 : 1.3);
+      x.beginPath();
+      x.moveTo(Math.cos(a) * R * 0.95, Math.sin(a) * R * 0.95);
+      x.lineTo(Math.cos(a) * r2, Math.sin(a) * r2);
+      x.stroke();
+    }
+
+    // Rings: two gold ones, and an outer one in the state's colour
+    x.lineWidth = Math.max(0.5, R * 0.025);
+    x.strokeStyle = "rgba(255,181,46,0.85)";
+    for (const r of [1.1, 1.32]) {
+      x.beginPath();
+      x.arc(0, 0, R * r, 0, Math.PI * 2);
+      x.stroke();
+    }
+    x.lineWidth = Math.max(0.5, R * 0.018);
+    x.strokeStyle = rgba(this.col, 0.55);
+    x.beginPath();
+    x.arc(0, 0, R * 1.45, 0, Math.PI * 2);
+    x.stroke();
+
+    // Runes between the two gold rings, turning forwards
+    x.strokeStyle = SAGE.gold;
+    x.fillStyle = SAGE.gold;
+    x.lineWidth = Math.max(0.5, R * 0.018);
+    for (let k = 0; k < 28; k++) {
+      const a = (k / 28) * Math.PI * 2 + ph;
+      x.save();
+      x.translate(Math.cos(a) * R * 1.21, Math.sin(a) * R * 1.21);
+      x.rotate(a + Math.PI / 2);
+      x.beginPath();
+      x.moveTo(0, -R * 0.06);
+      x.lineTo(0, R * 0.06);
+      switch (k % 4) {
+        case 0: x.moveTo(-R * 0.035, -R * 0.02); x.lineTo(R * 0.035, -R * 0.02); break;
+        case 1: x.moveTo(-R * 0.03, R * 0.03); x.lineTo(R * 0.03, -R * 0.04); break;
+        case 2: x.moveTo(R * 0.025, -R * 0.06); x.arc(0, -R * 0.06, R * 0.025, 0, Math.PI * 2); break;
+        default: x.moveTo(-R * 0.035, R * 0.04); x.lineTo(R * 0.035, R * 0.04);
+      }
+      x.stroke();
+      x.restore();
+    }
+
+    // Ticks on the inner ring, turning backwards
+    x.strokeStyle = "rgba(63,208,192,0.8)";
+    x.lineWidth = Math.max(0.5, R * 0.015);
+    for (let k = 0; k < 40; k++) {
+      const a = (k / 40) * Math.PI * 2 - ph * 1.6;
+      const r2 = R * (k % 5 === 0 ? 1.08 : 1.05);
+      x.beginPath();
+      x.moveTo(Math.cos(a) * R * 1.02, Math.sin(a) * R * 1.02);
+      x.lineTo(Math.cos(a) * r2, Math.sin(a) * r2);
+      x.stroke();
+    }
+    x.restore();
+  }
+
+  /** On the body: a light from inside, breathing with the circles. */
+  private drawSageGlow(x: CanvasRenderingContext2D, body: Path2D, R: number) {
+    if (!this.hasSage || this.morph >= 0.05) return;
+    const pulse = 0.5 + 0.5 * Math.sin(this.sagePhase * 2.2);
+    x.save();
+    x.clip(body);
+    const g = x.createRadialGradient(0, R * 0.1, 0, 0, R * 0.1, R * 0.9);
+    g.addColorStop(0, `rgba(255,255,255,${0.35 + 0.15 * pulse})`);
+    g.addColorStop(1, "rgba(255,255,255,0)");
+    x.fillStyle = g;
+    x.fill(body);
+    x.restore();
   }
 
   /** Mailbox slot: dark pill cut into the box face, with rim and lip highlights. */

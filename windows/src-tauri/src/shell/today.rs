@@ -3,14 +3,14 @@
 // Settings. No city, no network call; with one, at most a call every thirty
 // minutes, and only while the tab is on screen (the tab asks, nothing polls).
 
-use std::sync::Mutex;
 use std::time::{Duration, Instant};
 
+use parking_lot::Mutex;
 use serde::{Deserialize, Serialize};
 
 const MAX_TODOS: usize = 50;
 const MAX_TODO_CHARS: usize = 200;
-const WEATHER_EVERY: Duration = Duration::from_secs(30 * 60);
+const WEATHER_EVERY: Duration = Duration::from_mins(30);
 const MAX_CITY_CHARS: usize = 80;
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -98,7 +98,7 @@ pub fn apply_change(mut list: Vec<Todo>, change: TodoChange) -> Result<Vec<Todo>
 static TODOS_LOCK: Mutex<()> = Mutex::new(());
 
 pub fn change_todos(change: TodoChange) -> Result<Vec<Todo>, String> {
-    let _guard = TODOS_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+    let _guard = TODOS_LOCK.lock();
     let next = apply_change(load_todos(), change)?;
     save_todos(&next)?;
     Ok(next)
@@ -217,7 +217,7 @@ pub async fn weather(city: &str) -> Result<Option<Weather>, String> {
         return Ok(None);
     }
     {
-        let cache = CACHE.lock().unwrap_or_else(|e| e.into_inner());
+        let cache = CACHE.lock();
         if let Some(c) = cache.as_ref() {
             if c.city == city && c.at.elapsed() < WEATHER_EVERY {
                 return Ok(Some(c.weather.clone()));
@@ -227,7 +227,7 @@ pub async fn weather(city: &str) -> Result<Option<Weather>, String> {
     let lang = crate::i18n::current().split('-').next().unwrap_or("en").to_string();
     let place = parse_place(&get(geocode_url(&city, &lang)).await?)?;
     let weather = parse_forecast(place.name, &get(forecast_url(place.latitude, place.longitude)).await?)?;
-    *CACHE.lock().unwrap_or_else(|e| e.into_inner()) = Some(Cached { city, at: Instant::now(), weather: weather.clone() });
+    *CACHE.lock() = Some(Cached { city, at: Instant::now(), weather: weather.clone() });
     Ok(Some(weather))
 }
 

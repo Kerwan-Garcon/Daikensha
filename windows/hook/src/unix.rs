@@ -31,7 +31,7 @@ fn is_private_dir(dir: &Path) -> bool {
     use std::os::unix::fs::MetadataExt;
     std::fs::symlink_metadata(dir)
         .map(|m| {
-            m.file_type().is_dir() && m.uid() == unsafe { libc::getuid() } && m.mode() & 0o077 == 0
+            m.file_type().is_dir() && m.uid() == unsafe { libc::getuid() } && m.mode().trailing_zeros() >= 6
         })
         .unwrap_or(false)
 }
@@ -83,7 +83,7 @@ fn try_connect(path: &Path) -> io::Result<UnixStream> {
     let rc = unsafe {
         libc::connect(
             fd,
-            &addr as *const libc::sockaddr_un as *const libc::sockaddr,
+            (&raw const addr).cast::<libc::sockaddr>(),
             std::mem::size_of::<libc::sockaddr_un>() as libc::socklen_t,
         )
     };
@@ -104,8 +104,8 @@ fn server_is_same_user(stream: &UnixStream) -> bool {
             stream.as_raw_fd(),
             libc::SOL_SOCKET,
             libc::SO_PEERCRED,
-            &mut cred as *mut libc::ucred as *mut libc::c_void,
-            &mut len,
+            (&raw mut cred).cast::<libc::c_void>(),
+            &raw mut len,
         )
     };
     rc == 0

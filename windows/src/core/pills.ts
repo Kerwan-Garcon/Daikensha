@@ -124,6 +124,8 @@ export const PILL_CATALOG: readonly PillDefinition[] = [
     subtitle: N_("Integration"), source: "n8n", support: "yes", connect: key("github-token") },
   { id: "integration_notion", name: "Notion", color: "#8C8C8C", category: "service",
     subtitle: N_("Integration"), source: "n8n", support: "yes", connect: key("notion-api-key") },
+  { id: "integration_linear", name: "Linear", color: "#5E6AD2", category: "service",
+    subtitle: N_("Integration"), source: "n8n", support: "yes", connect: key("linear-api-key") },
   { id: "integration_calcom", name: "Cal.com", color: "#C9956A", category: "service",
     subtitle: N_("Integration"), source: "n8n", support: "yes", connect: key("calcom-api-key") },
   { id: "integration_stripe", name: "Stripe", color: "#0570DE", category: "service",
@@ -133,6 +135,10 @@ export const PILL_CATALOG: readonly PillDefinition[] = [
   // Spotify through MPRIS on Linux and the system media controls on Windows
   // (src-tauri/src/spotify.rs).
   { id: "integration_spotify", name: "Spotify", color: "#1DB954", category: "service",
+    subtitle: N_("Integration"), source: "n8n", support: "yes", connect: none },
+  // YouTube Music through Pear Desktop's API Server, the same on both systems
+  // (src-tauri/src/youtube_music.rs).
+  { id: "integration_youtube_music", name: "YouTube Music", color: "#FF0033", category: "service",
     subtitle: N_("Integration"), source: "n8n", support: "yes", connect: none },
 ];
 
@@ -144,7 +150,7 @@ export const MAX_DECLARED = 4;
 
 /** The OS this page runs on. Only the Windows webview says "Windows". */
 export const HOST_OS: HostOs =
-  typeof navigator !== "undefined" && /Windows/.test(navigator.userAgent ?? "") ? "windows" : "linux";
+  typeof navigator !== "undefined" && navigator.userAgent.includes("Windows") ? "windows" : "linux";
 
 export function pillDefinition(id: string): PillDefinition | undefined {
   return PILL_CATALOG.find((p) => p.id === id);
@@ -196,7 +202,8 @@ export interface Declared {
  * without the main pill, which never takes a slot. Same rules as
  * AppState.loadIntegrationTasks on macOS.
  */
-export function sanitizeDeclared(d: Declared, os: HostOs = HOST_OS): Declared {
+/** `d` may come from a settings file written by an older build, without the list. */
+export function sanitizeDeclared(d: Pick<Declared, "mainPill"> & Partial<Declared>, os: HostOs = HOST_OS): Declared {
   const mains = new Set(mainPillChoices(os).map((p) => p.id));
   const mainPill = mains.has(d.mainPill) ? d.mainPill : DEFAULT_MAIN_PILL;
   const offered = new Set(availablePills(os).map((p) => p.id));
@@ -239,7 +246,7 @@ export function chooseMainPill(d: Declared, id: string, os: HostOs = HOST_OS): D
  */
 export function orderPills<T extends { id: string }>(tasks: T[], mainPill: string): T[] {
   const index = new Map(PILL_CATALOG.map((p, i) => [p.id, i]));
-  const rank = (t: T) => (t.id === mainPill ? -2 : index.has(t.id) ? index.get(t.id)! : -1);
+  const rank = (t: T) => (t.id === mainPill ? -2 : (index.get(t.id) ?? -1));
   return tasks
     .map((t, i) => ({ t, i }))
     .sort((a, b) => rank(a.t) - rank(b.t) || a.i - b.i)

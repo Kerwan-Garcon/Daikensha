@@ -54,7 +54,7 @@ impl Keymap {
     }
 
     fn syms(&self, keycode: u32) -> &[u32] {
-        let i = keycode.saturating_sub(self.min as u32) as usize * self.per;
+        let i = keycode.saturating_sub(u32::from(self.min)) as usize * self.per;
         self.syms.get(i..i + self.per).unwrap_or(&[])
     }
 
@@ -130,7 +130,7 @@ fn run(conn: RustConnection, keymap: Keymap, key: FlowKey, tx: Sender<(KeyEvent,
     while !stop.load(Ordering::Relaxed) {
         // Sleep in poll() until the server writes, waking now and then for `stop`.
         let mut pfd = libc::pollfd { fd, events: libc::POLLIN, revents: 0 };
-        unsafe { libc::poll(&mut pfd, 1, 300) };
+        unsafe { libc::poll(&raw mut pfd, 1, 300) };
         loop {
             let event = match conn.poll_for_event() {
                 Ok(Some(e)) => e,
@@ -237,7 +237,7 @@ pub fn running_apps() -> Vec<(String, String)> {
     let Ok((conn, screen)) = x11rb::connect(None) else { return Vec::new() };
     let root = conn.setup().roots[screen].root;
     let Some(list) = atom(&conn, "_NET_CLIENT_LIST") else { return Vec::new() };
-    let Ok(Ok(reply)) = conn.get_property(false, root, list, AtomEnum::WINDOW, 0, 1024).map(|c| c.reply()) else {
+    let Ok(Ok(reply)) = conn.get_property(false, root, list, AtomEnum::WINDOW, 0, 1024).map(x11rb::cookie::Cookie::reply) else {
         return Vec::new();
     };
     let mut out: Vec<(String, String)> = Vec::new();

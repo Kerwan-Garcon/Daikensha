@@ -9,12 +9,15 @@
 
 import type { BotEmoteName, BotStateName } from "../core/layout";
 import type { Outfit } from "./wardrobe";
+import type { MochiLook } from "./look";
 
 /** What the island tells the desktop window, whenever it changes. */
 export interface DesktopSnapshot {
   state: BotStateName;
   /** He is always the main Mochi, so always dressed (try-ons included). */
   outfit: Outfit;
+  /** His face (./look.ts), the island's choice. */
+  look: MochiLook;
   soundEnabled: boolean;
   soundVolume: number;
   /** Tray → Pause: he dozes off and stays asleep. */
@@ -33,7 +36,10 @@ export const DESKTOP_EVENTS = {
   home: "desktop-mochi-home",
   wardrobe: "desktop-mochi-wardrobe",
   dizzy: "desktop-mochi-dizzy",
-  /** Rust → island: a drag ended, `{ from: "island" | "desktop", home }`. */
+  /**
+   * Rust → island: a drag ended, `{ from: "island" | "desktop", home, look }`.
+   * `look`: dropped on a window, he came home and looked at it (look.rs).
+   */
   dropped: "desktop-mochi-dropped",
   /** Rust → desktop window */
   cursor: "desktop-cursor",
@@ -116,7 +122,7 @@ export function agentActive(state: BotStateName): boolean {
  */
 export function alertActive(s: {
   pendingApproval: { questions?: unknown } | null;
-  tasks: ReadonlyArray<{ state: BotStateName }>;
+  tasks: readonly { state: BotStateName }[];
 }): boolean {
   if (s.pendingApproval != null) return true;
   return s.tasks.some((t) => t.state === "question");
@@ -223,6 +229,8 @@ export class DesktopMochiController {
     this.phase = "flyingOut";
     this.port.setAway(true);
     const ok = await this.port.flyOut(anywhere);
+    // The phase may have changed during the flight (an alert, a drag).
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- narrowed before the await, not after
     if (this.phase !== "flyingOut") return;
     if (!ok) {
       // His spot is on a display that is gone: he stays home.

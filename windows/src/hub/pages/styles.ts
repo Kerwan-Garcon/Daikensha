@@ -54,7 +54,7 @@ export async function stylesPage(page: HTMLElement, ctx: HubContext) {
   ));
 
   // "Add an app": the apps with a window right now.
-  const add = h("select", { class: "hub-select" }) as HTMLSelectElement;
+  const add = h("select", { class: "hub-select" });
   const fillAdd = async () => {
     clear(add);
     add.append(h("option", { value: "", text: `+ ${t("Add an app")}` }));

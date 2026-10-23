@@ -17,7 +17,7 @@ pub mod voice_tools;
 pub mod wallpaper;
 pub mod windows_mgr;
 #[cfg(windows)]
-mod win;
+pub(crate) mod win;
 #[cfg(windows)]
 mod win_desk;
 
@@ -34,7 +34,7 @@ fn sampler() -> &'static stats::Sampler {
 }
 
 fn enabled(shared: &State<'_, Shared>) -> Result<(), String> {
-    if shared.settings.lock().unwrap().shell_panel {
+    if shared.settings.lock().shell_panel {
         Ok(())
     } else {
         Err(crate::i18n::t("Turn on the panel in Settings first."))
@@ -80,7 +80,7 @@ pub fn settings_saved(app: &tauri::AppHandle, settings: &crate::settings::Settin
 pub fn shell_top_bar_off(app: tauri::AppHandle, shared: State<'_, Shared>) {
     appbar::restore();
     let settings = {
-        let mut s = shared.settings.lock().unwrap();
+        let mut s = shared.settings.lock();
         s.shell_top_bar = false;
         s.clone()
     };
@@ -207,7 +207,7 @@ pub fn shell_todo_change(shared: State<'_, Shared>, change: today::TodoChange) -
 #[tauri::command]
 pub async fn shell_weather(shared: State<'_, Shared>) -> Result<Option<today::Weather>, String> {
     enabled(&shared)?;
-    let city = shared.settings.lock().unwrap().shell_weather_city.clone();
+    let city = shared.settings.lock().shell_weather_city.clone();
     today::weather(&city).await
 }
 
@@ -215,7 +215,7 @@ pub async fn shell_weather(shared: State<'_, Shared>) -> Result<Option<today::We
 
 fn clipboard_on(shared: &State<'_, Shared>) -> Result<(), String> {
     enabled(shared)?;
-    if shared.settings.lock().unwrap().shell_clipboard {
+    if shared.settings.lock().shell_clipboard {
         Ok(())
     } else {
         Err(crate::i18n::t("Turn on the clipboard history in Settings first."))

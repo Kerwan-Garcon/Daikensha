@@ -134,7 +134,7 @@ export function readActivity(data: Record<string, unknown>): GitHubActivity | nu
 
 export function readStats(data: Record<string, unknown>): GitHubStats | null {
   if (data.totalRepos == null) return null;
-  return { totalRepos: Number(data.totalRepos ?? 0), totalStars: Number(data.totalStars ?? 0) };
+  return { totalRepos: Number(data.totalRepos), totalStars: Number(data.totalStars ?? 0) };
 }
 
 // ── Card summaries ────────────────────────────────────────────────────────────

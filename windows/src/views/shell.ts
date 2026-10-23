@@ -20,6 +20,7 @@ import { card, cardTitle, chipRow, foot, linkButton, message, note, ring, switch
 import { buildClipboard, buildPower, buildToday, buildWallpapers } from "./shell-tabs";
 import type { ViewHost } from "./views";
 import { colorHex } from "../design/tokens";
+import { itemAt } from "../core/arrays";
 
 const ICON: Record<ShellTab, string> = {
   controls: "M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6",
@@ -174,13 +175,13 @@ function buildControls(): Tab {
   function draw(c: ShellControls) {
     const level = Math.round((c.volume ?? 0) * 100);
     const value = h("span", { class: "shell-mono shell-dim shell-value", text: `${level} %` });
-    const slider = h("input", { type: "range", min: "0", max: "100", value: String(level), "aria-label": t("Volume") }) as HTMLInputElement;
+    const slider = h("input", { type: "range", min: "0", max: "100", value: String(level), "aria-label": t("Volume") });
     slider.disabled = c.volume == null;
     slider.addEventListener("input", () => {
       value.textContent = `${slider.value} %`;
       if (volumeTimer != null) window.clearTimeout(volumeTimer);
       volumeTimer = window.setTimeout(() => {
-        Bridge.shellSetVolume(Number(slider.value) / 100).catch((e) => info.say(message(e)));
+        Bridge.shellSetVolume(Number(slider.value) / 100).catch((e: unknown) => info.say(message(e)));
       }, 60);
     });
     const mute = h(
@@ -241,13 +242,13 @@ function buildControls(): Tab {
             { class: "shell-grid2" },
             ...adjustable.map((d) => {
               const v = h("span", { class: "shell-mono", text: `${d.brightness} %` });
-              const r = h("input", { type: "range", min: "0", max: "100", value: String(d.brightness), "aria-label": d.name }) as HTMLInputElement;
+              const r = h("input", { type: "range", min: "0", max: "100", value: String(d.brightness), "aria-label": d.name });
               let timer: number | null = null;
               r.addEventListener("input", () => {
                 v.textContent = `${r.value} %`;
                 if (timer != null) window.clearTimeout(timer);
                 timer = window.setTimeout(() => {
-                  Bridge.shellSetBrightness(d.index, Number(r.value)).catch((e) => info.say(message(e)));
+                  Bridge.shellSetBrightness(d.index, Number(r.value)).catch((e: unknown) => info.say(message(e)));
                 }, 150);
               });
               return h("label", { class: "shell-slider" }, h("span", { class: "shell-row shell-between shell-dim" }, h("span", { text: d.name }), v), r);
@@ -274,7 +275,7 @@ const RECENT_KEY = "coucou.shell.recentApps";
 
 function readRecent(): string[] {
   try {
-    const raw = JSON.parse(localStorage.getItem(RECENT_KEY) ?? "[]");
+    const raw: unknown = JSON.parse(localStorage.getItem(RECENT_KEY) ?? "[]");
     return Array.isArray(raw) ? raw.filter((x): x is string => typeof x === "string").slice(0, 12) : [];
   } catch {
     return [];
@@ -295,7 +296,7 @@ function tile(app: ShellApp, size: number): HTMLElement {
 
 function buildApps(): Tab {
   const info = note();
-  const input = h("input", { type: "text", class: "shell-search-input", placeholder: tl("Search an app"), "aria-label": tl("Search an app"), spellcheck: "false" }) as HTMLInputElement;
+  const input = h("input", { type: "text", class: "shell-search-input", placeholder: tl("Search an app"), "aria-label": tl("Search an app"), spellcheck: "false" });
   const search = h("label", { class: "shell-search" }, svg("M11 19a8 8 0 1 0 0-16 8 8 0 0 0 0 16zM21 21l-4.3-4.3", 18, { stroke: 2 }), input);
   const results = h("div", { class: "shell-results" });
   const recentGrid = h("div", { class: "shell-tiles" });
@@ -363,7 +364,7 @@ function buildApps(): Tab {
           apps = list;
           draw();
         })
-        .catch((e) => info.say(message(e)));
+        .catch((e: unknown) => info.say(message(e)));
     },
     hide() {
       input.blur();
@@ -392,7 +393,7 @@ function buildWindows(): Tab {
   const snaps = h("div", { class: "shell-snaps" });
   const screens = h("div", { class: "shell-screens" });
   const layoutList = h("div", { class: "shell-layouts" });
-  const nameInput = h("input", { type: "text", class: "shell-name-input", placeholder: t("Layout name"), "aria-label": t("Layout name"), maxlength: "40" }) as HTMLInputElement;
+  const nameInput = h("input", { type: "text", class: "shell-name-input", placeholder: t("Layout name"), "aria-label": t("Layout name"), maxlength: "40" });
   const saveRow = h("div", { class: "shell-row", style: "display:none" }, nameInput, h("button", { class: "shell-pill", onclick: () => void saveLayout(), text: tl("Save") }));
   const el = h(
     "div",
@@ -491,7 +492,7 @@ function buildWindows(): Tab {
           { class: "shell-layout" },
           h(
             "button",
-            { class: "shell-layout-main", onclick: () => Bridge.shellLayoutApply(l.name).then(() => refresh(), (e) => info.say(message(e))) },
+            { class: "shell-layout-main", onclick: () => Bridge.shellLayoutApply(l.name).then(() => refresh(), (e: unknown) => info.say(message(e))) },
             layoutThumb(l),
             h(
               "span",
@@ -500,7 +501,7 @@ function buildWindows(): Tab {
               h("span", { class: "shell-dim shell-ellipsis", text: l.windows.map((w) => w.app).join(", ") }),
             ),
           ),
-          h("button", { class: "shell-icon-btn", "aria-label": t("Delete"), title: t("Delete"), onclick: () => Bridge.shellLayoutDelete(l.name).then(drawLayouts, (e) => info.say(message(e))) }, svg("M6 6l12 12M18 6 6 18", 14, { stroke: 2 })),
+          h("button", { class: "shell-icon-btn", "aria-label": t("Delete"), title: t("Delete"), onclick: () => Bridge.shellLayoutDelete(l.name).then(drawLayouts, (e: unknown) => info.say(message(e))) }, svg("M6 6l12 12M18 6 6 18", 14, { stroke: 2 })),
         ),
       );
     }
@@ -533,8 +534,8 @@ function buildWindows(): Tab {
     el,
     show() {
       void refresh();
-      Bridge.shellLayouts().then(drawLayouts, (e) => info.say(message(e)));
-      if (timer == null) timer = window.setInterval(() => void refresh(), 2000);
+      Bridge.shellLayouts().then(drawLayouts, (e: unknown) => info.say(message(e)));
+      timer ??= window.setInterval(() => void refresh(), 2000);
     },
     hide() {
       if (timer != null) window.clearInterval(timer);
@@ -606,7 +607,7 @@ export function buildShell(onCircle: () => void): ShellHost {
 
   function drawTabs() {
     const list = availableTabs(caps);
-    if (!list.includes(current)) current = list[0];
+    if (!list.includes(current)) current = itemAt(list, 0);
     nav.replaceChildren(
       ...list.map((tab) =>
         h(

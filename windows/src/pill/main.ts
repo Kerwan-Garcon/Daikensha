@@ -7,11 +7,12 @@
 
 import { Bridge, onEvent } from "../core/bridge";
 import { FlowBridge, clock, type PillState } from "../core/flow";
-import type { Settings } from "../core/state";
 import { BotEngine, hexToRGB } from "../mochi/engine";
 import { resolveLanguage, setLanguage, systemLanguages, t } from "../i18n/i18n";
 import { HUB_ICONS, keyLabel } from "../hub/ui";
 import { colorHex } from "../design/tokens";
+import { itemAt } from "../core/arrays";
+import { context2d, requireChild, requireElement } from "../core/elements";
 
 const RESTING_LENGTH = 44;
 const RESTING_THICKNESS = 8;
@@ -27,7 +28,7 @@ let visible = false;
 const levels = new Array<number>(BANDS).fill(0);
 const target = new Array<number>(BANDS).fill(0);
 
-const root = document.getElementById("pill")!;
+const root = requireElement("pill");
 
 function svgIcon(name: string): SVGSVGElement {
   const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
@@ -97,7 +98,7 @@ function messageText(): string | null {
 }
 
 function measure(text: string): number {
-  const c = document.createElement("canvas").getContext("2d")!;
+  const c = context2d(document.createElement("canvas"));
   c.font = "500 12px system-ui, 'Segoe UI', sans-serif";
   return Math.ceil(c.measureText(text).width);
 }
@@ -177,7 +178,7 @@ function content(l: Look): HTMLElement {
       if (vertical()) {
         const icon = el("span");
         icon.append(svgIcon(state.phase === "failed" ? "mic" : "copy"));
-        icon.querySelector("svg")!.setAttribute("style", "width:13px;height:13px;fill:none;stroke:var(--gray-918);stroke-width:2");
+        requireChild(icon, "svg").setAttribute("style", "width:13px;height:13px;fill:none;stroke:var(--gray-918);stroke-width:2");
         c.append(mochiSlot(), icon);
       } else {
         c.append(mochiSlot(), el("span", "message", messageText() ?? ""));
@@ -325,9 +326,9 @@ function setHovered(inside: boolean) {
 }
 
 document.addEventListener("pointermove", (e) => {
-  const overPill = capsule?.contains(e.target as Node) || (e.target as HTMLElement)?.closest?.(".bubble");
+  const overPill = capsule?.contains(e.target as Node) || (e.target instanceof Element && e.target.closest(".bubble") !== null);
   const near = capsule ? distanceTo(capsule, e.clientX, e.clientY) < 14 : false;
-  setHovered(Boolean(overPill || near));
+  setHovered(overPill || near);
 });
 document.addEventListener("pointerleave", () => setHovered(false));
 
@@ -350,7 +351,7 @@ function animating(): boolean {
 /** Where dot `i` goes: the voice, a slow wave while thinking, a lively one while Coucou speaks. */
 function dotGoal(now: number, i: number): number {
   if (state.phase === "thinking") return 0.25 + 0.25 * Math.sin(now / 160 - i * 0.7);
-  if (state.phase === "listening" || state.phase === "locked") return target[i];
+  if (state.phase === "listening" || state.phase === "locked") return itemAt(target, i);
   switch (state.voice?.phase) {
     case "thinking":
       return 0.25 + 0.25 * Math.sin(now / 160 - i * 0.7);
@@ -371,9 +372,10 @@ function tick(now: number) {
   // The dots: follow the voice, or a slow wave while thinking.
   for (let i = 0; i < BANDS; i++) {
     const goal = dotGoal(now, i);
-    levels[i] += (goal - levels[i]) * Math.min(1, dt * 14);
+    const level = itemAt(levels, i) + (goal - itemAt(levels, i)) * Math.min(1, dt * 14);
+    levels[i] = level;
     const bar = barsEl.children[i] as HTMLElement;
-    const size = 3.4 + 16 * Math.max(0, levels[i]);
+    const size = 3.4 + 16 * Math.max(0, level);
     if (vertical()) bar.style.width = `${size}px`;
     else bar.style.height = `${size}px`;
   }
@@ -413,7 +415,7 @@ function wake() {
 
 // ── « OK Coucou » speaks ──────────────────────────────────────────────────────
 
-interface Say {
+export interface Say {
   id: number;
   text: string;
   lang: string | null;
@@ -426,7 +428,7 @@ let speaking = false;
 
 /** The system's voice in the answer's language, a woman's or a man's when the system says. */
 function systemVoice(lang: string | null, gender: string): SpeechSynthesisVoice | null {
-  const voices = window.speechSynthesis?.getVoices() ?? [];
+  const voices = (window as Partial<Window>).speechSynthesis?.getVoices() ?? [];
   const want = (lang ?? navigator.language).toLowerCase();
   const short = want.split("-")[0];
   const inLang = voices.filter((v) => v.lang.toLowerCase() === want).concat(voices.filter((v) => v.lang.toLowerCase().split(/[-_]/)[0] === short && v.lang.toLowerCase() !== want));
@@ -437,8 +439,9 @@ function systemVoice(lang: string | null, gender: string): SpeechSynthesisVoice 
 }
 
 async function sayWithSystem(text: string, lang: string | null, gender: string): Promise<void> {
-  const synth = window.speechSynthesis;
-  if (synth && synth.getVoices().length === 0) {
+  // Not every WebKitGTK build has speech synthesis.
+  const synth = (window as Partial<Window>).speechSynthesis;
+  if (synth?.getVoices().length === 0) {
     await new Promise<void>((r) => {
       synth.addEventListener("voiceschanged", () => r(), { once: true });
       setTimeout(r, 600);
@@ -495,16 +498,16 @@ async function main() {
   state = (await FlowBridge.pillState()) ?? state;
   visible = state.enabled || state.noteStartedAt !== null || state.announcement !== null || state.voice !== null;
   render();
-  void onEvent<PillState>("pill-state", (s) => {
+  void onEvent("pill-state", (s) => {
     state = s;
     if (s.phase === "listening") target.fill(0);
     render();
   });
-  void onEvent<number[]>("pill-bands", (bands) => {
+  void onEvent("pill-bands", (bands) => {
     for (let i = 0; i < BANDS; i++) target[i] = bands[i] ?? 0;
     wake();
   });
-  void onEvent<boolean>("pill-visible", (v) => {
+  void onEvent("pill-visible", (v) => {
     visible = v;
     if (!v) {
       hovered = false;
@@ -513,11 +516,11 @@ async function main() {
     render();
   });
   // Windows: the cursor poll tells when the pointer is over the pill.
-  void onEvent<boolean>("pill-pointer", (inside) => {
+  void onEvent("pill-pointer", (inside) => {
     if (!inside) setHovered(false);
   });
-  void onEvent<Say>("voice-say", (s) => void say(s));
-  void onEvent<Settings>("settings-changed", (s) => {
+  void onEvent("voice-say", (s) => void say(s));
+  void onEvent("settings-changed", (s) => {
     setLanguage(resolveLanguage(s.language, systemLanguages()));
     render();
   });

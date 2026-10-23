@@ -108,7 +108,7 @@ fn shell(command: &str) -> Option<Command> {
 fn shell(command: &str) -> Option<Command> {
     use std::os::windows::process::CommandExt;
     const CREATE_NO_WINDOW: u32 = 0x0800_0000;
-    let bash = git_bash_candidates(|k| std::env::var_os(k), |p| p.is_file()).into_iter().next()?;
+    let bash = git_bash_candidates(|k| std::env::var_os(k), std::path::Path::is_file).into_iter().next()?;
     let mut c = Command::new(bash);
     c.args(["-c", command]).creation_flags(CREATE_NO_WINDOW);
     Some(c)
@@ -193,7 +193,7 @@ pub fn run_previous(command: &str, input: &[u8], budget: Duration) -> Option<Vec
                 match stdout.read(&mut chunk) {
                     Ok(0) | Err(_) => break,
                     Ok(n) => {
-                        let mut buf = kept.lock().unwrap_or_else(|e| e.into_inner());
+                        let mut buf = kept.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
                         let room = MAX_OUTPUT.saturating_sub(buf.len());
                         buf.extend_from_slice(&chunk[..n.min(room)]);
                     }
@@ -218,7 +218,7 @@ pub fn run_previous(command: &str, input: &[u8], budget: Duration) -> Option<Vec
     // Whatever arrived; a child process of the command holding the pipe open
     // does not get to hold us too.
     let _ = done_rx.recv_timeout(DRAIN_GRACE);
-    let out = std::mem::take(&mut *kept.lock().unwrap_or_else(|e| e.into_inner()));
+    let out = std::mem::take(&mut *kept.lock().unwrap_or_else(std::sync::PoisonError::into_inner));
     Some(out)
 }
 

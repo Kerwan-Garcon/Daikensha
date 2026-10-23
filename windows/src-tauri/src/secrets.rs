@@ -20,6 +20,7 @@ pub const KNOWN_KEYS: &[&str] = &[
     "resend-api-key",
     "notion-api-key",
     "calcom-api-key",
+    "linear-api-key",
     // « OK Coucou »'s answers in an ElevenLabs voice.
     "elevenlabs-api-key",
 ];
@@ -58,8 +59,8 @@ pub fn present(key: &str) -> bool {
 
 // ── Entries only Rust reads and writes ───────────────────────────────────────
 //
-// The phone link's certificate, key and pairing token, and the relay's room, end-to-end key and access key.
-// They are not in KNOWN_KEYS
+// The phone link's certificate, key and pairing token, the relay's room, end-to-end key and access key,
+// and the token Pear Desktop gave the YouTube Music pill. They are not in KNOWN_KEYS
 // on purpose: the island has `secret_present` / `secret_set` / `secret_clear`
 // for those, and none of the three may be reachable from a webview.
 
@@ -71,6 +72,8 @@ pub const INTERNAL_KEYS: &[&str] = &[
     "phone-relay-room",
     "phone-relay-key",
     "phone-relay-access",
+    // The token Pear Desktop's API Server gave the YouTube Music pill (youtube_music.rs).
+    "youtube-music-token",
 ];
 
 /// Whether the keystore would accept this key through `get_internal` / `set_internal`.

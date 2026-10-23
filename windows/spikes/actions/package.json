@@ -1,0 +1,12 @@
+{
+  "name": "coucou-actions-spike",
+  "private": true,
+  "type": "module",
+  "description": "Spike: the « Actions » skill — an app's MCP server first, the browser otherwise, behind Coucou's gate (docs/ACTIONS.md).",
+  "scripts": {
+    "test": "node --test gate.test.mjs"
+  },
+  "dependencies": {
+    "@playwright/mcp": "0.0.83"
+  }
+}

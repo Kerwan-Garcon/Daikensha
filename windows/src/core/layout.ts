@@ -1,4 +1,5 @@
 import { colorHex } from "../design/tokens";
+import { cyclicAt } from "./arrays";
 // Island geometry — ported from IslandTypes.swift + IslandWindowController.islandSize
 // + IslandRootView.botPosition. All values are logical pixels, identical to the
 // macOS app's points.
@@ -246,7 +247,7 @@ export function colorForProject(name: string): string {
   }
   let hash = 0;
   for (let i = 0; i < name.length; i++) hash = (hash * 31 + name.charCodeAt(i)) | 0;
-  return FALLBACK_COLORS[Math.abs(hash) % FALLBACK_COLORS.length];
+  return cyclicAt(FALLBACK_COLORS, Math.abs(hash));
 }
 
 // Card wash colours (CardBackground.washColor)

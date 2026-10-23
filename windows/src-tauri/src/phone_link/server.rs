@@ -18,9 +18,10 @@
 
 use std::net::IpAddr;
 use std::sync::atomic::Ordering;
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 use std::time::Duration;
 
+use parking_lot::Mutex;
 use serde_json::json;
 use tokio::io::{AsyncBufReadExt, AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt, BufReader};
 use tokio::net::{TcpListener, TcpStream};
@@ -43,16 +44,16 @@ const HELLO_TIMEOUT: Duration = Duration::from_secs(10);
 /// short limit here dropped it after 90 s and it only noticed on waking. Its alarm checks in every few minutes (Doze may stretch that
 /// to about 15), so the limit is well above that. A conversation whose phone vanished without a goodbye (its address changed)
 /// holds one of the 8 places until then.
-const IDLE_TIMEOUT: Duration = Duration::from_secs(20 * 60);
+const IDLE_TIMEOUT: Duration = Duration::from_mins(20);
 
 #[cfg(test)]
 mod idle_tests {
     #[test]
     fn the_idle_limit_is_well_above_what_a_sleeping_phone_needs() {
         // The phone's alarm asks for a check every 4 minutes and Doze can stretch that to about 15 (KeepAlivePolicy.kt).
-        assert!(super::IDLE_TIMEOUT >= std::time::Duration::from_secs(16 * 60));
+        assert!(super::IDLE_TIMEOUT >= std::time::Duration::from_mins(16));
         // But not unbounded: a vanished phone must not hold a place for hours.
-        assert!(super::IDLE_TIMEOUT <= std::time::Duration::from_secs(30 * 60));
+        assert!(super::IDLE_TIMEOUT <= std::time::Duration::from_mins(30));
     }
 }
 /// Pause before answering a wrong token.
@@ -172,13 +173,10 @@ pub fn serve(listener: TcpListener, acceptor: TlsAcceptor, shared: Arc<Shared>) 
     let for_handle = shared.clone();
     let accept = tokio::spawn(async move {
         loop {
-            let (tcp, peer) = match listener.accept().await {
-                Ok(x) => x,
-                Err(_) => {
+            let Ok((tcp, peer)) = listener.accept().await else {
                     tokio::time::sleep(Duration::from_millis(200)).await;
                     continue;
-                }
-            };
+                };
             if !is_local(peer.ip()) {
                 continue; // dropped before any byte is read
             }
@@ -258,7 +256,7 @@ where
         return;
     }
     let sent_token = hello["token"].as_str().unwrap_or("").to_string();
-    let expected = shared.token.lock().unwrap().clone();
+    let expected = shared.token.lock().clone();
     let good = hello["v"].as_u64() == Some(PROTOCOL) && constant_eq(sent_token.as_bytes(), expected.as_bytes());
     if !good {
         tokio::time::sleep(AUTH_PENALTY).await;

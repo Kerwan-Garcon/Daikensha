@@ -14,7 +14,7 @@ function newId(): string {
 }
 
 function input(placeholder: string, onEnter?: () => void): HTMLInputElement {
-  const el = h("input", { class: "hub-input", placeholder }) as HTMLInputElement;
+  const el = h("input", { class: "hub-input", placeholder });
   if (onEnter) el.addEventListener("keydown", (e) => e.key === "Enter" && onEnter());
   return el;
 }
@@ -101,15 +101,16 @@ export async function snippetsPage(page: HTMLElement, ctx: HubContext) {
 
   let editing: Snippet | null = null;
   const formTitle = h("div", { style: "font:700 14px var(--font-sans)" });
-  const trigger = h("input", { class: "hub-input", placeholder: t("What you say, e.g. my signature") }) as HTMLInputElement;
-  const text = h("textarea", { class: "hub-textarea", placeholder: t("The text Coucou pastes") }) as HTMLTextAreaElement;
+  const trigger = h("input", { class: "hub-input", placeholder: t("What you say, e.g. my signature") });
+  const text = h("textarea", { class: "hub-textarea", placeholder: t("The text Coucou pastes") });
   const cancel = button(t("Cancel"), () => edit(null));
   const saveButton = button(t("Save"), () => {
     const tr = trigger.value.trim();
     const tx = text.value;
     if (!tr || !tx.trim()) return;
     if (editing) {
-      snippets = snippets.map((s) => (s.id === editing!.id ? { ...s, trigger: tr, text: tx } : s));
+      const { id } = editing;
+      snippets = snippets.map((s) => (s.id === id ? { ...s, trigger: tr, text: tx } : s));
     } else {
       snippets = [...snippets, { id: newId(), trigger: tr, text: tx }];
     }

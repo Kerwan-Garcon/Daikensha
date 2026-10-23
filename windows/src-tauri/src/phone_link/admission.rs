@@ -13,8 +13,10 @@
 
 use std::collections::{HashMap, VecDeque};
 use std::net::IpAddr;
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 use std::time::Duration;
+
+use parking_lot::Mutex;
 
 pub const MAX_CONNECTIONS: usize = 8;
 /// Connections from one address that have not yet sent a valid hello.
@@ -51,7 +53,7 @@ impl Admission {
     /// A slot for this caller, or None (the connection is closed unserved). The slot is given back when the ticket drops.
     pub fn admit(self: &Arc<Self>, ip: IpAddr) -> Option<Ticket> {
         let ip = canonical(ip);
-        let mut s = self.state.lock().unwrap();
+        let mut s = self.state.lock();
         if s.total >= MAX_CONNECTIONS {
             return None;
         }
@@ -80,13 +82,13 @@ impl Admission {
 
     #[cfg(test)]
     pub fn counts(&self) -> (usize, usize) {
-        let s = self.state.lock().unwrap();
+        let s = self.state.lock();
         (s.total, s.strangers_unauth)
     }
 
     #[cfg(test)]
     pub fn knows(&self, ip: IpAddr) -> bool {
-        self.state.lock().unwrap().known.contains(&canonical(ip))
+        self.state.lock().known.contains(&canonical(ip))
     }
 }
 
@@ -108,12 +110,12 @@ impl Ticket {
     /// The caller said a valid hello: it no longer counts against the unauthenticated limits and its address is
     /// remembered, so a flood from elsewhere cannot keep it out.
     pub fn authenticated(&self) {
-        let mut flag = self.unauthenticated.lock().unwrap();
+        let mut flag = self.unauthenticated.lock();
         if !*flag {
             return;
         }
         *flag = false;
-        let mut s = self.admission.state.lock().unwrap();
+        let mut s = self.admission.state.lock();
         release_unauth(&mut s, self.ip, self.stranger);
         s.known.retain(|k| *k != self.ip);
         s.known.push_front(self.ip);
@@ -135,9 +137,9 @@ fn release_unauth(s: &mut State, ip: IpAddr, stranger: bool) {
 
 impl Drop for Ticket {
     fn drop(&mut self) {
-        let mut s = self.admission.state.lock().unwrap();
+        let mut s = self.admission.state.lock();
         s.total -= 1;
-        if *self.unauthenticated.lock().unwrap() {
+        if *self.unauthenticated.lock() {
             release_unauth(&mut s, self.ip, self.stranger);
         }
     }

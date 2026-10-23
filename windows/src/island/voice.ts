@@ -6,13 +6,15 @@ import { invoke } from "@tauri-apps/api/core";
 import { Bridge, IS_TAURI, onEvent } from "../core/bridge";
 import { MAX_DECLARED, availablePills, chooseMainPill, pillDefinition, sanitizeDeclared, toggleDeclared } from "../core/pills";
 import { Spotify } from "../core/spotify";
+import { YouTubeMusic } from "../core/youtube-music";
 import { State } from "../core/state";
 import { serviceCards } from "./phone-services";
 
-interface Ask {
+export interface Ask {
   id: number;
   kind: "pills" | "info";
-  input: { action?: string; names?: string[] };
+  /** Absent when the voice tool was called without arguments. */
+  input?: { action?: string; names?: string[] };
 }
 
 const norm = (s: string) =>
@@ -42,7 +44,7 @@ function describe(): string {
   });
 }
 
-function pills(input: Ask["input"]): string {
+function pills(input: NonNullable<Ask["input"]>): string {
   const action = input.action ?? "list";
   if (action === "list") return describe();
   const names = input.names ?? [];
@@ -86,7 +88,7 @@ function pills(input: Ask["input"]): string {
     if (State.mainPillId !== previousMain) State.setFocus(State.mainPillId);
     void Bridge.saveSettings(State.settings);
   }
-  return JSON.stringify({ done, failed, now: JSON.parse(describe()) });
+  return JSON.stringify({ done, failed, now: JSON.parse(describe()) as unknown });
 }
 
 function info(): string {
@@ -99,19 +101,21 @@ function info(): string {
       weekPercent: p.sevenDay?.usedPct ?? null,
     };
   const s = Spotify.state;
+  const y = YouTubeMusic.state;
   return JSON.stringify({
-    pills: JSON.parse(describe()),
+    pills: JSON.parse(describe()) as unknown,
     sessions,
     claudePlan: plan(State.planUsage),
     codexPlan: plan(State.codexPlanUsage),
     spotify: s.running && s.track ? { playing: s.playing, title: s.track.title, artist: s.track.artist } : null,
+    youtubeMusic: y.running && y.track ? { playing: y.playing, title: y.track.title, artist: y.track.artist } : null,
     services: serviceCards().map((c) => ({ service: c.title, headline: c.headline, about: c.reason, items: c.items })),
   });
 }
 
 export function registerVoiceHandlers() {
   if (!IS_TAURI) return;
-  void onEvent<Ask>("voice-ask", (ask) => {
+  void onEvent("voice-ask", (ask) => {
     let text: string;
     try {
       text = ask.kind === "pills" ? pills(ask.input ?? {}) : info();

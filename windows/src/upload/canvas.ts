@@ -12,6 +12,7 @@ import {
   USC, eIn, eInOut, eOut, lerp, progressAt,
   type UploadEyeShape, type UploadFrame,
 } from "./sequence";
+import { itemAt } from "../core/arrays";
 
 const FONT = `system-ui, "Segoe UI Variable Text", "Segoe UI", ${SCRIPT_FONTS}, sans-serif`;
 
@@ -108,9 +109,9 @@ function fitted(ctx: CanvasRenderingContext2D, s: string, maxW: number, weight: 
 
 export interface UploadCanvasActions {
   /** Primary button — hand the file to the chat. */
-  ask(): void;
+  ask: () => void;
   /** Secondary button. */
-  cancel(): void;
+  cancel: () => void;
 }
 
 export class UploadCanvas {
@@ -242,7 +243,7 @@ export class UploadCanvas {
     }
     let cx = USC.TEXT_X;
     labels.forEach((chip, i) => {
-      const w = ws[i];
+      const w = itemAt(ws, i);
       ctx.fillStyle = "rgba(255,255,255,0.07)";
       rr(ctx, cx, USC.TEXT_Y + 9, w, 18, 9);
       ctx.fill();

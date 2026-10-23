@@ -12,4 +12,5 @@ enum IslandView: String, CaseIterable {
     case searching, result, note, settings, greeting, wardrobe, recap
     case listening
     case voiceResult
+    case capture
 }

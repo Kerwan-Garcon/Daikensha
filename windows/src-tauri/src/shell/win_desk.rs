@@ -4,8 +4,9 @@
 // WM_CLIPBOARDUPDATE; the rest runs only when the panel asks.
 
 use std::path::Path;
-use std::sync::{Mutex, OnceLock};
+use std::sync::OnceLock;
 
+use parking_lot::Mutex;
 use windows::core::{w, HSTRING, PCWSTR};
 use windows::Win32::Foundation::{CloseHandle, HANDLE, HGLOBAL, HWND, LPARAM, LRESULT, WPARAM};
 use windows::Win32::System::DataExchange::{
@@ -37,7 +38,7 @@ static NOTIFY: OnceLock<Box<dyn Fn() + Send + Sync>> = OnceLock::new();
 /// Starts or stops the listener. `notify` runs after each kept copy.
 pub fn clipboard_listen(on: bool, notify: impl Fn() + Send + Sync + 'static) {
     let _ = NOTIFY.set(Box::new(notify));
-    let mut current = LISTENER.lock().unwrap_or_else(|e| e.into_inner());
+    let mut current = LISTENER.lock();
     match (on, *current) {
         (true, None) => {
             let (tx, rx) = std::sync::mpsc::channel();
@@ -61,8 +62,8 @@ fn run_listener(ready: std::sync::mpsc::Sender<Option<isize>>) {
         let class = w!("CoucouClipboardListener");
         let wc = WNDCLASSW { lpfnWndProc: Some(listener_proc), lpszClassName: class, ..Default::default() };
         // A second start registers the class again and fails harmlessly.
-        RegisterClassW(&wc);
-        let hwnd = match CreateWindowExW(
+        RegisterClassW(&raw const wc);
+        let Ok(hwnd) = CreateWindowExW(
             WINDOW_EX_STYLE(0),
             class,
             w!(""),
@@ -75,13 +76,10 @@ fn run_listener(ready: std::sync::mpsc::Sender<Option<isize>>) {
             None,
             None,
             None,
-        ) {
-            Ok(h) => h,
-            Err(_) => {
+        ) else {
                 let _ = ready.send(None);
                 return;
-            }
-        };
+            };
         if AddClipboardFormatListener(hwnd).is_err() {
             let _ = DestroyWindow(hwnd);
             let _ = ready.send(None);
@@ -89,13 +87,13 @@ fn run_listener(ready: std::sync::mpsc::Sender<Option<isize>>) {
         }
         let _ = ready.send(Some(hwnd.0 as isize));
         let mut msg = MSG::default();
-        while GetMessageW(&mut msg, None, 0, 0).as_bool() {
-            DispatchMessageW(&msg);
+        while GetMessageW(&raw mut msg, None, 0, 0).as_bool() {
+            DispatchMessageW(&raw const msg);
         }
     }
 }
 
-unsafe extern "system" fn listener_proc(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LRESULT {
+unsafe extern "system" fn listener_proc(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LRESULT { unsafe {
     match msg {
         WM_CLIPBOARDUPDATE => {
             if let Some((text, app)) = read_copy(hwnd) {
@@ -117,7 +115,7 @@ unsafe extern "system" fn listener_proc(hwnd: HWND, msg: u32, wparam: WPARAM, lp
         }
         _ => DefWindowProcW(hwnd, msg, wparam, lparam),
     }
-}
+}}
 
 /// The executable's file name, lower case ("keepassxc.exe"), and its display name.
 fn owner_app(pid: u32) -> (String, String) {
@@ -126,7 +124,7 @@ fn owner_app(pid: u32) -> (String, String) {
         let Ok(h) = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, false, pid) else { return (String::new(), String::new()) };
         let mut buf = [0u16; 1024];
         let mut len = buf.len() as u32;
-        let ok = QueryFullProcessImageNameW(h, PROCESS_NAME_WIN32, windows::core::PWSTR(buf.as_mut_ptr()), &mut len).is_ok();
+        let ok = QueryFullProcessImageNameW(h, PROCESS_NAME_WIN32, windows::core::PWSTR(buf.as_mut_ptr()), &raw mut len).is_ok();
         let _ = CloseHandle(h);
         if !ok {
             return (String::new(), String::new());
@@ -138,7 +136,7 @@ fn owner_app(pid: u32) -> (String, String) {
 }
 
 /// Runs `f` on a global memory block (its address and size), under its lock.
-unsafe fn with_global<R>(handle: HANDLE, f: impl FnOnce(*const u8, usize) -> R) -> Option<R> {
+unsafe fn with_global<R>(handle: HANDLE, f: impl FnOnce(*const u8, usize) -> R) -> Option<R> { unsafe {
     let global = HGLOBAL(handle.0);
     let ptr = GlobalLock(global) as *const u8;
     if ptr.is_null() {
@@ -147,7 +145,7 @@ unsafe fn with_global<R>(handle: HANDLE, f: impl FnOnce(*const u8, usize) -> R) 
     let out = f(ptr, GlobalSize(global));
     let _ = GlobalUnlock(global);
     Some(out)
-}
+}}
 
 /// The text just copied and the app it came from, unless it must not be kept.
 fn read_copy(hwnd: HWND) -> Option<(String, String)> {
@@ -156,7 +154,7 @@ fn read_copy(hwnd: HWND) -> Option<(String, String)> {
         let (file, app) = match owner {
             Some(o) => {
                 let mut pid = 0u32;
-                GetWindowThreadProcessId(o, Some(&mut pid));
+                GetWindowThreadProcessId(o, Some(&raw mut pid));
                 if pid == std::process::id() {
                     return None;
                 }
@@ -188,15 +186,17 @@ fn read_copy(hwnd: HWND) -> Option<(String, String)> {
             }
             if IsClipboardFormatAvailable(history).is_ok() {
                 let h = GetClipboardData(history).ok()?;
-                let allowed = with_global(h, |p, size| size >= 4 && std::ptr::read_unaligned(p as *const u32) != 0)?;
+                let allowed = with_global(h, |p, size| size >= 4 && std::ptr::read_unaligned(p.cast::<u32>()) != 0)?;
                 if !allowed {
                     return None;
                 }
             }
-            let h = GetClipboardData(CF_UNICODETEXT.0 as u32).ok()?;
+            let h = GetClipboardData(u32::from(CF_UNICODETEXT.0)).ok()?;
             with_global(h, |p, size| {
                 let units = (size / 2).min(clipboard::MAX_CHARS * 2);
-                let slice = std::slice::from_raw_parts(p as *const u16, units);
+                // GlobalLock memory is 8-aligned (GlobalAlloc's guarantee).
+                #[allow(clippy::cast_ptr_alignment)]
+                let slice = std::slice::from_raw_parts(p.cast::<u16>(), units);
                 let end = slice.iter().position(|&c| c == 0).unwrap_or(units);
                 String::from_utf16_lossy(&slice[..end])
             })
@@ -236,7 +236,7 @@ pub fn thumbnail(path: &Path, w: u32, h: u32) -> Option<(u32, u32, Vec<u8>)> {
         let factory: IShellItemImageFactory = SHCreateItemFromParsingName(PCWSTR(path.as_ptr()), None).ok()?;
         let bitmap = factory.GetImage(SIZE { cx: w as i32, cy: h as i32 }, SIIGBF_RESIZETOFIT).ok()?;
         let mut info = BITMAP::default();
-        let got = GetObjectW(HGDIOBJ(bitmap.0), std::mem::size_of::<BITMAP>() as i32, Some(&mut info as *mut _ as *mut _));
+        let got = GetObjectW(HGDIOBJ(bitmap.0), std::mem::size_of::<BITMAP>() as i32, Some((&raw mut info).cast()));
         let (bw, bh) = (info.bmWidth.max(0) as u32, info.bmHeight.unsigned_abs());
         let mut pixels = vec![0u8; (bw * bh * 4) as usize];
         let mut header = BITMAPINFO {
@@ -253,7 +253,7 @@ pub fn thumbnail(path: &Path, w: u32, h: u32) -> Option<(u32, u32, Vec<u8>)> {
         };
         let dc = CreateCompatibleDC(None);
         let lines = if got > 0 && bw > 0 && bh > 0 && bw <= 1024 && bh <= 1024 {
-            GetDIBits(dc, bitmap, 0, bh, Some(pixels.as_mut_ptr() as *mut _), &mut header, DIB_RGB_COLORS)
+            GetDIBits(dc, bitmap, 0, bh, Some(pixels.as_mut_ptr().cast()), &raw mut header, DIB_RGB_COLORS)
         } else {
             0
         };
@@ -308,10 +308,10 @@ fn shutdown_privilege() -> Result<(), String> {
     use windows::Win32::System::Threading::{GetCurrentProcess, OpenProcessToken};
     unsafe {
         let mut token = HANDLE::default();
-        OpenProcessToken(GetCurrentProcess(), TOKEN_ADJUST_PRIVILEGES | TOKEN_QUERY, &mut token).map_err(err)?;
+        OpenProcessToken(GetCurrentProcess(), TOKEN_ADJUST_PRIVILEGES | TOKEN_QUERY, &raw mut token).map_err(err)?;
         let mut privileges = TOKEN_PRIVILEGES { PrivilegeCount: 1, Privileges: [LUID_AND_ATTRIBUTES { Attributes: SE_PRIVILEGE_ENABLED, ..Default::default() }] };
-        let out = LookupPrivilegeValueW(None, SE_SHUTDOWN_NAME, &mut privileges.Privileges[0].Luid)
-            .and_then(|_| AdjustTokenPrivileges(token, false, Some(&privileges), 0, None, None))
+        let out = LookupPrivilegeValueW(None, SE_SHUTDOWN_NAME, &raw mut privileges.Privileges[0].Luid)
+            .and_then(|()| AdjustTokenPrivileges(token, false, Some(&raw const privileges), 0, None, None))
             .map_err(err);
         let _ = CloseHandle(token);
         out
@@ -353,7 +353,7 @@ pub fn power(action: PowerAction) -> Result<(), String> {
 pub fn battery() -> Battery {
     use windows::Win32::System::Power::{GetSystemPowerStatus, SYSTEM_POWER_STATUS};
     let mut s = SYSTEM_POWER_STATUS::default();
-    if unsafe { GetSystemPowerStatus(&mut s) }.is_err() {
+    if unsafe { GetSystemPowerStatus(&raw mut s) }.is_err() {
         return Battery::default();
     }
     // 128: no system battery; 255: unknown.
@@ -372,7 +372,7 @@ pub fn foreground() -> Option<(isize, String)> {
             return None;
         }
         let mut pid = 0u32;
-        GetWindowThreadProcessId(hwnd, Some(&mut pid));
+        GetWindowThreadProcessId(hwnd, Some(&raw mut pid));
         if pid == 0 || pid == std::process::id() {
             return None;
         }
@@ -444,7 +444,7 @@ pub fn capture_screen(x: i32, y: i32, w: i32, h: i32) -> Result<(u32, u32, Vec<u
         };
         let mut pixels = vec![0u8; (w as usize) * (h as usize) * 4];
         SelectObject(dc, old);
-        let lines = if copied { GetDIBits(dc, bitmap, 0, h as u32, Some(pixels.as_mut_ptr() as *mut _), &mut info, DIB_RGB_COLORS) } else { 0 };
+        let lines = if copied { GetDIBits(dc, bitmap, 0, h as u32, Some(pixels.as_mut_ptr().cast()), &raw mut info, DIB_RGB_COLORS) } else { 0 };
         let _ = DeleteObject(bitmap.into());
         let _ = DeleteDC(dc);
         ReleaseDC(None, screen);

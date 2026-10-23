@@ -10,6 +10,8 @@ import { calls, emit, internals, sent } from "./tauri.mjs";
 installFakeDom();
 const { buildPrompt } = await import("../src/views/chat.ts");
 const { DEFAULT_SETTINGS, State } = await import("../src/core/state.ts");
+const { askInChat } = await import("../src/views/chat.ts");
+const { lookChipLabel, lookPrompt } = await import("../src/core/look.ts");
 
 /** What the mocked Rust side answers, by command. */
 let answers;
@@ -31,6 +33,8 @@ beforeEach(() => {
   State.stateOverride = null;
   State.view = "prompt";
   State.droppedFile = null;
+  State.capturePreview = null;
+  State.lookWindow = null;
   view = buildPrompt(() => {});
   view.sync();
 });
@@ -121,4 +125,38 @@ test("a local answer streams into one reply, then the finished text replaces it"
   assert.equal(view.el.find(".reply")[0].textContent, "Hello there!");
   assert.deepEqual(State.chatHistory.map((m) => m.role), ["user", "assistant"]);
   assert.ok(!$(".model-btn").disabled);
+});
+
+test("a window Mochi looked at goes with the first question only, and its chips ask more", async () => {
+  answers.chat_send = { text: "A docs page." };
+  State.lookWindow = { appName: "Microsoft Edge", title: "Docs" };
+  view.sync();
+  assert.ok($(".look-chips").classList.contains("on"));
+  assert.equal($(".chip").textContent, "Microsoft Edge · Docs");
+
+  askInChat("Look and tell me.", "Look at this window");
+  await flush();
+  view.sync();
+  assert.deepEqual(sent("chat_send").at(-1), {
+    query: "Look and tell me.",
+    context: { kind: "look", appName: "Microsoft Edge", title: "Docs" },
+  });
+  assert.equal(State.chatHistory[0].content, "Look at this window");
+
+  // The chips: same conversation, no context again (the history has the picture).
+  view.el.find(".look-chip")[0].fire("click");
+  await flush();
+  assert.deepEqual(sent("chat_send").at(-1), { query: "Summarize what's in this window for me.", context: null });
+  assert.deepEqual(State.chatHistory.map((m) => m.role), ["user", "assistant", "user", "assistant"]);
+});
+
+test("no chips without a window", () => {
+  assert.ok(!$(".look-chips").classList.contains("on"));
+});
+
+test("the look prompt asks for the app's language, the chip shortens long titles", () => {
+  assert.match(lookPrompt("fr"), /Reply in French\.$/);
+  assert.match(lookPrompt("pt-BR"), /Reply in Brazilian Portuguese\.$/);
+  assert.equal(lookChipLabel({ appName: "Code", title: "x".repeat(60) }, 10), "Code · xxxxxxxxx…");
+  assert.equal(lookChipLabel({ appName: "", title: "Notes" }), "Notes");
 });

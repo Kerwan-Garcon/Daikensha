@@ -107,7 +107,7 @@ pub struct RelayLink<'a> {
 }
 
 /// The link with the relay fields appended. Whoever holds this link holds K: it is shown only in Settings.
-pub fn pairing_link_with_relay(host: &str, port: u16, fingerprint: &str, token: &str, name: &str, relay: &RelayLink) -> String {
+pub fn pairing_link_with_relay(host: &str, port: u16, fingerprint: &str, token: &str, name: &str, relay: &RelayLink<'_>) -> String {
     format!(
         "{}&relay={}&room={}&key={}&access={}",
         pairing_link(host, port, fingerprint, token, name),
@@ -134,7 +134,7 @@ fn percent_encode(s: &str) -> String {
 pub fn qr_svg(link: &str) -> Option<String> {
     let code = qrcode::QrCode::new(link.as_bytes()).ok()?;
     Some(
-        code.render::<qrcode::render::svg::Color>()
+        code.render::<qrcode::render::svg::Color<'_>>()
             .min_dimensions(220, 220)
             .quiet_zone(true)
             .dark_color(qrcode::render::svg::Color("#000000"))
@@ -176,16 +176,16 @@ pub fn computer_name() -> String {
 pub mod tests {
     use super::*;
     use std::collections::HashMap;
-    use std::sync::Mutex;
+    use parking_lot::Mutex;
 
     #[derive(Default)]
     pub struct MemStore(pub Mutex<HashMap<String, String>>);
     impl SecretStore for MemStore {
         fn get(&self, key: &str) -> Option<String> {
-            self.0.lock().unwrap().get(key).cloned()
+            self.0.lock().get(key).cloned()
         }
         fn set(&self, key: &str, value: &str) -> Result<(), String> {
-            self.0.lock().unwrap().insert(key.into(), value.into());
+            self.0.lock().insert(key.into(), value.into());
             Ok(())
         }
     }
@@ -242,7 +242,7 @@ pub mod tests {
         let store = MemStore::default();
         let id = load_or_create_identity(&store).unwrap();
         let t = token(&store).unwrap();
-        let kept = store.0.lock().unwrap();
+        let kept = store.0.lock();
         assert_eq!(kept.get(PRIVATE_KEY).unwrap(), &hex(&id.key_der));
         assert_eq!(kept.get(TOKEN_KEY).unwrap(), &t);
     }

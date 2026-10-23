@@ -2,6 +2,8 @@
 // are PillCatalog.swift's (pill `agent_<id>`), so a pill looks the same on every
 // platform.
 
+import { cyclicAt } from "../core/arrays";
+
 export interface KnownAgent {
   name: string;
   color: string;
@@ -43,7 +45,7 @@ export function agentColor(id: string): string {
   for (let i = 0; i < id.length; i++) {
     h = (Math.imul(31, h) + id.charCodeAt(i)) | 0;
   }
-  return FALLBACK_COLORS[Math.abs(h) % FALLBACK_COLORS.length];
+  return cyclicAt(FALLBACK_COLORS, Math.abs(h));
 }
 
 /** The pill label: the agent's own name when Coucou knows it, else its id. */

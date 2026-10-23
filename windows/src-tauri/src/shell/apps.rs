@@ -5,8 +5,7 @@
 // The pure helpers here serve the Windows code; elsewhere only the tests use them.
 #![cfg_attr(not(windows), allow(dead_code))]
 
-use std::sync::Mutex;
-
+use parking_lot::Mutex;
 use serde::Serialize;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -30,7 +29,7 @@ pub fn tidy(mut apps: Vec<App>) -> Vec<App> {
 #[cfg(windows)]
 pub fn list() -> Result<Vec<App>, String> {
     let apps = tidy(super::win::list_apps()?);
-    *LISTED.lock().unwrap() = apps.clone();
+    (*LISTED.lock()).clone_from(&apps);
     Ok(apps)
 }
 
@@ -41,7 +40,7 @@ pub fn list() -> Result<Vec<App>, String> {
 
 /// True when `id` is one the last list gave.
 pub fn known(id: &str) -> bool {
-    LISTED.lock().unwrap().iter().any(|a| a.id == id)
+    LISTED.lock().iter().any(|a| a.id == id)
 }
 
 pub fn launch(id: &str) -> Result<(), String> {
@@ -70,7 +69,7 @@ mod tests {
 
     #[test]
     fn only_a_listed_id_may_be_launched() {
-        *LISTED.lock().unwrap() = vec![app("Microsoft.WindowsCalculator_8wekyb3d8bbwe!App", "Calculator")];
+        *LISTED.lock() = vec![app("Microsoft.WindowsCalculator_8wekyb3d8bbwe!App", "Calculator")];
         assert!(known("Microsoft.WindowsCalculator_8wekyb3d8bbwe!App"));
         assert!(!known("C:\\Windows\\System32\\cmd.exe"));
         assert!(launch("C:\\Windows\\System32\\cmd.exe").is_err());
