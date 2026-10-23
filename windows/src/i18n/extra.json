@@ -6474,6 +6474,83 @@
    "ru": "Ретранслятор Coucou устарел и не смог защитить Claude Code. Закройте и снова запустите Coucou, чтобы обновить его.",
    "id": "Relai Coucou sudah usang dan tidak bisa menjaga Claude Code. Tutup lalu buka lagi Coucou untuk memperbaruinya."
   },
+  "This turn is over: reply in the terminal.": {
+   "zh-Hans": "这一轮已结束：请在终端中回复。",
+   "hi": "यह बारी ख़त्म हो गई: टर्मिनल में जवाब दें।",
+   "es": "Este turno ha terminado: responde en el terminal.",
+   "ar": "انتهى هذا الدور: ردّ في الطرفية.",
+   "fr": "Ce tour est terminé : réponds dans le terminal.",
+   "bn": "এই পালা শেষ: টার্মিনালে উত্তর দিন।",
+   "pt-BR": "Este turno acabou: responda no terminal.",
+   "ru": "Этот ход завершён: ответьте в терминале.",
+   "id": "Giliran ini sudah selesai: balas di terminal."
+  },
+  "Reply from the island": {
+   "zh-Hans": "在岛上回复",
+   "hi": "आइलैंड से जवाब दें",
+   "es": "Responder desde la isla",
+   "ar": "الرد من الجزيرة",
+   "fr": "Répondre depuis l’île",
+   "bn": "আইল্যান্ড থেকে উত্তর",
+   "pt-BR": "Responder pela ilha",
+   "ru": "Отвечать с острова",
+   "id": "Balas dari pulau"
+  },
+  "When Claude Code finishes a turn, its whole answer shows in the island with a field to reply. Your reply goes to the same session, as if typed in its terminal. Until you reply or click Done, that terminal waits; Esc there takes it back at any time.": {
+   "zh-Hans": "Claude Code 完成一轮后，完整回答会显示在岛上，并附有回复框。你的回复会进入同一会话，就像在其终端中输入一样。在你回复或点击“完成”之前，该终端会等待；随时在终端按 Esc 即可收回。",
+   "hi": "Claude Code की बारी ख़त्म होने पर उसका पूरा जवाब आइलैंड में जवाब देने के बॉक्स के साथ दिखता है। आपका जवाब उसी सेशन में जाता है, जैसे टर्मिनल में लिखा हो। जब तक आप जवाब न दें या 'हो गया' न दबाएँ, वह टर्मिनल इंतज़ार करता है; वहाँ Esc दबाकर कभी भी नियंत्रण वापस लें।",
+   "es": "Cuando Claude Code termina un turno, su respuesta completa aparece en la isla con un campo para responder. Tu respuesta va a la misma sesión, como si la escribieras en su terminal. Hasta que respondas o pulses Listo, ese terminal espera; Esc allí lo recupera en cualquier momento.",
+   "ar": "عندما ينهي Claude Code دورًا، يظهر رده كاملًا في الجزيرة مع حقل للرد. يذهب ردك إلى الجلسة نفسها كأنك كتبته في طرفيتها. إلى أن ترد أو تضغط «تم»، تنتظر تلك الطرفية؛ ويستعيدها Esc هناك في أي وقت.",
+   "fr": "Quand Claude Code finit un tour, sa réponse entière s’affiche dans l’île avec un champ pour répondre. Ta réponse part dans la même session, comme si tu l’avais tapée dans son terminal. Tant que tu n’as pas répondu ou cliqué Terminé, ce terminal attend ; Échap dans le terminal le reprend à tout moment.",
+   "bn": "Claude Code একটি পালা শেষ করলে তার পুরো উত্তর আইল্যান্ডে উত্তর দেওয়ার ঘরসহ দেখা যায়। আপনার উত্তর একই সেশনে যায়, যেন তার টার্মিনালে লেখা। আপনি উত্তর না দেওয়া বা 'শেষ' না চাপা পর্যন্ত সেই টার্মিনাল অপেক্ষা করে; সেখানে Esc চাপলে যেকোনো সময় ফিরিয়ে নিতে পারেন।",
+   "pt-BR": "Quando o Claude Code termina um turno, a resposta inteira aparece na ilha com um campo para responder. Sua resposta vai para a mesma sessão, como se digitada no terminal. Até você responder ou clicar em Concluir, esse terminal espera; Esc nele o retoma a qualquer momento.",
+   "ru": "Когда Claude Code завершает ход, его полный ответ появляется на острове с полем для ответа. Ваш ответ уходит в ту же сессию, как будто набран в её терминале. Пока вы не ответите или не нажмёте «Готово», терминал ждёт; Esc в нём в любой момент возвращает управление.",
+   "id": "Saat Claude Code menyelesaikan giliran, seluruh jawabannya tampil di pulau dengan kolom untuk membalas. Balasan Anda masuk ke sesi yang sama, seolah diketik di terminalnya. Sampai Anda membalas atau mengklik Selesai, terminal itu menunggu; Esc di sana mengambilnya kembali kapan saja."
+  },
+  "Your hooks were installed by an older Coucou: reinstall them (backup, diff, then your click) so a reply can wait as long as you need.": {
+   "zh-Hans": "你的钩子由旧版 Coucou 安装：请重新安装（备份、差异、再由你点击），以便回复可以等待任意时长。",
+   "hi": "आपके हुक पुराने Coucou ने लगाए थे: उन्हें फिर से लगाएँ (बैकअप, अंतर, फिर आपका क्लिक) ताकि जवाब जितना चाहें इंतज़ार कर सके।",
+   "es": "Tus hooks los instaló un Coucou anterior: reinstálalos (copia, diferencias y tu clic) para que una respuesta pueda esperar lo que necesites.",
+   "ar": "ثبّت إصدار أقدم من Coucou خطافاتك: أعد تثبيتها (نسخة احتياطية، الفروق، ثم نقرتك) كي ينتظر الرد قدر ما تحتاج.",
+   "fr": "Tes hooks ont été installés par un Coucou plus ancien : réinstalle-les (sauvegarde, diff, puis ton clic) pour qu’une réponse puisse attendre autant qu’il le faut.",
+   "bn": "আপনার হুক পুরনো Coucou বসিয়েছে: আবার বসান (ব্যাকআপ, ডিফ, তারপর আপনার ক্লিক) যাতে উত্তর যতক্ষণ দরকার অপেক্ষা করতে পারে।",
+   "pt-BR": "Seus hooks foram instalados por um Coucou mais antigo: reinstale-os (backup, diff e seu clique) para que uma resposta possa esperar o quanto precisar.",
+   "ru": "Ваши хуки установлены старой версией Coucou: переустановите их (копия, разница, затем ваш щелчок), чтобы ответ мог ждать сколько нужно.",
+   "id": "Hook Anda dipasang oleh Coucou lama: pasang ulang (cadangan, diff, lalu klik Anda) agar balasan bisa menunggu selama yang Anda perlukan."
+  },
+  "Copy the answer": {
+   "zh-Hans": "复制回答",
+   "hi": "जवाब कॉपी करें",
+   "es": "Copiar la respuesta",
+   "ar": "نسخ الرد",
+   "fr": "Copier la réponse",
+   "bn": "উত্তর কপি করুন",
+   "pt-BR": "Copiar a resposta",
+   "ru": "Скопировать ответ",
+   "id": "Salin jawaban"
+  },
+  "Reply to Claude…": {
+   "zh-Hans": "回复 Claude…",
+   "hi": "Claude को जवाब दें…",
+   "es": "Responder a Claude…",
+   "ar": "الرد على Claude…",
+   "fr": "Répondre à Claude…",
+   "bn": "Claude-কে উত্তর দিন…",
+   "pt-BR": "Responder ao Claude…",
+   "ru": "Ответить Claude…",
+   "id": "Balas Claude…"
+  },
+  "The session's terminal window was not found.": {
+   "zh-Hans": "未找到该会话的终端窗口。",
+   "hi": "सेशन की टर्मिनल विंडो नहीं मिली।",
+   "es": "No se encontró la ventana del terminal de la sesión.",
+   "ar": "لم يُعثر على نافذة طرفية الجلسة.",
+   "fr": "La fenêtre du terminal de la session est introuvable.",
+   "bn": "সেশনের টার্মিনাল উইন্ডো পাওয়া যায়নি।",
+   "pt-BR": "A janela do terminal da sessão não foi encontrada.",
+   "ru": "Окно терминала сессии не найдено.",
+   "id": "Jendela terminal sesi tidak ditemukan."
+  },
   "Face · {look}": {
    "zh-Hans": "脸 · {look}",
    "hi": "चेहरा · {look}",

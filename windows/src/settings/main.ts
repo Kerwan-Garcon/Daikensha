@@ -232,6 +232,21 @@ function claudeSection(status: HookStatus): HTMLElement {
       }));
     }
     body.append(actions);
+
+    // Answering Claude from the island, in the same session (pipe.rs).
+    body.append(
+      h("div", { class: "row" },
+        h("label", { text: t("Reply from the island") }),
+        toggle(settings.replyFromIsland, (v) => { settings.replyFromIsland = v; void save(); }),
+      ),
+      h("div", { class: "hint", text: t("When Claude Code finishes a turn, its whole answer shows in the island with a field to reply. Your reply goes to the same session, as if typed in its terminal. Until you reply or click Done, that terminal waits; Esc there takes it back at any time.") }),
+    );
+    if (settings.replyFromIsland && status.installed && !status.replyReady) {
+      body.append(h("div", {
+        class: "notice warn",
+        text: t("Your hooks were installed by an older Coucou: reinstall them (backup, diff, then your click) so a reply can wait as long as you need."),
+      }));
+    }
   }
 
   draw();
@@ -1515,7 +1530,7 @@ let notchPage: PageId = "general";
 /** Reads what the sections of the Notch page show and draws them. */
 async function render() {
   const status = (await Bridge.hooksStatus()) ?? {
-    installed: false, planRelayInstalled: false, settingsPath: "", hookPath: "", hookReady: false,
+    installed: false, planRelayInstalled: false, settingsPath: "", hookPath: "", hookReady: false, replyReady: false,
   };
   const agents = await Bridge.agentHooksList();
 

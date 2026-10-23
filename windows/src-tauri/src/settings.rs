@@ -38,6 +38,9 @@ pub struct Settings {
     /// Show the Codex plan pill (5 h / weekly limits from `codex app-server`).
     /// Off by default; nothing is installed for it.
     pub show_codex_plan_in_notch: bool,
+    /// When a Claude Code turn ends, the island holds the session so the user
+    /// can reply from it (pipe.rs, the relay's Stop hook). Off by default.
+    pub reply_from_island: bool,
     /// Claude through the user's own Claude Code and its subscription login
     /// instead of the API key (claude_cli.rs): the chat's "Claude subscription"
     /// provider, the dictation clean-up and the Notetaker's summary. Off: the
@@ -170,6 +173,7 @@ impl Default for Settings {
             show_plan_in_notch: false,
             plan_relay_installed: false,
             show_codex_plan_in_notch: false,
+            reply_from_island: false,
             claude_subscription: false,
             shell_panel: false,
             shell_clipboard: false,
@@ -467,6 +471,7 @@ mod tests {
   "showPlanInNotch": true,
   "planRelayInstalled": true,
   "showCodexPlanInNotch": true,
+  "replyFromIsland": true,
   "claudeSubscription": true,
   "shellPanel": true,
   "shellClipboard": true,
@@ -991,6 +996,7 @@ mod tests {
                 "showPlanInNotch",
                 "planRelayInstalled",
                 "showCodexPlanInNotch",
+                "replyFromIsland",
                 "claudeSubscription",
                 "shellPanel",
                 "shellClipboard",

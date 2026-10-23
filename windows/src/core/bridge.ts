@@ -223,6 +223,8 @@ export const Bridge = {
    * "Open terminal": the window the session runs in when Rust found it
    * (Windows; Linux on X11 and KDE Plasma), else the folder in VS Code.
    */
+  /** The user's reply to a held Claude Code turn: Claude carries on with it. */
+  sessionReply: (replyId: string, text: string) => call<boolean>("session_reply", { replyId, text }),
   openSession: (sessionId: string | null, path: string | null) =>
     call<boolean>("open_session", { sessionId, path }),
 
@@ -610,6 +612,8 @@ export interface HookStatus {
   settingsPath: string;
   hookPath: string;
   hookReady: boolean;
+  /** The Stop hook waits long enough to reply from the island (hooks.rs). */
+  replyReady: boolean;
 }
 
 /** One agent other than Claude Code, as agents.rs reports it. */

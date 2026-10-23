@@ -32,3 +32,55 @@
   border-radius: 50%;
   flex: 0 0 auto;
 }
+
+/* ── The finished card: Claude's whole answer, and the reply field ─────────── */
+
+.who-line {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.final-icon {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border: 0;
+  border-radius: 12px;
+  background: rgb(var(--color-overlay-rgb) / 0.07);
+  color: var(--color-text-muted);
+  cursor: default;
+}
+.final-icon:hover { color: var(--color-text); background: rgb(var(--color-overlay-rgb) / 0.13); }
+
+.final-text {
+  max-height: 78px;
+  overflow-y: auto;
+  font: 400 13px/1.45 var(--font-sans);
+  color: var(--color-text-2);
+  user-select: text;
+  scrollbar-width: thin;
+}
+.final-text p { margin: 0 0 4px; }
+.final-text :is(ul, ol) { margin: 0 0 4px; padding-left: 18px; }
+.final-text code { font: 12px var(--font-mono); }
+.final-text pre { margin: 0 0 4px; white-space: pre-wrap; }
+
+.reply-row { align-items: center; }
+
+.reply-input {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 30px;
+  padding: 0 12px;
+  border-radius: 999px;
+  border: 1px solid rgb(var(--color-overlay-rgb) / 0.10);
+  background: rgb(var(--color-overlay-rgb) / 0.06);
+  color: var(--color-text);
+  font: 13px var(--font-sans);
+  outline: none;
+}
+.reply-input:focus { border-color: rgb(var(--color-overlay-rgb) / 0.28); }

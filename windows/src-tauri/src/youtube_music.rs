@@ -586,7 +586,7 @@ async fn send_artwork(app: &AppHandle, art_url: String) {
 
 /// Where the pill stands, for the voice: connected to Pear, and playing.
 pub fn voice_status() -> (bool, bool) {
-    let s = SHARED.lock().unwrap();
+    let s = SHARED.lock();
     (s.active && s.state.link == Link::Connected, s.active && s.state.playing)
 }
 
@@ -594,7 +594,7 @@ pub fn voice_status() -> (bool, bool) {
 /// after the current song, then on to it. The result's title is not known
 /// here; the card shows it a moment later.
 pub async fn search_and_play(app: &AppHandle, query: &str) -> Result<(), String> {
-    let connected = SHARED.lock().unwrap().state.link == Link::Connected;
+    let connected = SHARED.lock().state.link == Link::Connected;
     let token = token().filter(|_| connected).ok_or("not connected")?;
     let client = client(Duration::from_secs(10)).ok_or("no client")?;
     let post = |path: &str, body: Option<Json>| {

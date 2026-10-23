@@ -16,6 +16,13 @@
 //! * Only `PermissionRequest` waits for an answer, because approving from the
 //!   island is the whole point. No answer means no decision, and the agent asks
 //!   in its terminal exactly as if Coucou were not installed.
+//! * Claude Code's `Stop` may also wait, but only when Coucou says so: the app
+//!   answers `hold` within the usual 2 s when the user turned on "Reply from
+//!   the island" and the card is on screen. The relay then waits, with no
+//!   deadline of its own, for the reply (`{"reply":"…"}`, handed back as the
+//!   documented `decision: block`, so Claude carries on in the same session)
+//!   or for the card to be closed. An older or closed Coucou says nothing, and
+//!   the relay exits as before. Esc in the terminal stops the hook at any time.
 //!
 //! Usage: `coucou-hook [--agent <name>] [<EventName>]` (the event name is also
 //! read from the JSON; `--agent` is absent for Claude Code), or
@@ -51,6 +58,10 @@ const MAX_FIELD_LEN: usize = 2_000;
 mod statusline;
 mod tool_guard;
 mod tool_lists;
+
+/// Claude's final message on Stop: the island shows it whole, so it gets more
+/// room than the other fields.
+const MAX_FINAL_LEN: usize = 16 * 1024;
 
 /// The live diff needs the whole text of a file edit, once it has happened:
 /// PostToolUse of these tools keeps its edit strings far longer than the rest.
@@ -128,7 +139,27 @@ fn main() {
     // Only an agent whose decisions the island can give waits for one; any other
     // would be held for nothing, its decision being thrown away (reply.rs).
     let waits_for_answer = event.name == "PermissionRequest" && reply::takes_decisions(&args.agent);
+    // Claude Code only: the reply goes back through its Stop hook output.
+    let may_hold = event.name == "Stop" && args.agent.is_empty();
     let budget = if waits_for_answer { DECISION_BUDGET } else { FIRE_AND_FORGET_BUDGET };
+
+    if may_hold {
+        let (tx, rx) = mpsc::channel::<Held>();
+        let line = event.line.clone();
+        std::thread::spawn(move || talk_stop(&line, &tx));
+        // The usual budget for Coucou to say "hold"; after that, no deadline:
+        // the user is typing a reply, and Claude Code's own hook timeout (or
+        // Esc in the terminal) has the last word.
+        let answer = match rx.recv_timeout(FIRE_AND_FORGET_BUDGET) {
+            Ok(Held::Waiting) => rx.recv().ok().and_then(|m| match m {
+                Held::Reply(r) => r,
+                Held::Waiting => None,
+            }),
+            _ => None,
+        };
+        print(answer.as_deref().and_then(reply::stop_json));
+        std::process::exit(0);
+    }
 
     // The worker owns every blocking call. If it overruns the budget we simply
     // stop listening and exit: the process dying takes the pipe handle with it.
@@ -266,7 +297,19 @@ fn truncate_payload(payload: &mut serde_json::Value, event: &str) {
         None
     };
 
+    // Claude's final words, kept longer for the island to show them whole.
+    let last = (event == "Stop")
+        .then(|| payload.as_object_mut().and_then(|map| map.remove("last_assistant_message")))
+        .flatten();
+
     truncate_strings(payload);
+
+    if let Some(Value::String(mut text)) = last {
+        cut(&mut text, MAX_FINAL_LEN);
+        if let Some(map) = payload.as_object_mut() {
+            map.insert("last_assistant_message".into(), Value::String(text));
+        }
+    }
 
     if let Some(mut input) = input {
         let mut budget = MAX_DIFF_TOTAL;
@@ -339,6 +382,48 @@ fn cut(s: &mut String, max: usize) -> bool {
 }
 
 /// Connect, send, and — for a permission request — wait for the island's word.
+/// What the Stop worker tells the main thread.
+enum Held {
+    /// Coucou holds the session for a reply.
+    Waiting,
+    /// The reply line, or None when the card was closed.
+    Reply(Option<String>),
+}
+
+/// Reads one line from the pipe; None on close or error.
+fn read_line(pipe: &mut impl Read) -> Option<String> {
+    let mut buf = Vec::new();
+    let mut byte = [0u8; 1];
+    loop {
+        match pipe.read(&mut byte) {
+            Ok(0) | Err(_) => break,
+            Ok(_) if byte[0] == b'\n' => break,
+            Ok(_) => {
+                buf.push(byte[0]);
+                if buf.len() > 256 * 1024 {
+                    return None;
+                }
+            }
+        }
+    }
+    let line = String::from_utf8_lossy(&buf).trim().to_string();
+    (!line.is_empty()).then_some(line)
+}
+
+/// Stop: forward it; if Coucou answers `hold`, wait for the reply line.
+fn talk_stop(payload: &str, tx: &mpsc::Sender<Held>) {
+    let Some(mut pipe) = connect() else { return };
+    if pipe.write_all(payload.as_bytes()).is_err() {
+        return;
+    }
+    let _ = pipe.flush();
+    if read_line(&mut pipe).as_deref() != Some("hold") {
+        return;
+    }
+    let _ = tx.send(Held::Waiting);
+    let _ = tx.send(Held::Reply(read_line(&mut pipe)));
+}
+
 fn talk(payload: &str, waits_for_answer: bool) -> Option<String> {
     let mut pipe = connect()?;
 
@@ -372,6 +457,27 @@ fn talk(payload: &str, waits_for_answer: bool) -> Option<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn the_final_message_of_a_stop_is_kept_long_and_the_rest_capped() {
+        let long = "word ".repeat(2_000); // 10 KB
+        let raw = serde_json::json!({ "hook_event_name": "Stop", "last_assistant_message": long, "cwd": "x".repeat(5_000) }).to_string();
+        let (v, _) = run(&raw, "", "Stop");
+        assert_eq!(v["last_assistant_message"].as_str().unwrap().len(), long.len());
+        assert!(v["cwd"].as_str().unwrap().len() <= MAX_FIELD_LEN + 4);
+        let huge = "x".repeat(40_000);
+        let raw = serde_json::json!({ "hook_event_name": "Stop", "last_assistant_message": huge }).to_string();
+        let (v, _) = run(&raw, "", "Stop");
+        assert!(v["last_assistant_message"].as_str().unwrap().len() <= MAX_FINAL_LEN + 4);
+    }
+
+    #[test]
+    fn a_line_is_read_up_to_its_newline() {
+        let mut input: &[u8] = b"hold\n{\"reply\":\"ok\"}\n";
+        assert_eq!(read_line(&mut input).as_deref(), Some("hold"));
+        assert_eq!(read_line(&mut input).as_deref(), Some(r#"{"reply":"ok"}"#));
+        assert_eq!(read_line(&mut input), None, "closed");
+    }
 
     fn run(raw: &str, agent: &str, event: &str) -> (Value, Event) {
         let args = Args { agent: agent.into(), event: event.into() };

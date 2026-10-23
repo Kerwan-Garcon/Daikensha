@@ -56,6 +56,20 @@ pub fn stdout(agent: &str, event: &str, decision: Option<&str>, question: Option
     }
 }
 
+/// What a Claude Code Stop hook prints to hand the user's reply from the
+/// island back to the same session: Claude does not stop, and takes `reason`
+/// as its next instruction (https://code.claude.com/docs/en/hooks, Stop).
+/// The reply arrives as `{"reply":"…"}`; anything else, or an empty reply,
+/// prints nothing and the session simply ends its turn.
+pub fn stop_json(answer: &str) -> Option<String> {
+    let reply = serde_json::from_str::<Value>(answer).ok()?;
+    let text = reply.get("reply")?.as_str()?.trim();
+    if text.is_empty() {
+        return None;
+    }
+    Some(json!({ "decision": "block", "reason": text }).to_string())
+}
+
 /// The documented PermissionRequest output. Anything we do not recognise prints
 /// nothing at all rather than guessing — silence is the safe answer.
 /// See https://code.claude.com/docs/en/hooks
@@ -150,6 +164,15 @@ mod tests {
         // choice back to the agent's own prompt.
         let decided = v.get("decision").is_some_and(|d| d.as_str() != Some("ask"));
         text.contains("allow") || decided || v.get("permission").is_some() || v.get("continue").is_some()
+    }
+
+    #[test]
+    fn a_reply_from_the_island_continues_the_session_with_its_text() {
+        let out: Value = serde_json::from_str(&stop_json(r#"{"reply":"  now add the tests "}"#).unwrap()).unwrap();
+        assert_eq!(out, json!({ "decision": "block", "reason": "now add the tests" }));
+        assert!(stop_json(r#"{"reply":"  "}"#).is_none());
+        assert!(stop_json("allow").is_none());
+        assert!(stop_json(r#"{"answers":{}}"#).is_none());
     }
 
     #[test]

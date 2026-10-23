@@ -292,30 +292,25 @@ fn open_in_vscode(path: Option<String>) -> bool {
 }
 
 /// "Open terminal": brings forward the terminal or editor window the session
-/// runs in, when it was found (see session_window.rs); otherwise opens the
-/// folder in VS Code, as before.
+/// runs in, when it was found (see session_window.rs). Nothing else opens when
+/// it was not — no editor in its place: the island says so, and Claude's
+/// answer stays readable (and answerable) there.
 #[tauri::command]
 fn open_session(session_id: Option<String>, path: Option<String>) -> bool {
     let Some(owners) = session_id.as_deref().and_then(session_window::lookup) else {
-        return open_in_vscode(path);
+        return false;
     };
     let folder = path.as_deref().map(session_window::folder_name).unwrap_or_default().to_string();
     #[cfg(windows)]
     {
-        if platform::focus_session_window(&owners, &folder) {
-            return true;
-        }
-        open_in_vscode(path)
+        platform::focus_session_window(&owners, &folder)
     }
     // Linux asks the display server, KWin or the terminal, which can take a
-    // moment: never on the UI thread a sync command runs on. VS Code still
-    // opens when none of them could bring the window forward.
+    // moment: never on the UI thread a sync command runs on.
     #[cfg(target_os = "linux")]
     {
         std::thread::spawn(move || {
-            if !platform::focus_session_window(&owners, &folder) {
-                open_in_vscode(path);
-            }
+            platform::focus_session_window(&owners, &folder);
         });
         true
     }
@@ -491,9 +486,17 @@ fn approval_answer(
     pipe::answer_question(&app, &request_id, &answers);
 }
 
+/// The user's reply to a finished Claude Code turn, from the island: Claude
+/// carries on with it in the same session. Only ever from the reply field.
+#[tauri::command]
+fn session_reply(app: AppHandle, reply_id: String, text: String) -> bool {
+    pipe::reply(&app, &reply_id, &text)
+}
+
 /// The island has the card on screen, so the long wait for a human may begin.
 /// Until this arrives the relay only waits a few hundred milliseconds, which is
-/// what stops a paused or unresponsive island from freezing Claude Code.
+/// what stops a paused or unresponsive island from freezing Claude Code. Also
+/// for a finished turn held for a reply.
 #[tauri::command]
 fn approval_ack(app: AppHandle, request_id: String) {
     pipe::acknowledge(&app, &request_id);
@@ -879,6 +882,7 @@ pub fn run() {
             approval_decision,
             approval_answer,
             approval_ack,
+            session_reply,
             approval_decline,
             log_line,
             chat_send,

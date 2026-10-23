@@ -43,6 +43,11 @@ export interface AgentTask {
   sessionId?: string | null;
   /** Claude's final message after Stop, one line; cleared when a new turn starts. */
   finalLine?: string | null;
+  /** The same message whole (Markdown), for the finished card. */
+  finalText?: string | null;
+  /** A finished Claude Code turn held for a reply from the island (pipe.rs), and its session. */
+  replyId?: string | null;
+  replySession?: string | null;
 }
 
 export interface ApprovalInfo {
@@ -124,6 +129,7 @@ export interface Settings {
   planRelayInstalled: boolean;
   /** Show the Codex plan pill in the island's header. */
   showCodexPlanInNotch: boolean;
+  replyFromIsland: boolean;
   /**
    * Claude through the user's own Claude Code and subscription instead of the
    * API key (claude_cli.rs). Off by default; only Settings → Claude turns it on.
@@ -204,6 +210,7 @@ export const DEFAULT_SETTINGS: Settings = {
   showPlanInNotch: false,
   planRelayInstalled: false,
   showCodexPlanInNotch: false,
+  replyFromIsland: false,
   claudeSubscription: false,
   shellPanel: false,
   shellClipboard: false,
@@ -551,6 +558,8 @@ class AppState {
    */
   defaultView(): IslandViewName {
     if (this.pendingApproval) return this.pendingApproval.questions ? "question" : "approval";
+    // A finished turn held for a reply comes back with its field (pipe.rs).
+    if (this.focusTask?.replyId) return "finished";
     return this.tasks.length === 0 ? "empty" : "overview";
   }
 }

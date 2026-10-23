@@ -9,6 +9,7 @@ import { State, type AgentTask } from "../core/state";
 import { washRGBA, type IslandViewName, type Wash } from "../core/layout";
 import { createMiniBot, pruneMiniBots } from "../mochi/minibots";
 import { buildPrompt } from "./chat";
+import { renderMarkdown } from "./markdown";
 import { buildChoose, buildUpload, buildUploading } from "./upload";
 import { renderIntegrationCard, type IntegrationCardHooks } from "./integrations";
 import { highlightRow, listRows, openRow } from "./github";
@@ -47,6 +48,10 @@ export interface ViewActions {
   openTarget(): void;
   openUrl(url: string): void;
   decide(d: "allow" | "deny"): void;
+  /** The finished card's reply field: hands `text` to the held Claude Code turn. */
+  replyToSession(text: string): void;
+  /** The finished card's Done: lets a held turn end, then folds the island. */
+  endHeldTurn(): void;
   /** A level 2 card's buttons (views/confirm.ts): run it, or drop it. */
   decideCard(ok: boolean): void;
   /** The circled capture's preview: ask about it, or forget it. */
@@ -711,13 +716,46 @@ function buildError(actions: ViewActions): ViewHost {
 
 function buildFinished(actions: ViewActions): ViewHost {
   const who = h("div");
-  const title = h("div", { class: "title one-line" });
-  const open = btn(tl("Open terminal"), "primary", () => actions.openTerminal());
-  const row = h("div", { class: "actions" },
-    open,
-    btn(tl("OK"), "secondary", () => actions.collapse()),
-  );
-  const el = h("div", { class: "view" }, card("green", stack(116, 16, who, title, row)));
+  // Claude's whole answer, readable and selectable, scrolling when it is long.
+  const answer = h("div", { class: "final-text" });
+  const copy = h("button", { class: "final-icon", title: tl("Copy the answer"), "aria-label": tl("Copy the answer") }, svg(ICONS.copy, 13));
+  const open = btn(tl("Open terminal"), "secondary", () => actions.openTerminal());
+  const ok = btn(tl("OK"), "secondary", () => actions.collapse());
+  const done = btn(tl("Done"), "secondary", () => actions.endHeldTurn());
+  // Replying from the island (Settings → Reply from the island): one line, Enter sends.
+  const input = h("input", { class: "reply-input", type: "text", placeholder: t("Reply to Claude…"), "aria-label": t("Reply to Claude…"), spellcheck: "true" });
+  const send = btn(tl("Send"), "primary", () => submit());
+  const replyRow = h("div", { class: "actions reply-row" }, input, send, done);
+  const row = h("div", { class: "actions" }, open, ok);
+  const el = h("div", { class: "view" }, card("green", stack(116, 16, h("div", { class: "who-line" }, who, copy), answer, replyRow, row)));
+  let shownText: string | null = null;
+
+  function submit() {
+    const text = input.value.trim();
+    if (!text) return;
+    input.value = "";
+    input.blur();
+    actions.replyToSession(text);
+  }
+  input.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      submit();
+    }
+    // Escape leaves the field, not the island.
+    if (e.key === "Escape") {
+      e.stopPropagation();
+      input.blur();
+    }
+  });
+  // The field needs the keyboard, which the island only takes on demand.
+  input.addEventListener("focus", () => void Bridge.focusWindow(true));
+  input.addEventListener("blur", () => void Bridge.focusWindow(false));
+  copy.addEventListener("click", () => {
+    const text = State.focusTask?.finalText || State.focusTask?.finalLine || "";
+    if (text) void (navigator as Partial<Navigator>).clipboard?.writeText(text).catch(() => {});
+  });
+
   return {
     el,
     sync() {
@@ -726,11 +764,22 @@ function buildFinished(actions: ViewActions): ViewHost {
       who.append(agentWho(State.focusTask, agent ? t("finished") : t("Claude Code finished")));
       // The final message, else the last step that is not a diff (FinishedView).
       const task = State.focusTask;
-      title.textContent = task?.finalLine || (task && lastTextStep(task.steps)) || t("Session finished");
+      const text = task?.finalText || task?.finalLine || (task && lastTextStep(task.steps)) || t("Session finished");
+      if (text !== shownText) {
+        shownText = text;
+        renderMarkdown(answer, text);
+        answer.scrollTop = 0;
+      }
+      const held = !!task?.replyId;
+      replyRow.style.display = held ? "" : "none";
+      ok.style.display = held ? "none" : "";
       // Sessions from the Claude desktop app live there, not in a terminal.
       const label = task?.id === "agent_claude-desktop" ? t("Open Claude") : t("Open terminal");
       const span = open.firstElementChild as HTMLElement;
       if (span.textContent !== label) span.textContent = label;
+    },
+    focus() {
+      if (State.focusTask?.replyId) input.focus();
     },
   };
 }

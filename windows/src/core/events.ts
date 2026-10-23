@@ -32,6 +32,8 @@ export interface EventMap {
   "circle-captured": null;
   // Agents and integrations
   "hook": HookPayload;
+  /** A held Claude Code turn ended in the terminal, or its relay went away: no reply any more. */
+  "reply-closed": { reply_id: string };
   "chat-delta": string;
   "integration": IntegrationUpdate;
   "github-alerts": GitHubEvent[];
