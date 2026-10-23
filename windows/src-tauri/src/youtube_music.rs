@@ -302,6 +302,23 @@ pub fn backoff_secs(failures: u32) -> u64 {
     (2u64 << failures.min(5)).min(60)
 }
 
+/// The top result of Pear's `/search` (YouTube Music's own answer, passed on
+/// as is): the first song or video id in the order YouTube Music lists them.
+pub fn first_video_id(found: &Json) -> Option<String> {
+    match found {
+        Json::Object(map) => {
+            if let Some(Json::String(id)) = map.get("videoId") {
+                if id.len() == 11 && id.chars().all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_') {
+                    return Some(id.clone());
+                }
+            }
+            map.values().find_map(first_video_id)
+        }
+        Json::Array(list) => list.iter().find_map(first_video_id),
+        _ => None,
+    }
+}
+
 // ── Runtime ───────────────────────────────────────────────────────────────────
 
 use std::sync::{LazyLock, Mutex};
@@ -562,6 +579,45 @@ async fn send_artwork(app: &AppHandle, art_url: String) {
         data_url: String,
     }
     let _ = app.emit_to(crate::island::WINDOW_LABEL, ARTWORK_EVENT, Artwork { art_url, data_url });
+}
+
+// ── « OK Coucou » ─────────────────────────────────────────────────────────────
+
+/// Where the pill stands, for the voice: connected to Pear, and playing.
+pub fn voice_status() -> (bool, bool) {
+    let s = SHARED.lock().unwrap();
+    (s.active && s.state.link == Link::Connected, s.active && s.state.playing)
+}
+
+/// « mets du lofi sur YouTube Music »: Pear's search, the top result right
+/// after the current song, then on to it. The result's title is not known
+/// here; the card shows it a moment later.
+pub async fn search_and_play(app: &AppHandle, query: &str) -> Result<(), String> {
+    let connected = SHARED.lock().unwrap().state.link == Link::Connected;
+    let token = token().filter(|_| connected).ok_or("not connected")?;
+    let client = client(Duration::from_secs(10)).ok_or("no client")?;
+    let post = |path: &str, body: Option<Json>| {
+        let mut request = client.post(format!("{}/api/v1/{path}", base())).bearer_auth(&token);
+        if let Some(body) = body {
+            request = request.json(&body);
+        }
+        request.send()
+    };
+    let response = post("search", Some(serde_json::json!({ "query": query }))).await.map_err(|e| e.to_string())?;
+    if response.status().as_u16() == 401 {
+        let _ = crate::secrets::set_internal(TOKEN_KEY, "");
+        update(app, |s| s.disconnect(Link::NeedsAuth, now_ms()));
+        wake(Wake::Retry);
+        return Err("not connected".into());
+    }
+    let body = crate::net::read_capped(response, crate::net::MAX_BODY).await?;
+    let found: Json = serde_json::from_slice(&body).map_err(|e| e.to_string())?;
+    let id = first_video_id(&found).ok_or("nothing found")?;
+    let queued = serde_json::json!({ "videoId": id, "insertPosition": "INSERT_AFTER_CURRENT_VIDEO" });
+    post("queue", Some(queued)).await.map_err(|e| e.to_string())?;
+    post("next", None).await.map_err(|e| e.to_string())?;
+    post("play", None).await.map_err(|e| e.to_string())?;
+    Ok(())
 }
 
 // ── Commands ──────────────────────────────────────────────────────────────────
@@ -875,6 +931,28 @@ mod tests {
         assert!(!artwork_url_allowed("https://evilgoogleusercontent.com/abc"));
         assert!(!artwork_url_allowed("https://127.0.0.1/abc"));
         assert!(!artwork_url_allowed("file:///etc/passwd"));
+    }
+
+    #[test]
+    fn a_search_plays_the_first_song_youtube_music_lists() {
+        // The shape of YouTube Music's answer, cut down: filter chips first
+        // (no song), then the top result card, then the songs shelf.
+        let found = json!({ "contents": { "tabbedSearchResultsRenderer": { "tabs": [{ "tabRenderer": { "content": {
+            "sectionListRenderer": {
+                "header": { "chipCloudRenderer": { "chips": [{ "chipCloudChipRenderer": { "navigationEndpoint": {
+                    "searchEndpoint": { "query": "lofi", "params": "EgWKAQIIAWoKEAkQBRAKEAMQBA%3D%3D" } } } }] } },
+                "contents": [
+                    { "musicCardShelfRenderer": { "title": { "runs": [{ "text": "lofi hip hop radio",
+                        "navigationEndpoint": { "watchEndpoint": { "videoId": "jfKfPfyJRdk" } } }] } } },
+                    { "musicShelfRenderer": { "contents": [{ "musicResponsiveListItemRenderer": {
+                        "playlistItemData": { "videoId": "5qap5aO4i9A" } } }] } }
+                ]
+            } } } }] } } });
+        assert_eq!(first_video_id(&found).as_deref(), Some("jfKfPfyJRdk"));
+        assert_eq!(first_video_id(&json!({ "contents": [] })), None);
+        // Something that is not a YouTube id is skipped.
+        assert_eq!(first_video_id(&json!([{ "videoId": "../../etc" }, { "videoId": "dQw4w9WgXcQ" }])).as_deref(),
+            Some("dQw4w9WgXcQ"));
     }
 
     #[test]

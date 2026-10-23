@@ -493,6 +493,22 @@ pub fn spotify_installed() -> bool {
     }
 }
 
+/// Spotify plays on a declared pill: « OK Coucou » drives the player that plays.
+pub fn is_playing() -> bool {
+    #[cfg(target_os = "linux")]
+    {
+        linux::playing()
+    }
+    #[cfg(windows)]
+    {
+        win::playing()
+    }
+    #[cfg(not(any(target_os = "linux", windows)))]
+    {
+        false
+    }
+}
+
 /// Starts the listener when the pill is declared, stops it when it is not.
 /// Called at launch and after every settings save.
 pub fn sync(app: &AppHandle, active_integrations: &[String]) {
@@ -639,6 +655,11 @@ mod linux {
 
     pub fn sync(app: &AppHandle, on: bool) {
         set_active(Out::App(app.clone()), on);
+    }
+
+    pub fn playing() -> bool {
+        let s = SHARED.lock().unwrap();
+        s.active && s.state.playing
     }
 
     pub fn set_active(out: Out, on: bool) {
@@ -1463,6 +1484,11 @@ mod win {
     }
 
     // ── Start / stop ──────────────────────────────────────────────────────────
+
+    pub fn playing() -> bool {
+        let s = SHARED.lock().unwrap();
+        s.active && s.state.playing
+    }
 
     pub fn sync(app: &AppHandle, on: bool) {
         let (tx, rx) = mpsc::channel();

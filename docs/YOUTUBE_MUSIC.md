@@ -101,5 +101,5 @@ Pendant qu'il tourne, taper `p` (lecture/pause), `n` (suivant), `s` (aller à 1:
 ## Limites connues
 
 - Le port est fixé à 26538 (celui par défaut du plugin). Si vous l'avez changé dans Pear, remettez 26538.
-- La commande vocale « OK Coucou » ne pilote pas encore YouTube Music. Elle connaît le morceau en cours sur Windows/Linux, pas sur Mac.
+- « OK Coucou » pilote YouTube Music (lecture, pause, suivant, précédent, volume, et « mets du lofi » qui joue le premier résultat). Les commandes vont au lecteur qui joue ; si rien ne joue et que Pear est connecté, à YouTube Music ; « … sur YouTube Music » le choisit. La recherche prend le premier résultat de YouTube Music, qui n'est pas toujours celui attendu (un artiste ou un album en tête de résultats donne leur premier titre).
 - Sur Mac, si Pear est installé sous un autre identifiant que `com.github.th-ch.youtube-music` (fork), la carte sonde quand même le port quand elle s'affiche, mais le lancement de Pear n'est pas détecté automatiquement, et le bouton d'installation s'affiche faute de le trouver.

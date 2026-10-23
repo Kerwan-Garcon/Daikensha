@@ -69,6 +69,7 @@ final class VoiceEngine: ObservableObject {
     // Music ducking during command (main thread)
     private var savedMusicVolume:   Int?  = nil
     private var savedSpotifyVolume: Int?  = nil
+    private var savedYouTubeMusicVolume: Int? = nil
     private var isDuckingMusic             = false
 
     // Unavailability retry
@@ -473,6 +474,7 @@ final class VoiceEngine: ObservableObject {
         // Music without words gives no text either: while music plays it takes 6 silent
         // windows, not 2, before a rebuild (each costs a restart and ~0.5 s of deafness).
         let music = AppState.shared.musicPlaying || SpotifyController.shared.isPlaying
+            || YouTubeMusicController.shared.isPlaying
         deafWindows += 1
         if deafWindows >= (music ? 6 : 2) {
             deafWindows = 0
@@ -516,7 +518,7 @@ final class VoiceEngine: ObservableObject {
 
     // MARK: - Music ducking
 
-    /// Lower Apple Music and Spotify to 25 % while a command is in progress.
+    /// Lower Apple Music, Spotify and YouTube Music to 25 % while a command is in progress.
     /// Saves the current volumes so `restoreMusic()` can undo the change.
     private func duckMusic() {
         guard !isDuckingMusic else { return }
@@ -526,6 +528,12 @@ final class VoiceEngine: ObservableObject {
             savedSpotifyVolume = SpotifyController.shared.volume
             SpotifyController.shared.setVolume(25)
             appendAppLog("nb.log", "[Voice] music duck spotify \(savedSpotifyVolume ?? -1) → 25")
+        }
+
+        if YouTubeMusicController.shared.isPlaying {
+            savedYouTubeMusicVolume = YouTubeMusicController.shared.volume
+            YouTubeMusicController.shared.setVolume(25)
+            appendAppLog("nb.log", "[Voice] music duck youtube music \(savedYouTubeMusicVolume ?? -1) → 25")
         }
 
         if AppState.shared.musicPlaying {
@@ -550,6 +558,7 @@ final class VoiceEngine: ObservableObject {
             VoiceActionRunner.shared.volumeCommandExecuted = false
             savedMusicVolume   = nil
             savedSpotifyVolume = nil
+            savedYouTubeMusicVolume = nil
             appendAppLog("nb.log", "[Voice] music restore skipped (volume command)")
             return
         }
@@ -558,6 +567,11 @@ final class VoiceEngine: ObservableObject {
             SpotifyController.shared.setVolume(vol)
             appendAppLog("nb.log", "[Voice] music restore spotify → \(vol)")
             savedSpotifyVolume = nil
+        }
+        if let vol = savedYouTubeMusicVolume {
+            YouTubeMusicController.shared.setVolume(vol)
+            appendAppLog("nb.log", "[Voice] music restore youtube music → \(vol)")
+            savedYouTubeMusicVolume = nil
         }
         if let vol = savedMusicVolume {
             MusicController.shared.setVolume(vol)

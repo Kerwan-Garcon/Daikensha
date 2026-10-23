@@ -493,7 +493,38 @@ pub fn run_tool(app: &AppHandle, name: &str, input: &Value) -> (String, bool) {
     }
 }
 
+/// The player « OK Coucou » drives.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum Player {
+    Spotify,
+    YouTubeMusic,
+}
+
+/// The one the user named; otherwise the one playing; otherwise YouTube Music
+/// when Pear is connected (Spotify is silent then too); otherwise Spotify.
+pub fn pick_player(named: Option<&str>, spotify_playing: bool, ytm_connected: bool, ytm_playing: bool) -> Player {
+    match named {
+        Some("youtube_music") => return Player::YouTubeMusic,
+        Some("spotify") => return Player::Spotify,
+        _ => {}
+    }
+    if ytm_playing {
+        Player::YouTubeMusic
+    } else if spotify_playing {
+        Player::Spotify
+    } else if ytm_connected {
+        Player::YouTubeMusic
+    } else {
+        Player::Spotify
+    }
+}
+
 fn music(app: &AppHandle, input: &Value) -> (String, bool) {
+    let (ytm_connected, ytm_playing) = crate::youtube_music::voice_status();
+    let player = pick_player(input["player"].as_str(), crate::spotify::is_playing(), ytm_connected, ytm_playing);
+    if player == Player::YouTubeMusic {
+        return youtube_music(app, input, ytm_connected);
+    }
     let action = input["action"].as_str().unwrap_or("");
     let (control, value) = match action {
         "play_pause" => ("playPause", None),
@@ -517,6 +548,42 @@ fn music(app: &AppHandle, input: &Value) -> (String, bool) {
         ("done".into(), true)
     } else {
         ("Spotify is not running or not playing: tell the user to open it.".into(), false)
+    }
+}
+
+/// The same actions on YouTube Music, through Pear Desktop's API Server.
+fn youtube_music(app: &AppHandle, input: &Value, connected: bool) -> (String, bool) {
+    const NOT_CONNECTED: &str = "YouTube Music is not connected: tell the user to open Pear Desktop with its API \
+        Server plugin on, then press Connect on the YouTube Music card.";
+    if !connected {
+        return (NOT_CONNECTED.into(), false);
+    }
+    let action = input["action"].as_str().unwrap_or("");
+    let (control, value) = match action {
+        "play_pause" => ("playPause", None),
+        "next" => ("next", None),
+        "previous" => ("previous", None),
+        "set_volume" => ("volume", Some(input["volume"].as_f64().unwrap_or(50.0).clamp(0.0, 100.0))),
+        "search" => {
+            let q = input["query"].as_str().unwrap_or("").trim().to_string();
+            if q.is_empty() {
+                return ("missing query".into(), false);
+            }
+            return match tauri::async_runtime::block_on(crate::youtube_music::search_and_play(app, &q)) {
+                Ok(()) => (format!("YouTube Music now plays its top result for {q}."), true),
+                Err(e) if e == "nothing found" => (format!("YouTube Music found nothing for {q}."), false),
+                Err(e) if e == "not connected" => (NOT_CONNECTED.into(), false),
+                Err(e) => (format!("YouTube Music did not answer: {e}"), false),
+            };
+        }
+        _ => return ("unknown action".into(), false),
+    };
+    let done =
+        tauri::async_runtime::block_on(crate::youtube_music::youtube_music_control(app.clone(), control.into(), value));
+    if done {
+        ("done".into(), true)
+    } else {
+        (NOT_CONNECTED.into(), false)
     }
 }
 
@@ -602,6 +669,20 @@ fn find_app(wanted: &str) -> Option<(String, Box<dyn FnOnce()>)> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn the_voice_drives_the_player_that_plays() {
+        use Player::*;
+        // (named, Spotify playing, YouTube Music connected, YouTube Music playing)
+        assert_eq!(pick_player(Some("youtube_music"), true, false, false), YouTubeMusic, "named wins");
+        assert_eq!(pick_player(Some("spotify"), false, true, true), Spotify, "named wins");
+        assert_eq!(pick_player(None, true, true, true), YouTubeMusic, "both play: YouTube Music");
+        assert_eq!(pick_player(None, true, true, false), Spotify, "the one playing");
+        assert_eq!(pick_player(None, false, true, true), YouTubeMusic, "the one playing");
+        assert_eq!(pick_player(None, false, true, false), YouTubeMusic, "nothing plays, Pear is there");
+        assert_eq!(pick_player(None, false, false, false), Spotify, "as before");
+        assert_eq!(pick_player(Some("deezer"), false, false, false), Spotify, "an unknown name: as before");
+    }
 
     #[test]
     fn reopening_waits_longer_each_time_up_to_30_s() {
