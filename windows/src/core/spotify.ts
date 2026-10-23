@@ -41,15 +41,21 @@ export const IDLE_SPOTIFY: SpotifyState = {
   position: 0, positionAt: 0, shuffle: false, repeat: false, volume: 50,
 };
 
+/** A player's state on the page and its current cover (Spotify, YouTube Music). */
+export interface NowPlayingStore<S extends SpotifyState = SpotifyState> {
+  state: S;
+  artwork: { artUrl: string; dataUrl: string } | null;
+}
+
 /** The page's copy of the player, and the cover of the track that has one. */
-export const Spotify = {
-  state: { ...IDLE_SPOTIFY } as SpotifyState,
-  artwork: null as { artUrl: string; dataUrl: string } | null,
+export const Spotify: NowPlayingStore = {
+  state: { ...IDLE_SPOTIFY },
+  artwork: null,
 };
 
 /** The cover to show for the current track, if it has arrived. */
-export function currentArtwork(s: SpotifyState = Spotify.state): string | null {
-  const art = Spotify.artwork;
+export function currentArtwork(s: SpotifyState = Spotify.state, store: NowPlayingStore = Spotify): string | null {
+  const art = store.artwork;
   return art && s.track?.artUrl && art.artUrl === s.track.artUrl ? art.dataUrl : null;
 }
 
@@ -101,7 +107,8 @@ const DANCE_STATES: ReadonlySet<BotStateName> = new Set(["idle", "working", "thi
 
 /**
  * The island's Mochi (BotCanvasView, macOS): in the compact island whenever
- * music plays, expanded only on the overview with the music pill in front.
+ * music plays, expanded only on the overview with a playing music pill in
+ * front (`musicPills`, Spotify's when not given).
  */
 export function islandDances(o: {
   music: boolean;
@@ -109,10 +116,12 @@ export function islandDances(o: {
   mode: IslandMode;
   view: IslandViewName;
   focusId: string | null | undefined;
+  musicPills?: readonly string[];
 }): boolean {
   if (!o.music || !DANCE_STATES.has(o.state)) return false;
   if (o.mode === "compact") return true;
-  return o.mode === "expanded" && o.view === "overview" && o.focusId === SPOTIFY_ID;
+  return o.mode === "expanded" && o.view === "overview" && o.focusId != null &&
+    (o.musicPills ?? [SPOTIFY_ID]).includes(o.focusId);
 }
 
 /** Mochi on the desktop: the compact island's rules (DesktopMochi.swift). */

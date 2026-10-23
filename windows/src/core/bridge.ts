@@ -8,6 +8,7 @@ import { getCurrentWebview } from "@tauri-apps/api/webview";
 import type { Settings } from "./state";
 import type { RecapHistory, RecapPrefs } from "../recap/summary";
 import type { SpotifyState } from "./spotify";
+import type { YouTubeMusicState } from "./youtube-music";
 
 export const IS_TAURI =
   typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
@@ -464,6 +465,19 @@ export const Bridge = {
   spotifyOpen: () => call<boolean>("spotify_open"),
   /** Whether there is a Spotify to launch (Settings). */
   spotifyInstalled: () => call<boolean>("spotify_installed"),
+
+  // ── YouTube Music (src-tauri/src/youtube_music.rs) ────────────────────────
+  /** The player as it stands; reconnects at once if it can (the card came on screen). */
+  youTubeMusicRefresh: () => call<YouTubeMusicState | null>("youtube_music_refresh"),
+  /** "Connect…": Pear Desktop shows its Allow / Deny dialog. True when allowed. */
+  youTubeMusicConnect: () => call<boolean>("youtube_music_connect"),
+  /** True when Pear took it. Same actions and values as Spotify's. */
+  youTubeMusicControl: (action: SpotifyAction, value?: number) =>
+    call<boolean>("youtube_music_control", { action, value: value ?? null }),
+  /** Starts Pear Desktop; without it, its download page. */
+  youTubeMusicOpen: () => call<boolean>("youtube_music_open"),
+  /** Whether there is a Pear Desktop to launch (Settings). */
+  youTubeMusicInstalled: () => call<boolean>("youtube_music_installed"),
 };
 
 export type SpotifyAction = "playPause" | "next" | "previous" | "seek" | "shuffle" | "repeat" | "volume";

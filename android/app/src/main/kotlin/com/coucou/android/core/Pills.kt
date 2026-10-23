@@ -39,9 +39,11 @@ object Pills {
         PillDefinition("integration_vercel", "Vercel", "#7C5CFF", PillCategory.SERVICE),
         PillDefinition("integration_github", "GitHub", "#F4505E", PillCategory.SERVICE),
         PillDefinition("integration_notion", "Notion", "#8C8C8C", PillCategory.SERVICE),
+        PillDefinition("integration_linear", "Linear", "#5E6AD2", PillCategory.SERVICE),
         PillDefinition("integration_calcom", "Cal.com", "#C9956A", PillCategory.SERVICE),
         PillDefinition("integration_stripe", "Stripe", "#0570DE", PillCategory.SERVICE),
         PillDefinition("integration_spotify", "Spotify", "#1DB954", PillCategory.SERVICE),
+        PillDefinition("integration_youtube_music", "YouTube Music", "#FF0033", PillCategory.SERVICE),
     )
 
     fun byId(id: String): PillDefinition? = catalog.firstOrNull { it.id == id }

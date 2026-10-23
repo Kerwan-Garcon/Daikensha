@@ -136,6 +136,10 @@ export const PILL_CATALOG: readonly PillDefinition[] = [
   // (src-tauri/src/spotify.rs).
   { id: "integration_spotify", name: "Spotify", color: "#1DB954", category: "service",
     subtitle: N_("Integration"), source: "n8n", support: "yes", connect: none },
+  // YouTube Music through Pear Desktop's API Server, the same on both systems
+  // (src-tauri/src/youtube_music.rs).
+  { id: "integration_youtube_music", name: "YouTube Music", color: "#FF0033", category: "service",
+    subtitle: N_("Integration"), source: "n8n", support: "yes", connect: none },
 ];
 
 /** The always-on pill unless the user picks another workspace tool. */

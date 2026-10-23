@@ -861,6 +861,8 @@ const INTEGRATIONS: IntegrationDef[] = [
     fields: [{ key: "calcom-api-key", label: N_("API key"), placeholder: "cal_…", secret: true }] },
   // Nothing to enter: Spotify is read from the OS (src-tauri/src/spotify.rs).
   { id: "integration_spotify", name: "Spotify", color: "#1DB954", fields: [] },
+  // Nothing to enter either: "Connect…" on its card asks Pear Desktop (src-tauri/src/youtube_music.rs).
+  { id: "integration_youtube_music", name: "YouTube Music", color: "#FF0033", fields: [] },
 ];
 
 const MAX_ACTIVE = MAX_DECLARED;
@@ -976,11 +978,12 @@ function integrationsSection(present: Record<string, boolean>): HTMLElement {
 
     if (def.hint) rows.append(h("div", { class: "hint", text: t(def.hint) }));
     if (def.id === "integration_linear") rows.append(...linearExtras());
-    if (def.id === "integration_spotify") {
-      // As on the Mac's row: said only when there is no Spotify to launch.
+    if (def.id === "integration_spotify" || def.id === "integration_youtube_music") {
+      // As on the Mac's row: said only when there is no Spotify (Pear Desktop) to launch.
       const hint = h("div", { class: "hint", style: "padding-top:5px" });
       rows.append(hint);
-      void Bridge.spotifyInstalled().then((ok) => {
+      const installed = def.id === "integration_spotify" ? Bridge.spotifyInstalled() : Bridge.youTubeMusicInstalled();
+      void installed.then((ok) => {
         hint.textContent = ok === false ? t("Not installed") : "";
       });
     }
