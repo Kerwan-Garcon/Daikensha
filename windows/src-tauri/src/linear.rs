@@ -260,10 +260,24 @@ pub async fn create(app: AppHandle, title: String) -> Result<(), String> {
 }
 
 /// A new key: forget what the old one saw.
-pub fn key_changed() {
-    let mut cache = CACHE.lock();
-    cache.viewer = None;
-    cache.teams.clear();
+/// The key was saved or removed (call it after the store is written): forget
+/// what the old key saw and show the new state at once, as the Mac's
+/// keyChanged() does, instead of waiting for the next poll — which never comes
+/// once the key is gone.
+pub fn key_changed(app: &AppHandle) {
+    {
+        let mut cache = CACHE.lock();
+        cache.viewer = None;
+        cache.teams.clear();
+    }
+    let app = app.clone();
+    tauri::async_runtime::spawn(async move {
+        if secrets::present(KEY) {
+            poll(app).await;
+        } else {
+            integrations::emit(&app, IntegrationUpdate { id: ID, data: json!({}), error: None, event: None });
+        }
+    });
 }
 
 #[cfg(test)]

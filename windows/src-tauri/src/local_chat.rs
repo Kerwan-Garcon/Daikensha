@@ -236,15 +236,21 @@ fn read_prefix(path: &str, limit: usize) -> Option<String> {
     }
 }
 
+/// Sent with a look to a model server, which gets no screenshot.
+const NO_PICTURE_LINE: &str = "No screenshot reaches you: you only know the window's app and title. \
+Say so in one sentence, then answer from those alone without inventing what the window shows.";
+
 fn user_text(first: bool, context: Option<&ChatContext>, query: &str) -> String {
     match context.filter(|_| first) {
         Some(ChatContext::File { name, path }) => format!("{}\n\n{query}", file_note(name, path)),
         Some(ChatContext::Window { app_name, title, url }) => {
             format!("{}\n\n{query}", chat::window_line(app_name, title, url.as_deref()))
         }
-        // A model server gets the window's name only: few local models read images.
+        // A model server gets the window's name only: few local models read
+        // images. The look question speaks of an attached screenshot, so the
+        // model is told none came, or it describes a picture it never saw.
         Some(ChatContext::Look { app_name, title }) => {
-            format!("{}\n\n{query}", chat::window_line(app_name, title, None))
+            format!("{}\n{NO_PICTURE_LINE}\n\n{query}", chat::window_line(app_name, title, None))
         }
         // chat::send keeps captures for Claude.
         Some(ChatContext::Capture) | None => query.to_string(),
@@ -527,6 +533,17 @@ mod tests {
         assert_eq!(block_on(stream(&url(&u), None, "m", &json!({}), |_| {})).unwrap_err(), "context too long");
         let u = serve_once("200 OK", "", b"data: {\"error\":{\"message\":\"crashed\"}}\n".to_vec());
         assert_eq!(block_on(stream(&url(&u), None, "m", &json!({}), |_| {})).unwrap_err(), "crashed");
+    }
+
+    #[test]
+    fn a_look_tells_a_local_model_that_no_picture_reaches_it() {
+        let look = ChatContext::Look { app_name: "Edge".into(), title: "Docs".into() };
+        let text = user_text(true, Some(&look), "What do you see?");
+        assert!(text.contains("Edge") && text.contains("Docs"), "{text}");
+        assert!(text.contains(NO_PICTURE_LINE), "the model must know no screenshot came: {text}");
+        assert!(text.ends_with("What do you see?"), "{text}");
+        // Only the first turn carries the window.
+        assert_eq!(user_text(false, Some(&look), "And?"), "And?");
     }
 
     #[test]

@@ -510,7 +510,8 @@ own window.
   attaches a file here, and the drop card would need a third button it doesn't have.
 - Dragging Mochi onto a window to have him look at it works on Windows only:
   the window is drawn with PrintWindow (read from the screen when it can't be),
-  kept in memory, never on disk, and sent with the first question only. Claude,
+  kept in memory, never on disk, sent with the first question only and dropped
+  after it, answered or not (or on New chat). Claude,
   OpenAI, Google and OpenRouter get the picture; a local model server gets the
   window's name and title. On Linux he lands on the desktop as before. No
   browser URL is read, unlike the Mac.

@@ -545,6 +545,8 @@ fn local_set_key(url: String, key: String) -> Result<(), String> {
 #[tauri::command]
 fn chat_reset(chat: State<'_, Chat>) {
     chat.reset();
+    // A new chat forgets the window Mochi looked at, too.
+    look::discard();
     if claude_cli::enabled() {
         claude_cli::forget(claude_cli::Mode::Chat);
     }
@@ -576,10 +578,10 @@ fn secret_set(app: AppHandle, key: String, value: String) -> Result<(), String> 
         return Err("use local_set_key".into());
     }
     let before = (key == "github-token").then(|| secrets::get(&key));
-    if key == linear::KEY {
-        linear::key_changed();
-    }
     secrets::set(&key, &value)?;
+    if key == linear::KEY {
+        linear::key_changed(&app);
+    }
     if key == claude::KEY {
         voice::sync(&app);
     }
@@ -594,10 +596,10 @@ fn secret_set(app: AppHandle, key: String, value: String) -> Result<(), String> 
 #[tauri::command]
 fn secret_clear(app: AppHandle, key: String) -> Result<(), String> {
     let had = key == "github-token" && secrets::present(&key);
-    if key == linear::KEY {
-        linear::key_changed();
-    }
     secrets::clear(&key)?;
+    if key == linear::KEY {
+        linear::key_changed(&app);
+    }
     if key == claude::KEY {
         voice::sync(&app);
     }

@@ -259,9 +259,10 @@ pub async fn send(
     }
     let look = matches!(context, Some(ChatContext::Look { .. }));
     let reply = dispatch(app, chat, settings, provider, &model, query, context).await;
-    // The window's picture lives until its question is answered: the
-    // conversation keeps it from there. A failed turn (no key yet…) may retry.
-    if look && reply.is_ok() {
+    // Like a capture, the window's picture lives for its one turn, answered or
+    // not: the island never sends the look context again (the bubble is already
+    // in the chat), so a picture kept after a failure would only linger.
+    if look {
         crate::look::discard();
     }
     reply

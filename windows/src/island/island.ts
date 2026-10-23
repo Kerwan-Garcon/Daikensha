@@ -42,6 +42,9 @@ const CLAUDE_DESKTOP_ID = "agent_claude-desktop";
 const BOT_SIDE = 24;
 /** Same margin as the Rust hit test (src-tauri/src/island.rs). */
 const HIT_MARGIN = 14;
+/** A look waits for a pending chat answer this often, and at most this long. */
+const LOOK_WAIT_STEP_MS = 250;
+const LOOK_WAIT_MAX_MS = 120_000;
 
 /** The three views the drop sequence owns; leaving them stops the engine. */
 const UPLOAD_VIEWS: ReadonlySet<IslandViewName> = new Set(["upload", "uploading", "choose"]);
@@ -570,9 +573,18 @@ export class Island {
 
   /**
    * Mochi was dropped on a window and is back: a fresh chat about it, asked at
-   * once (the Mac's WindowLook). Rust holds the picture until it is answered.
+   * once (the Mac's WindowLook). Rust holds the picture for that one turn.
    */
-  private onLooked(look: Looked) {
+  private onLooked(look: Looked, waitedMs = 0) {
+    // An answer is on its way: resetting now would drop the look question
+    // (the chat ignores a send while one is pending) and land that answer in
+    // the new chat. Ask right after it instead, as the newChat shortcut waits.
+    if (State.stateOverride === "thinking" && !look.error) {
+      if (waitedMs < LOOK_WAIT_MAX_MS) {
+        window.setTimeout(() => this.onLooked(look, waitedMs + LOOK_WAIT_STEP_MS), LOOK_WAIT_STEP_MS);
+      }
+      return;
+    }
     if (look.error) {
       State.noteMessage = look.error;
       Sound.play("error");

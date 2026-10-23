@@ -45,6 +45,23 @@ Audit de l'ensemble du dépôt (≈ 175 000 lignes : Swift 69 k, Rust 44 k, Type
 
 La règle « 0 % de CPU quand l'île est cachée » est tenue côté webview : la boucle de rendu s'arrête d'elle-même. Aucune optimisation n'a été faite là, faute de gain mesurable.
 
+## Ré-audit (après la passe)
+
+Toutes les vérifications ont été relancées de zéro (relais : 28 tests ; TypeScript : `tsc`, lint, 437 tests, build ; Rust : clippy `-D warnings` Linux et Windows, 609 tests ; skills : aucune dérive), puis une revue de code de toute la branche, code environnant compris. Elle a trouvé des **bugs préexistants dans `main`**, vérifiés un par un :
+
+| Constat | Verdict | Suite |
+| --- | --- | --- |
+| Carte Linear : après création d'un ticket, le champ reste grisé avec l'ancien titre (la carte est reconstruite pendant la requête, le `finally` réactivait l'ancien champ, détaché). | Confirmé (Windows) | **Corrigé** : la fin de requête agit sur le champ affiché. |
+| Clé Linear changée ou supprimée : la carte garde les tickets de l'ancienne clé (aucun nouveau sondage, et le cache était vidé *avant* l'écriture de la clé). | Confirmé (Windows) | **Corrigé** : nouveau sondage (ou carte vidée) après l'écriture, comme `keyChanged()` sur Mac. |
+| « Mochi regarde une fenêtre » pendant qu'une réponse arrive : la question du regard est perdue et l'ancienne réponse atterrit dans le nouveau chat. | Confirmé (Windows **et** Mac) | **Corrigé sous Windows** : le regard attend la fin de la réponse (2 min max). Mac : même trou dans `WindowLook.look()`, à corriger. |
+| Capture de la fenêtre gardée après un échec « pour réessayer », alors que rien ne peut la réutiliser ; « Nouveau chat » ne l'effaçait pas. | Confirmé (Windows) | **Corrigé** : elle vit le temps de sa question, répondue ou non, et « Nouveau chat » l'efface. |
+| Le prompt du regard annonce une capture jointe à des modèles qui n'en reçoivent pas (serveurs locaux) : le modèle invente une analyse. | Confirmé (Windows **et** Mac : DeepSeek, Qwen, Moonshot, serveurs locaux) | **Corrigé sous Windows** (test `a_look_tells_a_local_model_that_no_picture_reaches_it`). Mac : à corriger. |
+| Mac : un message avec un bloc `image_url` (fournisseur OpenAI/Google) reste dans la conversation, puis est envoyé tel quel à Anthropic si l'on change de fournisseur : erreur 400 sur tous les tours suivants. | Plausible, par lecture (`ClaudeService.swift`) | À vérifier sur un Mac et corriger. |
+| Mac : la Mochi du bureau ne suit pas le changement de visage fait dans la garde-robe. | Plausible, par lecture (`DesktopMochi.swift`) | À corriger ; Windows le fait déjà. |
+| Mac : chaque capture de « regard » est écrite en JPEG dans `$TMPDIR/CoucouLooks` (les 10 dernières gardées), alors que Windows les garde en mémoire seulement. | Confirmé par lecture | Aligner le Mac sur Windows (mémoire seulement). |
+| `BotEngine.look` vaut « portrait » par défaut pour **toutes** les Mochi (iPhone, pilule Flow, récap), alors que son commentaire dit « Main Mochi only ». | Le défaut est un choix produit (commit `45f8a2e`) ; sa portée est ambiguë | **Question au propriétaire du produit.** |
+| Couleurs de marque en dur dans `header()` des cartes de services (TS). | Convention existante à toutes les cartes, pas une régression | À migrer vers les couleurs du catalogue de pilules lors d'un passage dédié, sans changer le rendu. |
+
 ## Ce qui reste, par priorité
 
 ### 1. Contrat IPC Rust ↔ TypeScript généré, pas recopié — *haute*

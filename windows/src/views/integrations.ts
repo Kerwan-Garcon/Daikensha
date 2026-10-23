@@ -346,6 +346,12 @@ function notionCard(): HTMLElement {
 const LINEAR = "integration_linear";
 let linearDraft = "";
 let linearCreating = false;
+/**
+ * The new-issue field on screen now. Creating an issue polls Linear, which
+ * rebuilds the card while the request is still pending: the end of the request
+ * must reach this field, not the one it started from.
+ */
+let linearInput: HTMLInputElement | null = null;
 
 /** A state colour from Linear, or a neutral one if it isn't "#rrggbb". */
 function linearColor(v: unknown): string {
@@ -432,6 +438,7 @@ function linearCard(): HTMLElement {
     });
     input.value = linearDraft;
     input.disabled = linearCreating;
+    linearInput = input;
     const submit = async () => {
       const title = input.value.trim();
       if (!title || linearCreating) return;
@@ -441,13 +448,13 @@ function linearCard(): HTMLElement {
       try {
         await Bridge.linearCreate(title);
         linearDraft = "";
-        input.value = "";
+        if (linearInput) linearInput.value = "";
         Sound.play("approve");
       } catch (err) {
         fail(err);
       } finally {
         linearCreating = false;
-        input.disabled = false;
+        if (linearInput) linearInput.disabled = false;
       }
     };
     input.addEventListener("input", () => {
