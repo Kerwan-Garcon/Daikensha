@@ -5,7 +5,7 @@
 
 import { Bridge, onEvent, type ClaudeCliStatus, type HookPreview, type HookStatus, type ShellRoutine, type ShortcutsReport } from "../core/bridge";
 import { whenText } from "../core/shell";
-import { CUSTOM_SERVER_KEY, providerDef, urlExposure } from "../core/providers";
+import { CUSTOM_SERVER_KEY, keyedProvider, serverProvider, urlExposure } from "../core/providers";
 import {
   ISLAND_SHORTCUTS, SHORTCUTS, SHORTCUT_TEXT, activeKeys, displayKeys, duplicates, effective,
   recordPress, type Binding,
@@ -28,6 +28,7 @@ import {
 } from "../i18n/i18n";
 import { colorHex } from "../design/tokens";
 import { itemAt } from "../core/arrays";
+import { requireChild, requireElement } from "../core/elements";
 
 /** Where secrets.rs keeps the keys on this OS. */
 const KEY_STORE = navigator.userAgent.includes("Windows")
@@ -37,7 +38,7 @@ const KEY_STORE = navigator.userAgent.includes("Windows")
 let settings: Settings = { ...DEFAULT_SETTINGS };
 let version = "";
 
-const windowRoot = document.getElementById("hub")!;
+const windowRoot = requireElement("hub");
 /** Where the Notch page being shown draws its sections. */
 let root: HTMLElement = windowRoot;
 let hub: { redraw(): void; current(): PageId } | null = null;
@@ -179,7 +180,7 @@ function claudeSection(status: HookStatus): HTMLElement {
     const fresh = await Bridge.hooksStatus();
     if (fresh) Object.assign(status, fresh);
     redraw();
-    const head = section.querySelector("h2")!;
+    const head = requireChild(section, "h2");
     clear(head);
     head.append(statusDot(status.installed), h("span", { text: "Claude Code" }));
   };
@@ -345,7 +346,7 @@ function apiSection(hasKey: boolean): HTMLElement {
     style: "flex:1 1 auto;min-width:0",
     autocomplete: "off",
     spellcheck: "false",
-  }) as HTMLInputElement;
+  });
 
   const saveBtn = h("button", { class: "primary", text: t("Save key") });
   const clearBtn = h("button", { class: "danger", text: t("Remove") });
@@ -396,7 +397,7 @@ function apiSection(hasKey: boolean): HTMLElement {
     }
   });
 
-  const model = h("select", {}) as HTMLSelectElement;
+  const model = h("select", {});
   for (const [id, label] of MODELS) model.append(h("option", { value: id, text: label }));
   if (!MODELS.some(([id]) => id === settings.model)) {
     model.append(h("option", { value: settings.model, text: settings.model }));
@@ -411,7 +412,7 @@ function apiSection(hasKey: boolean): HTMLElement {
 
   // How Claude is reached: the key above, or the user's own Claude Code signed in
   // to their subscription (claude_cli.rs). The API stays the default.
-  const account = h("select", {}) as HTMLSelectElement;
+  const account = h("select", {});
   account.append(
     h("option", { value: "api", text: t("API key") }),
     h("option", { value: "subscription", text: t("Claude subscription") }),
@@ -492,7 +493,7 @@ function cliStatusText(status: ClaudeCliStatus | null): string {
  */
 function activePillsSection(connected: Record<string, boolean>): HTMLElement {
   const slots = h("div", { class: "hint" });
-  const main = h("select", {}) as HTMLSelectElement;
+  const main = h("select", {});
   for (const def of mainPillChoices()) main.append(h("option", { value: def.id, text: def.name }));
   main.addEventListener("change", () => {
     const next = chooseMainPill(settings, main.value);
@@ -526,7 +527,7 @@ function activePillsSection(connected: Record<string, boolean>): HTMLElement {
     }
     const why = hint(def);
     el.append(h("span", { class: "state", text: why ?? "" }));
-    const sw = h("button", { class: on ? "switch on" : "switch" }) as HTMLButtonElement;
+    const sw = h("button", { class: on ? "switch on" : "switch" });
     sw.disabled = full;
     sw.addEventListener("click", () => {
       const next = toggleDeclared(settings, def.id);
@@ -609,15 +610,15 @@ function chatProvidersSection(
 ): HTMLElement {
   const list = h("div", { style: "display:flex;flex-direction:column;gap:8px" });
   for (const def of CLOUD) {
-    const p = providerDef(def.id);
-    const key = p.key!;
+    const p = keyedProvider(def.id);
+    const { key } = p;
     const input = h("input", {
       type: "password",
       placeholder: present[key] ? CHAT_STRINGS.stored : def.placeholder,
       autocomplete: "off",
       spellcheck: "false",
       style: "flex:1 1 auto;min-width:0",
-    }) as HTMLInputElement;
+    });
     const dotEl = statusDot(present[key] ?? false);
     const saveBtn = h("button", { text: CHAT_STRINGS.save });
     const removeBtn = h("button", { class: "danger", text: CHAT_STRINGS.remove });
@@ -718,8 +719,8 @@ function localSection(customKey: boolean): HTMLElement {
 
   function serverBlock(id: LocalId): HTMLElement {
     const def = LOCAL[id];
-    const p = providerDef(id);
-    const field = p.urlField!;
+    const p = serverProvider(id);
+    const field = p.urlField;
     const connected = settings[field] !== "";
     const status = h("div", {});
     const exposure = h("div", {});
@@ -763,7 +764,7 @@ function localSection(customKey: boolean): HTMLElement {
       style: "flex:1 1 auto;min-width:0",
       spellcheck: "false",
       autocomplete: "off",
-    }) as HTMLInputElement;
+    });
     // A custom server may want a key; it goes to the keychain, never to settings.json.
     const key = h("input", {
       type: "password",
@@ -771,7 +772,7 @@ function localSection(customKey: boolean): HTMLElement {
       style: "flex:1 1 auto;min-width:0",
       autocomplete: "off",
       spellcheck: "false",
-    }) as HTMLInputElement;
+    });
     const connect = h("button", { class: "primary", text: CHAT_STRINGS.connect });
 
     const showExposure = () => {
@@ -874,7 +875,7 @@ const LINEAR_MCP_COMMAND = "claude mcp add --transport http linear https://mcp.l
  * can list them) and the command that lets Claude Code drive Linear too.
  */
 function linearExtras(): HTMLElement[] {
-  const team = h("select", {}) as HTMLSelectElement;
+  const team = h("select", {});
   const teamRow = h("div", { class: "row", style: "display:none" },
     h("label", { style: "min-width:104px", text: t("Team for new issues") }), team);
   void Bridge.linearTeams().then((teams) => {
@@ -952,7 +953,7 @@ function integrationsSection(present: Record<string, boolean>): HTMLElement {
         autocomplete: "off",
         spellcheck: "false",
         style: "flex:1 1 auto;min-width:0",
-      }) as HTMLInputElement;
+      });
       const saveBtn = h("button", { text: t("Save") });
       const dotEl = statusDot(present[field.key] ?? false);
       saveBtn.addEventListener("click", async () => {
@@ -1008,7 +1009,7 @@ function generalSection(): HTMLElement {
   const volume = h("input", {
     type: "range", min: "0", max: "0.2", step: "0.005",
     value: String(settings.soundVolume),
-  }) as HTMLInputElement;
+  });
   volume.addEventListener("input", () => {
     settings.soundVolume = Number(volume.value);
     void save();
@@ -1032,7 +1033,7 @@ function generalSection(): HTMLElement {
     type: "number", min: "5", max: "120", step: "1",
     value: String(Math.round(settings.autoCloseInterval)),
     style: "width:72px",
-  }) as HTMLInputElement;
+  });
   autoClose.addEventListener("change", () => {
     settings.autoCloseInterval = Math.max(5, Math.min(120, Number(autoClose.value) || 15));
     autoClose.value = String(settings.autoCloseInterval);
@@ -1045,12 +1046,12 @@ function generalSection(): HTMLElement {
     maxlength: "80",
     spellcheck: "false",
     value: settings.shellWeatherCity,
-  }) as HTMLInputElement;
+  });
   weatherCity.addEventListener("change", () => {
     settings.shellWeatherCity = weatherCity.value.trim();
     void save();
   });
-  const screen = h("select", {}) as HTMLSelectElement;
+  const screen = h("select", {});
   screen.append(
     h("option", { value: "primary", text: t("Main display") }),
     h("option", { value: "cursor", text: t("Display under the cursor") }),
@@ -1151,7 +1152,7 @@ function generalSection(): HTMLElement {
  * Both windows and the tray switch in place, without a restart.
  */
 function languageRow(): HTMLElement {
-  const select = h("select", {}) as HTMLSelectElement;
+  const select = h("select", {});
   select.append(h("option", { value: "", text: t("System") }));
   for (const { code, name } of LANGUAGES) select.append(h("option", { value: code, text: name, lang: code }));
   select.value = LANGUAGES.some((l) => l.code === settings.language) ? settings.language : "";
@@ -1292,7 +1293,7 @@ function shortcutsSection(initial: ShortcutsReport | null): HTMLElement {
       const keycap = h("button", {
         class: "keycap",
         text: binding.keys ? displayKeys(binding.keys) : SHORTCUTS_UI.none,
-      }) as HTMLButtonElement;
+      });
       keycap.disabled = !binding.enabled;
       keycap.addEventListener("click", () => record(d.id, binding, keycap));
       const sw = toggle(binding.enabled, (on) => store(d.id, { keys: binding.keys, enabled: on }));
@@ -1432,7 +1433,7 @@ function recapRows(): HTMLElement[] {
         feedback.textContent = "";
       }, 2400);
     },
-  }) as HTMLButtonElement;
+  });
   return [
     h("div", { class: "row" },
       h("label", { text: T.label }),
@@ -1493,8 +1494,8 @@ async function main() {
     hub?.redraw();
   });
 
-  void onEvent<ShortcutsReport>("shortcuts-status", (fresh) => shortcutsListener?.report(fresh));
-  void onEvent<Settings>("settings-changed", (s) => {
+  void onEvent("shortcuts-status", (fresh) => shortcutsListener?.report(fresh));
+  void onEvent("settings-changed", (s) => {
     const before = `${settings.chatProvider}|${settings.ollamaUrl}|${settings.lmstudioUrl}|${settings.customUrl}`;
     settings = { ...settings, ...s };
     shortcutsListener?.settingsChanged();
@@ -1542,7 +1543,7 @@ async function render() {
   };
   const chatKeys: Record<string, boolean> = {};
   for (const def of CLOUD) {
-    const key = providerDef(def.id).key!;
+    const { key } = keyedProvider(def.id);
     chatKeys[key] = (await Bridge.secretPresent(key)) ?? false;
   }
   const customKey = (await Bridge.secretPresent(CUSTOM_SERVER_KEY)) ?? false;

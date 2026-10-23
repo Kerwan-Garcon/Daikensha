@@ -507,6 +507,8 @@ export class Island {
       window.addEventListener("resize", done);
       window.setTimeout(done, 150);
     });
+    // Read again after the awaits above: a request may have arrived meanwhile.
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- narrowed before the awaits, not after
     if (State.pendingApproval || !State.settings.shellPanel) {
       if (!this.shellOn) void Bridge.setShellOpen(false);
       return;
@@ -538,7 +540,7 @@ export class Island {
     }
     Sound.play("approve");
     this.setView(State.defaultView());
-    Bridge.shellConfirm(card.token).catch((err) => {
+    Bridge.shellConfirm(card.token).catch((err: unknown) => {
       State.noteMessage = String(err).replace(/^Error:\s*/, "");
       this.setView("note");
       window.setTimeout(() => this.setView(State.defaultView()), 3000);
@@ -604,7 +606,7 @@ export class Island {
     this.barClock.classList.toggle("on", on);
     if (on === (this.barClockTimer != null)) return;
     if (!on) {
-      window.clearInterval(this.barClockTimer!);
+      window.clearInterval(this.barClockTimer ?? undefined);
       this.barClockTimer = null;
       return;
     }
@@ -832,7 +834,7 @@ export class Island {
         State.promptContext = { kind: "file", name: file.name, path: file.path };
         State.notify();
       })
-      .catch((err) => {
+      .catch((err: unknown) => {
         if (State.droppedFile?.path !== path) return;
         UploadSeq.deactivate();
         State.noteMessage = String(err).replace(/^Error:\s*/, "");
@@ -1040,10 +1042,10 @@ export class Island {
     });
 
     void onDragDrop((e) => this.onDragDrop(e));
-    void onEvent<ShellCard>("shell-confirm", (card) => this.showCard(card));
-    void onEvent<null>("circle-captured", () => void this.onCaptured());
+    void onEvent("shell-confirm", (card) => this.showCard(card));
+    void onEvent("circle-captured", () => void this.onCaptured());
     // A routine ran (shell/routines.rs): say so for a moment, unless a card is waiting.
-    void onEvent<string>("shell-routine-ran", (message) => {
+    void onEvent("shell-routine-ran", (message) => {
       if (State.pendingApproval || State.shellCard) return;
       State.noteMessage = message;
       this.alert("note");

@@ -8,8 +8,9 @@
 import type { PhoneLinkService } from "../core/bridge";
 import { State } from "../core/state";
 import { t } from "../i18n/i18n";
+import { text } from "../core/decode";
 
-const obj = (id: string): Record<string, unknown> => (State.integrations[id]?.data ?? {}) as Record<string, unknown>;
+const obj = (id: string): Record<string, unknown> => (State.integrations[id]?.data ?? {});
 const list = (id: string, key: string): Record<string, unknown>[] => {
   const v = obj(id)[key];
   return Array.isArray(v) ? (v as Record<string, unknown>[]) : [];
@@ -41,7 +42,7 @@ const BUILDERS: Record<string, Builder> = {
     const d = obj("integration_stripe");
     return {
       id: "integration_stripe", title: "Stripe",
-      headline: `${money(d.balance)} ${String(d.currency ?? "eur").toUpperCase()}`,
+      headline: `${money(d.balance)} ${text(d.currency, "eur").toUpperCase()}`,
       reason: t("Payments"),
       items: list("integration_stripe", "payments").slice(0, 3).map((p) => ({
         label: p.status === "succeeded" ? t("Payment") : t("Payment failed"),
@@ -65,7 +66,7 @@ const BUILDERS: Record<string, Builder> = {
       id: "integration_vercel", title: "Vercel",
       headline: deployments[0] === undefined ? "—" : ready(deployments[0]) ? t("Ready") : t("Failed"),
       reason: t("Deployments"),
-      items: deployments.slice(0, 3).map((d) => ({ label: String(d.projectName ?? ""), detail: `${ready(d) ? t("Ready") : t("Failed")} · ${ago(d.createdAt, now)}` })),
+      items: deployments.slice(0, 3).map((d) => ({ label: text(d.projectName, ""), detail: `${ready(d) ? t("Ready") : t("Failed")} · ${ago(d.createdAt, now)}` })),
     };
   },
   integration_resend: (now) => {
@@ -73,7 +74,7 @@ const BUILDERS: Record<string, Builder> = {
     const total = obj("integration_resend").total;
     return {
       id: "integration_resend", title: "Resend",
-      headline: total != null ? String(total) : String(emails.length),
+      headline: total != null ? text(total) : String(emails.length),
       reason: t("Emails"),
       // No address and no subject: only whether it arrived.
       items: emails.slice(0, 3).map((e) => ({ label: e.lastEvent === "delivered" ? t("Delivered") : t("Not delivered"), detail: ago(e.createdAt, now) })),
@@ -85,22 +86,22 @@ const BUILDERS: Record<string, Builder> = {
       id: "integration_notion", title: "Notion",
       headline: String(pages.length),
       reason: t("Recent"),
-      items: pages.slice(0, 3).map((p) => ({ label: String(p.title ?? t("Untitled")), detail: ago(p.lastEditedAt, now) })),
+      items: pages.slice(0, 3).map((p) => ({ label: text(p.title, t("Untitled")), detail: ago(p.lastEditedAt, now) })),
     };
   },
   integration_calcom: () => {
     const bookings = list("integration_calcom", "bookings")
       .slice()
-      .sort((a, b) => new Date(String(a.start)).getTime() - new Date(String(b.start)).getTime());
+      .sort((a, b) => new Date(String(a.start)).getTime() - new Date(text(b.start)).getTime());
     const when = (b: Record<string, unknown>) => {
-      const d = new Date(String(b.start));
+      const d = new Date(text(b.start));
       return `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")} ${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
     };
     return {
       id: "integration_calcom", title: "Cal.com",
       headline: bookings[0] === undefined ? t("No calls scheduled") : when(bookings[0]),
       reason: t("Schedule"),
-      items: bookings.slice(0, 3).map((b) => ({ label: String(b.title ?? t("Meeting")), detail: when(b) })),
+      items: bookings.slice(0, 3).map((b) => ({ label: text(b.title, t("Meeting")), detail: when(b) })),
     };
   },
   integration_n8n: () => {

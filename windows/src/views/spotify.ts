@@ -261,7 +261,7 @@ export function buildSpotifyCard(): SpotifyCardHost {
 
   // Now playing: artwork row, progress row, controls row.
   const art = h("div", { class: "np-art" });
-  const artImg = h("img", { alt: "", draggable: "false" }) as HTMLImageElement;
+  const artImg = h("img", { alt: "", draggable: "false" });
   const artNote = svg(ICONS.musicNote, 16);
   artNote.style.color = `${green}b3`;
   art.append(artNote, artImg);

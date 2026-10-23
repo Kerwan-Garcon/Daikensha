@@ -119,8 +119,7 @@ export function parseCodexPlan(result: unknown, now = Date.now()): CodexPlanUsag
     if (Number.isInteger(credits.availableCount)) usage.resetCredits = credits.availableCount as number;
     const expiries = (Array.isArray(credits.credits) ? credits.credits : [])
       .map(asObj)
-      .filter((c) => c?.status === "available" && isNum(c.expiresAt))
-      .map((c) => (c!.expiresAt as number) * 1000);
+      .flatMap((c) => (c?.status === "available" && isNum(c.expiresAt) ? [c.expiresAt * 1000] : []));
     if (expiries.length) usage.resetCreditExpiresAt = Math.min(...expiries);
   }
   return usage.fiveHour || usage.sevenDay ? usage : null;

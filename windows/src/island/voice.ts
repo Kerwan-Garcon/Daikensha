@@ -9,10 +9,11 @@ import { Spotify } from "../core/spotify";
 import { State } from "../core/state";
 import { serviceCards } from "./phone-services";
 
-interface Ask {
+export interface Ask {
   id: number;
   kind: "pills" | "info";
-  input: { action?: string; names?: string[] };
+  /** Absent when the voice tool was called without arguments. */
+  input?: { action?: string; names?: string[] };
 }
 
 const norm = (s: string) =>
@@ -42,7 +43,7 @@ function describe(): string {
   });
 }
 
-function pills(input: Ask["input"]): string {
+function pills(input: NonNullable<Ask["input"]>): string {
   const action = input.action ?? "list";
   if (action === "list") return describe();
   const names = input.names ?? [];
@@ -86,7 +87,7 @@ function pills(input: Ask["input"]): string {
     if (State.mainPillId !== previousMain) State.setFocus(State.mainPillId);
     void Bridge.saveSettings(State.settings);
   }
-  return JSON.stringify({ done, failed, now: JSON.parse(describe()) });
+  return JSON.stringify({ done, failed, now: JSON.parse(describe()) as unknown });
 }
 
 function info(): string {
@@ -100,7 +101,7 @@ function info(): string {
     };
   const s = Spotify.state;
   return JSON.stringify({
-    pills: JSON.parse(describe()),
+    pills: JSON.parse(describe()) as unknown,
     sessions,
     claudePlan: plan(State.planUsage),
     codexPlan: plan(State.codexPlanUsage),
@@ -111,7 +112,7 @@ function info(): string {
 
 export function registerVoiceHandlers() {
   if (!IS_TAURI) return;
-  void onEvent<Ask>("voice-ask", (ask) => {
+  void onEvent("voice-ask", (ask) => {
     let text: string;
     try {
       text = ask.kind === "pills" ? pills(ask.input ?? {}) : info();

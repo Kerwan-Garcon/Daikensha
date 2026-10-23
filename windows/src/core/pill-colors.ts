@@ -51,9 +51,7 @@ export function pillColor(id: string, catalogColor: string, colors: unknown): st
 export function withPillColor(
   colors: unknown, id: string, hex: string | null, catalogColor: string,
 ): Record<string, string> {
-  const next = parsePillColors(colors);
+  const { [id]: _previous, ...others } = parsePillColors(colors);
   const picked = normalizeHex(hex);
-  if (picked && picked !== normalizeHex(catalogColor)) next[id] = picked;
-  else delete next[id];
-  return next;
+  return picked && picked !== normalizeHex(catalogColor) ? { ...others, [id]: picked } : others;
 }

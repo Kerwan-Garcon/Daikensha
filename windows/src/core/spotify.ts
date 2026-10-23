@@ -43,7 +43,7 @@ export const IDLE_SPOTIFY: SpotifyState = {
 
 /** The page's copy of the player, and the cover of the track that has one. */
 export const Spotify = {
-  state: { ...IDLE_SPOTIFY } as SpotifyState,
+  state: { ...IDLE_SPOTIFY },
   artwork: null as { artUrl: string; dataUrl: string } | null,
 };
 

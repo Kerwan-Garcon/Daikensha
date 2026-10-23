@@ -54,6 +54,9 @@ jobs:
       - name: Type check
         run: npx tsc --noEmit
 
+      - name: Lint (typescript-eslint, strict and type-aware)
+        run: npm run lint
+
       - name: Island tests
         run: npm test
 

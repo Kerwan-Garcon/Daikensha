@@ -14,8 +14,8 @@ const GITHUB = "integration_github";
 const clearTimers = new Map<string, number>();
 
 export function registerIntegrationHandlers(island: Island) {
-  void onEvent<IntegrationUpdate>("integration", (update) => handle(island, update));
-  void onEvent<GitHubEvent[]>("github-alerts", handleGitHubAlerts);
+  void onEvent("integration", (update) => handle(island, update));
+  void onEvent("github-alerts", handleGitHubAlerts);
   void refreshConfigured();
   State.subscribe(refreshGitHubWhenShown);
 }

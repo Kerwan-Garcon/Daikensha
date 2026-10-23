@@ -25,7 +25,7 @@ function elevenKey(): HTMLElement {
       );
       return;
     }
-    const input = h("input", { class: "hub-input", type: "password", placeholder: t("ElevenLabs key"), autocomplete: "off", spellcheck: "false", style: "width:220px" }) as HTMLInputElement;
+    const input = h("input", { class: "hub-input", type: "password", placeholder: t("ElevenLabs key"), autocomplete: "off", spellcheck: "false", style: "width:220px" });
     const save = button(t("Save key"), () => {
       const value = input.value.trim();
       if (!value) return;

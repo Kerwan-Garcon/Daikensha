@@ -72,7 +72,7 @@ function buildToday(): Tab {
     ),
   );
 
-  const todoInput = h("input", { type: "text", class: "shell-name-input", placeholder: tl("Add a to-do"), "aria-label": tl("Add a to-do"), maxlength: "200" }) as HTMLInputElement;
+  const todoInput = h("input", { type: "text", class: "shell-name-input", placeholder: tl("Add a to-do"), "aria-label": tl("Add a to-do"), maxlength: "200" });
   const todoList = h("div", { class: "shell-todos" });
   const clearDone = h("button", { class: "shell-text-btn", text: tl("Clear done"), onclick: () => void change({ kind: "clearDone" }) });
   const todoCard = card(
@@ -234,7 +234,7 @@ function buildToday(): Tab {
       // The countdown redraws only while it is on screen.
       focusTimer = window.setInterval(() => focus.endAt && drawFocus(), 1000);
       void drawWeather();
-      Bridge.shellTodos().then(drawTodos, (e) => info.say(message(e)));
+      Bridge.shellTodos().then(drawTodos, (e: unknown) => info.say(message(e)));
       Bridge.shellRoutines().then(drawRoutines, () => drawRoutines([]));
     },
     hide() {
@@ -356,7 +356,7 @@ function buildClipboard(): Tab {
     show() {
       live = true;
       void refresh();
-      void onEvent<null>("shell-clipboard", () => void refresh()).then((u) => {
+      void onEvent("shell-clipboard", () => void refresh()).then((u) => {
         if (live) unlisten = u;
         else u();
       });
@@ -410,13 +410,13 @@ function buildWallpapers(): Tab {
       const on = img.id === selected;
       const thumb = h("button", { class: on ? "shell-wall on" : "shell-wall", "aria-label": t("Pick this image"), "aria-pressed": String(on), onclick: () => { selected = img.id; draw(); } });
       if (img.thumb) thumb.style.backgroundImage = `url("${img.thumb}")`;
-      const del = h("button", { class: "shell-wall-del", "aria-label": t("Delete"), title: t("Delete"), onclick: () => Bridge.shellWallpaperDelete(img.id).then((d) => { data = d; draw(); }, (e) => info.say(message(e))) }, svg("M6 6l12 12M18 6 6 18", 12, { stroke: 2.5 }));
+      const del = h("button", { class: "shell-wall-del", "aria-label": t("Delete"), title: t("Delete"), onclick: () => Bridge.shellWallpaperDelete(img.id).then((d) => { data = d; draw(); }, (e: unknown) => info.say(message(e))) }, svg("M6 6l12 12M18 6 6 18", 12, { stroke: 2.5 }));
       grid.append(h("div", { class: "shell-wall-cell" }, thumb, del, on ? h("span", { class: "shell-wall-mark" }, svg("M5 12l5 5L20 7", 14, { stroke: 2.5 })) : null));
     }
     const chips: [number | null, string][] = [[null, t("All screens")]];
     for (let i = 0; i < data.screens && data.screens > 1; i++) chips.push([i, t("Screen {n}", { n: String(i + 1) })]);
     targets.replaceChildren(...chips.map(([i, label]) => h("button", { class: i === screen ? "shell-chip on" : "shell-chip", text: label, onclick: () => { screen = i; draw(); } })));
-    (applyBtn as HTMLButtonElement).disabled = !selected;
+    (applyBtn).disabled = !selected;
   }
 
   async function apply() {
@@ -432,7 +432,7 @@ function buildWallpapers(): Tab {
   return {
     el,
     show() {
-      Bridge.shellWallpapers().then((d) => { data = d; draw(); }, (e) => info.say(message(e)));
+      Bridge.shellWallpapers().then((d) => { data = d; draw(); }, (e: unknown) => info.say(message(e)));
     },
     hide() {},
     drop(paths: string[]) {
@@ -445,7 +445,7 @@ function buildWallpapers(): Tab {
           draw();
           if (d.refused > 0) info.say(t("{n} files were not taken: not a JPG, PNG or WebP, too large, or the selection is full.", { n: String(d.refused) }));
         },
-        (e) => info.say(message(e)),
+        (e: unknown) => info.say(message(e)),
       );
       return true;
     },
@@ -528,7 +528,7 @@ function buildPower(): Tab {
               class: danger ? "shell-pill danger" : "shell-pill",
               onclick: () => {
                 close();
-                Bridge.shellConfirm(c.token).catch((e) => info.say(message(e)));
+                Bridge.shellConfirm(c.token).catch((e: unknown) => info.say(message(e)));
               },
             },
             h("span", { text: t(label) }),

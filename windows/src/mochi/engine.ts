@@ -1601,7 +1601,7 @@ export class BotEngine {
     x.stroke();
 
     // Fringe: strands ending in points between and over the eyes, longer at the sides.
-    const tips: Array<[number, number]> = [
+    const tips: [number, number][] = [
       [-1.25, 0.55], [-0.92, 0.18], [-0.6, -0.02], [-0.28, -0.1], [0.02, -0.04],
       [0.32, -0.12], [0.62, 0.0], [0.92, 0.18], [1.25, 0.55],
     ];

@@ -11,6 +11,7 @@ import { emptyState, glowCard } from "../hero";
 import { button, card, icon, iconButton, keyLabel, label, number, row, shortCount, toggle } from "../ui";
 import { modelsControl } from "./flowsettings";
 import { colorHex } from "../../design/tokens";
+import { requireChild } from "../../core/elements";
 
 function dayKey(ms: number): string {
   const d = new Date(ms);
@@ -35,7 +36,7 @@ export async function dictationPage(page: HTMLElement, ctx: HubContext) {
   const ready = status.prefs.enabled && status.models.parakeet.state === "ready";
 
   const record = button(t("Record a call"), () => {
-    void FlowBridge.startNote().then(() => ctx.navigate("notes"), (err) => alertLine.replaceChildren(String(err)));
+    void FlowBridge.startNote().then(() => ctx.navigate("notes"), (err: unknown) => alertLine.replaceChildren(String(err)));
   }, "primary");
   record.prepend(h("span", { class: "hub-rec", style: "background:var(--color-on-brand);box-shadow:none;margin-inline-end:8px" }));
   const alertLine = h("div", { class: "hub-note" });
@@ -50,7 +51,7 @@ export async function dictationPage(page: HTMLElement, ctx: HubContext) {
   let query = "";
 
   const list = h("div", { style: "display:flex;flex-direction:column;gap:10px" });
-  const search = h("input", { class: "hub-input", placeholder: t("Search dictations"), type: "search" }) as HTMLInputElement;
+  const search = h("input", { class: "hub-input", placeholder: t("Search dictations"), type: "search" });
   search.addEventListener("input", () => {
     query = search.value.trim().toLowerCase();
     draw();
@@ -67,8 +68,8 @@ export async function dictationPage(page: HTMLElement, ctx: HubContext) {
       list.append(emptyState(query ? t("No dictation matches.") : t("Your dictations will show here. Hold {0} in any app and speak.", { 0: key })));
       return;
     }
-    let group: HTMLElement | null = null;
-    let groupDay = "";
+    let group = h("div", { class: "hub-entries" });
+    let groupDay: string | null = null;
     for (const e of shown.slice(0, 300)) {
       const d = dayKey(e.date);
       if (d !== groupDay) {
@@ -87,7 +88,7 @@ export async function dictationPage(page: HTMLElement, ctx: HubContext) {
           draw();
         }),
       );
-      group!.append(h("div", { class: "hub-entry" }, when, h("div", { class: "words", text: e.text }), tools));
+      group.append(h("div", { class: "hub-entry" }, when, h("div", { class: "words", text: e.text }), tools));
     }
   }
 
@@ -99,7 +100,7 @@ export async function dictationPage(page: HTMLElement, ctx: HubContext) {
   page.append(h("div", { class: "hub-columns" }, left, right));
   draw();
 
-  const unlisten = await onEvent<FlowEntry | null>("flow-history", (entry) => {
+  const unlisten = await onEvent("flow-history", (entry) => {
     if (!entry) return;
     entries = [entry, ...entries.filter((x) => x.id !== entry.id)];
     draw();
@@ -113,7 +114,7 @@ function numbers(stats: FlowStats | null): HTMLElement {
   const big = (value: string, text: string) => h("div", { class: "hub-big-number" }, h("b", { text: value }), h("span", { text }));
   const ok = h("div", { class: "hub-ok" });
   ok.append(icon("check"), h("span", { text: t("Unlimited and free") }));
-  ok.querySelector("svg")!.setAttribute("style", "width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:2.2");
+  requireChild(ok, "svg").setAttribute("style", "width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:2.2");
   return card(
     big(shortCount(all?.words ?? 0), t("words dictated")),
     big(number(all?.wordsPerMinute ?? 0), t("words/min")),

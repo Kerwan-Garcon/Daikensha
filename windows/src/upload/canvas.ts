@@ -109,9 +109,9 @@ function fitted(ctx: CanvasRenderingContext2D, s: string, maxW: number, weight: 
 
 export interface UploadCanvasActions {
   /** Primary button — hand the file to the chat. */
-  ask(): void;
+  ask: () => void;
   /** Secondary button. */
-  cancel(): void;
+  cancel: () => void;
 }
 
 export class UploadCanvas {

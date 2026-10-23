@@ -6,7 +6,7 @@
 import { h, clear } from "../views/dom";
 import { t } from "../i18n/i18n";
 import { onEvent } from "../core/bridge";
-import { FlowBridge, type FlowPrefs, type FlowStatus, type ModelsStatus } from "../core/flow";
+import { FlowBridge, type FlowPrefs, type FlowStatus } from "../core/flow";
 import { hero, liveMochi } from "./hero";
 import { icon, keyLabel } from "./ui";
 import { colorHex } from "../design/tokens";
@@ -159,7 +159,7 @@ export async function startHub(root: HTMLElement, opts: HubOptions) {
   const side = h("nav", { class: "hub-side" });
   const logo = h("canvas", {});
   side.append(h("div", { class: "hub-brand" }, logo, h("span", { text: "Coucou" })));
-  liveMochi(logo as HTMLCanvasElement);
+  liveMochi(logo);
   const group = (title: string, pages: PageDef[]) => {
     side.append(h("div", { class: "hub-group", text: title }));
     for (const p of pages) {
@@ -178,15 +178,15 @@ export async function startHub(root: HTMLElement, opts: HubOptions) {
   drawStatus();
   await show(current);
 
-  void onEvent<string>("hub-page", (page) => {
+  void onEvent("hub-page", (page) => {
     const id = (page === "settings" ? "flowsettings" : page) as PageId;
     if (ALL.some((p) => p.id === id)) void show(id);
   });
-  void onEvent<FlowPrefs>("flow-prefs", (prefs) => {
+  void onEvent("flow-prefs", (prefs) => {
     status = { ...status, prefs };
     drawStatus();
   });
-  void onEvent<ModelsStatus>("speech-models", (models) => {
+  void onEvent("speech-models", (models) => {
     status = { ...status, models };
     drawStatus();
   });

@@ -346,7 +346,7 @@ class AppState {
   beginApproval(info: ApprovalInfo) {
     this.pendingApproval = info;
     this.isPinned = true;
-    if (this.focusBeforeApproval == null) this.focusBeforeApproval = this.focusId;
+    this.focusBeforeApproval ??= this.focusId;
     this.setFocus(info.pillId);
   }
 

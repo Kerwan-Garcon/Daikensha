@@ -119,14 +119,14 @@ export function linkSnapshot(): LinkSnapshot {
       ? { requestId: a.requestId, sessionId: a.sessionId, pillId: a.pillId, tool: a.tool, command: bareCommand(a.tool, a.command) }
       : null;
   const question =
-    a && a.questions && a.questions.length > 0 && a.requestId
+    a?.questions && a.questions.length > 0 && a.requestId
       ? {
           requestId: a.requestId,
           sessionId: a.sessionId,
           pillId: a.pillId,
           questions: a.questions.map((q) => ({
             question: q.question,
-            options: q.options.map((o) => ({ label: o.label, description: o.description ?? "" })),
+            options: q.options.map((o) => ({ label: o.label, description: o.description })),
             multiSelect: q.multiSelect,
           })),
         }
@@ -162,10 +162,11 @@ export function registerPhoneLink(island: Island): () => void {
   };
 
   const publishQuestion = () => {
-    const key = JSON.stringify(linkSnapshot().question);
+    const { question } = linkSnapshot();
+    const key = JSON.stringify(question);
     if (key === lastQuestion) return;
     lastQuestion = key;
-    void Bridge.phoneLinkPublishQuestion(JSON.parse(key));
+    void Bridge.phoneLinkPublishQuestion(question);
   };
 
   const publishOutfit = () => {
@@ -217,13 +218,13 @@ export function registerPhoneLink(island: Island): () => void {
   // Turning the link on or off in Settings reaches the island as settings-changed.
   void onEvent("settings-changed", () => void refresh());
   // The phone answered: Rust has already told the agent; the card goes.
-  void onEvent<string>("phone-link-decided", (requestId) => {
+  void onEvent("phone-link-decided", (requestId) => {
     if (State.pendingApproval?.requestId === requestId) dropPendingCard(island);
   });
   // A phone asked for a file's diff: the answer goes to that phone only (Rust cuts it to the limits).
-  void onEvent<{ conn: number; pillId: string; fileId: number }>("phone-link-getdiff", (ask) => {
-    if (!running || typeof ask?.conn !== "number") return;
-    void Bridge.phoneLinkSendDiff(ask.conn, linkDiff(String(ask.pillId), Number(ask.fileId)));
+  void onEvent("phone-link-getdiff", (ask) => {
+    if (!running) return;
+    void Bridge.phoneLinkSendDiff(ask.conn, linkDiff(ask.pillId, ask.fileId));
   });
   void refresh();
   return () => {

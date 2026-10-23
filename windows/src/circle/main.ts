@@ -6,10 +6,11 @@
 import { Bridge } from "../core/bridge";
 import { resolveLanguage, setLanguage, systemLanguages, t } from "../i18n/i18n";
 import { colorAlpha, colorHex } from "../design/tokens";
+import { context2d, requireElement } from "../core/elements";
 
 const canvas = document.getElementById("lasso") as HTMLCanvasElement;
-const hint = document.getElementById("hint")!;
-const ctx = canvas.getContext("2d")!;
+const hint = requireElement("hint");
+const ctx = context2d(canvas);
 let points: [number, number][] = [];
 let drawing = false;
 let done = false;

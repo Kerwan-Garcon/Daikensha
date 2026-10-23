@@ -62,7 +62,7 @@ export function isLanguage(code: unknown): code is Language {
 export function resolveLanguage(picked: string | undefined | null, system: readonly string[] = []): Language {
   if (isLanguage(picked)) return picked;
   for (const raw of system) {
-    const tag = String(raw ?? "").replace(/_/g, "-").toLowerCase();
+    const tag = raw.replace(/_/g, "-").toLowerCase();
     if (!tag) continue;
     const base = tag.split("-")[0];
     if (base === "zh") {
@@ -80,7 +80,7 @@ export function resolveLanguage(picked: string | undefined | null, system: reado
 /** The system's languages, as the webview knows them. */
 export function systemLanguages(): string[] {
   if (typeof navigator === "undefined") return [];
-  const list = navigator.languages?.length ? [...navigator.languages] : [];
+  const list = [...((navigator as Partial<Navigator>).languages ?? [])];
   if (navigator.language && !list.includes(navigator.language)) list.push(navigator.language);
   return list;
 }
@@ -116,10 +116,12 @@ export function onLanguageChange(listener: (lang: Language) => void): () => void
  * where they are. (The settings window sets `dir` on the whole page.)
  */
 export function applyDocumentLanguage() {
-  if (typeof document === "undefined" || !document.documentElement) return;
-  const root = document.documentElement;
+  // The tests' stand-in document may have no root element or dataset.
+  const root = typeof document === "undefined" ? undefined : (document as Partial<Document>).documentElement;
+  if (!root) return;
   root.lang = current;
-  if (root.dataset) root.dataset.dir = isRtl() ? "rtl" : "ltr";
+  const dataset = (root as Partial<HTMLElement>).dataset;
+  if (dataset) dataset.dir = isRtl() ? "rtl" : "ltr";
 }
 
 function interpolate(text: string, vars?: Vars): string {

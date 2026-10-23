@@ -63,7 +63,7 @@ export function searchApps(apps: readonly ShellApp[], query: string, limit = 8):
 
 /** The tile letter of an app: its first letter or digit. */
 export function initial(name: string): string {
-  const m = name.match(/[\p{L}\p{N}]/u);
+  const m = /[\p{L}\p{N}]/u.exec(name);
   return m ? m[0].toUpperCase() : "?";
 }
 

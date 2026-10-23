@@ -41,9 +41,9 @@ export function cssVar(name: Token): string {
 /** The R, G, B of a colour token (#rgb, #rrggbb, "r g b" or rgb(r g b)). */
 export function colorChannels(name: Token): [number, number, number] {
   const v = tokenValue(name);
-  const hex = v.match(/^#([0-9a-f]{3}|[0-9a-f]{6})$/i)?.[1];
+  const hex = (/^#([0-9a-f]{3}|[0-9a-f]{6})$/i.exec(v))?.[1];
   if (hex) {
-    const full = hex.length === 3 ? [...hex].map((c) => c + c).join("") : hex;
+    const full = hex.length === 3 ? Array.from(hex, (c) => c + c).join("") : hex;
     return [0, 2, 4].map((i) => parseInt(full.slice(i, i + 2), 16)) as [number, number, number];
   }
   const nums = v.replace(/^rgb\(|\)$/g, "").trim().split(/[\s,]+/).map(Number);

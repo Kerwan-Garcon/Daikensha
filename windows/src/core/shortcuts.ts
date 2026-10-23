@@ -132,7 +132,7 @@ const NAMED = [
 
 /** Every main key an accelerator may name — all of them parse in Rust too. */
 export const KEY_NAMES: readonly string[] = [
-  ..."ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789",
+  ...Array.from("ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"),
   ...Array.from({ length: 24 }, (_, i) => `F${i + 1}`),
   ...NAMED,
   ...Object.keys(PUNCTUATION),
@@ -279,7 +279,7 @@ export function recordPress(e: KeyPress): Recorded {
   // plain letter, digit or space, this combination is how the user types it.
   if (e.ctrlKey && e.altKey && !e.metaKey) {
     if (e.key === "Dead") return { kind: "typesCharacter", typed: "´", keys };
-    if ([...e.key].length === 1 && !/^[a-z0-9 ]$/i.test(e.key)) {
+    if (Array.from(e.key).length === 1 && !/^[a-z0-9 ]$/i.test(e.key)) {
       return { kind: "typesCharacter", typed: e.key, keys };
     }
   }

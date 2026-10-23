@@ -68,7 +68,7 @@ function spaced(x: Ctx, text: string, cx: number, y: number, spacing: number, ma
     return;
   }
   shrinkToFit(x, text, maxW, spacing);
-  const chars = [...text];
+  const chars = Array.from(text);
   const widths = chars.map((c) => x.measureText(c).width);
   const total = widths.reduce((a, b) => a + b, 0) + spacing * (chars.length - 1);
   let at = cx - total / 2;
@@ -86,7 +86,7 @@ function shrinkToFit(x: Ctx, text: string, maxW: number, spacing = 0) {
   if (!match) return;
   const [, weight, sizeText, family] = match;
   const size = Number(sizeText);
-  const extra = spacing * Math.max(0, [...text].length - 1);
+  const extra = spacing * Math.max(0, Array.from(text).length - 1);
   let s = size;
   while (x.measureText(text).width + extra > maxW && s > size * 0.6) {
     s -= 1;

@@ -2,7 +2,7 @@
 
 import { Bridge, IS_TAURI, onEvent } from "./core/bridge";
 import { Sound } from "./core/sound";
-import { State, type Settings } from "./core/state";
+import { State } from "./core/state";
 import { Island } from "./island/island";
 import { registerHookHandlers } from "./island/hooks";
 import { registerPhoneLink } from "./island/phone-link";
@@ -55,8 +55,8 @@ async function main() {
   if (boot && !boot.cursorPoll) island.followPageCursor();
   await island.desktop.init();
 
-  await onEvent<{ x: number; y: number }>("cursor", ({ x, y }) => island.onCursor(x, y));
-  await onEvent<boolean>("pointer-inside", (inside) => island.setPointerInside(inside));
+  await onEvent("cursor", ({ x, y }) => island.onCursor(x, y));
+  await onEvent("pointer-inside", (inside) => island.setPointerInside(inside));
 
   /** Pause has to reach Rust too, or the pollers keep calling out. */
   const setPaused = (on: boolean) => {
@@ -65,7 +65,7 @@ async function main() {
     void Bridge.setPaused(on);
   };
 
-  await onEvent<string>("tray", (what) => {
+  await onEvent("tray", (what) => {
     switch (what) {
       case "settings":
         setPaused(false);
@@ -96,13 +96,13 @@ async function main() {
     await Bridge.fitZoom(dpr);
   };
 
-  await onEvent<null>("screen-changed", async () => {
+  await onEvent("screen-changed", async () => {
     await checkZoom();
     void Bridge.reposition();
   });
 
   const mediaQuery = window.matchMedia(`(resolution: ${window.devicePixelRatio}dppx)`);
-  mediaQuery.addEventListener?.("change", () => void checkZoom());
+  mediaQuery.addEventListener("change", () => void checkZoom());
 
   window.addEventListener(
     "wheel",
@@ -118,12 +118,12 @@ async function main() {
   });
 
   // Settings → Reload sounds: read the sounds folder again, and let them hear it.
-  await onEvent<null>("sounds-changed", () => {
+  await onEvent("sounds-changed", () => {
     void Sound.reload().then(() => Sound.play("pop"));
   });
 
   // The settings window writes preferences; apply them here without a restart.
-  await onEvent<Settings>("settings-changed", (s) => {
+  await onEvent("settings-changed", (s) => {
     const previousMain = State.mainPillId;
     State.settings = { ...State.settings, ...s };
     applyLanguage();
@@ -149,7 +149,7 @@ async function main() {
   const checkRecap = () => void Recap.check(island);
   island.onGreetingDone = checkRecap;
   island.onWake = checkRecap;
-  await onEvent<null>("recap-check", checkRecap);
+  await onEvent("recap-check", checkRecap);
 
   island.launch();
 

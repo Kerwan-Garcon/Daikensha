@@ -10,7 +10,7 @@ import { h } from "./dom";
 import type { ViewHost } from "./views";
 
 export function buildCircle(decide: (ask: boolean) => void): ViewHost {
-  const img = h("img", { class: "circle-shot", alt: "" }) as HTMLImageElement;
+  const img = h("img", { class: "circle-shot", alt: "" });
   const title = h("div", { class: "title one-line", text: tl("Ask about this?") });
   const hint = h("div", { class: "sub confirm-hint", text: tl("Only Claude sees it, with your question. Nothing is saved.") });
   const ask = h("button", { class: "btn primary", onclick: () => decide(true) }, h("span", { text: tl("Ask") }));

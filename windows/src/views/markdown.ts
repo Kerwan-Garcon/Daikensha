@@ -204,10 +204,11 @@ async function writeClipboard(text: string) {
     await navigator.clipboard.writeText(text);
   } catch {
     // No clipboard API (or no permission): the old way, through a hidden field.
-    const area = h("textarea", { style: "position:fixed;opacity:0" }) as HTMLTextAreaElement;
+    const area = h("textarea", { style: "position:fixed;opacity:0" });
     area.value = text;
     document.body.append(area);
     area.select();
+    // eslint-disable-next-line @typescript-eslint/no-deprecated -- the fallback for webviews without the Clipboard API
     document.execCommand("copy");
     area.remove();
   }
