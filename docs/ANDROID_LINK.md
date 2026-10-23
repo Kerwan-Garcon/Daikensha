@@ -6,7 +6,8 @@ the local network.
 
 Status: the Android client, `android/tools/dev-desktop.mjs` (a stand-in desktop for testing) and the
 real desktop server of the Windows/Linux app (`windows/src-tauri/src/phone_link/`) implement this.
-The Mac app is left to its author.
+The Mac app implements protocol v1 (sessions, approvals, pairing, Bonjour) in `NotchBuddy/Sources/App/AndroidLink/`;
+the optional capabilities and the relay are not there yet (see "macOS implementation notes").
 
 ## Transport
 
@@ -329,6 +330,37 @@ simply keeps using the saved address.**
 - New crates: `mdns-sd` (+ `flume`, `if-addrs`, `socket-pktinfo`, `spin`; default features off, so no async runtime or logger) announces the computer on the local network while the link is on (`phone_link/discovery.rs`); `rcgen` (+ `yasna`) makes the certificate once, `qrcode` draws the pairing QR; `rustls`,
   `tokio-rustls` and `ring` were already in the dependency tree (through `reqwest`) and are now named
   directly. Hashing, randomness and the constant-time comparison use `ring`; no other crate.
+
+## macOS implementation notes
+
+- Settings → Android phone: off by default (`androidLinkEnabled` in the app's preferences). While off, nothing listens,
+  nothing is announced and no timer runs. GitHub builds only: the code is under the `ANDROID_LINK` compilation condition,
+  set for every configuration of the `NotchBuddy` target and never for `CoucouAppStore` (the CI checks that the App
+  Store binary carries none of it). The target is not sandboxed, so no network entitlement is involved;
+  `NSLocalNetworkUsageDescription` and `NSBonjourServices` (`_coucou._tcp`) are declared for macOS's local network prompt.
+- Same split as Windows: `AndroidLink/Core/` is the pure part (admission, line framing, the hub, the conversation over any
+  byte stream, the pairing link, the certificate), a port of `phone_link/` rule for rule; around it, `LinkServer`
+  (Network.framework: `NWListener`, TLS 1.2/1.3, Bonjour through `NWListener.service`), `LinkKeychain`, `LinkFeed`
+  (AppState → hub, decisions → `HookServer.sendApprovalDecision`) and the settings view.
+- It listens on IPv4, port 47821 (else any free port), and cancels every peer that is not on the local network before the
+  TLS handshake. Admission, the 10 s / 3 s hello, the 20 min idle limit and the 64 KiB line limit are the Rust ones.
+- The certificate (ECDSA P-256, self-signed, CN "Coucou phone link", 2024 to 2124) is built as DER by hand
+  (`Core/Certificate.swift`) and signed with CryptoKit: no package. Its key, the certificate and the pairing token live in
+  the data protection Keychain, on this Mac only; an unsigned build cannot use it, and the link then does not start (use
+  `scripts/dev-install.sh`). Nothing is ever written to disk instead.
+- The approval fingerprint's input key is the request's id (`ApprovalInfo.id`), as on Windows, so asking for the same
+  command twice gives two fingerprints. A decision is applied only if that request is still the one on the island's card,
+  checked again on the main actor. The demo's cards never reach the phone.
+- One token at a time: "Pair again" disconnects every phone first, then makes a new token. The pairing code (QR from
+  CoreImage, and the link) is shown only after a click in Settings.
+- Not yet on the Mac: `answers`, `details`, `diffs`, `usage`, `services`, `prefs`, `chat` and the relay. A phone that asks
+  for them is offered nothing (`welcome` carries no `caps`), as with an older computer.
+- Tests: `scripts/test-android-link.sh` (the core, on macOS or Linux), `scripts/test-android-link-mac.sh` (the
+  Network.framework server against a client that pins the certificate like the phone), and
+  `scripts/docker-android-link.sh`: the core's tests on Linux, then android/'s own `LinkClient` and
+  `RustDesktopInteropTest`, unchanged, against the Swift server over TLS with the certificate the core made (in that
+  image `cargo` starts the Swift server, `docker/android-link/cargo-shim.sh`). The `Android link (Mac)` workflow runs all
+  of them and builds Debug, Release and the App Store target.
 
 ## Android notes
 

@@ -527,6 +527,10 @@ struct SettingsView: View {
             .padding(6)
         }
         #endif
+
+        #if ANDROID_LINK
+        AndroidLinkSettingsView()
+        #endif
     }
 
     private func refreshConnectedScreens() {

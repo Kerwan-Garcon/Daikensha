@@ -29884,6 +29884,295 @@
         }
       }
     },
+    "android.error.identity" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The link's certificate could not be made or read. The link did not start."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Le certificat du lien n'a pas pu être créé ou lu. Le lien n'a pas démarré."
+          }
+        }
+      }
+    },
+    "android.error.keychain %lld" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The Keychain refused to keep the link's keys (error %lld). The link is off."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Le Trousseau a refusé de garder les clés du lien (erreur %lld). Le lien est désactivé."
+          }
+        }
+      }
+    },
+    "android.error.listen" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Coucou could not listen on the local network."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Coucou n'a pas pu écouter sur le réseau local."
+          }
+        }
+      }
+    },
+    "android.error.no-network" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This Mac has no local network address. Join a Wi-Fi or a wired network first."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ce Mac n'a pas d'adresse sur le réseau local. Rejoignez d'abord un Wi-Fi ou un réseau filaire."
+          }
+        }
+      }
+    },
+    "android.error.random" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No secure random source: the link did not start."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pas de source d'aléa sûre : le lien n'a pas démarré."
+          }
+        }
+      }
+    },
+    "android.error.unsigned" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This build of Coucou is not signed, so the Keychain cannot keep the link's keys. Install it with scripts/dev-install.sh or use a release build."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cette version de Coucou n'est pas signée : le Trousseau ne peut pas garder les clés du lien. Installez-la avec scripts/dev-install.sh ou utilisez une version publiée."
+          }
+        }
+      }
+    },
+    "android.link.description" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Coucou for Android connects to this Mac over your local network only, with an encrypted link and a pairing code. Nothing listens while this is off. Every Allow on the phone needs its screen lock; you can always answer here too."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Coucou pour Android se connecte à ce Mac uniquement par votre réseau local, avec une liaison chiffrée et un code d'appairage. Rien n'écoute tant que c'est désactivé. Chaque « Autoriser » sur le téléphone demande son verrouillage d'écran ; vous pouvez toujours répondre ici aussi."
+          }
+        }
+      }
+    },
+    "android.link.toggle" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Let my Android phone see my sessions and answer approvals"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Laisser mon téléphone Android voir mes sessions et répondre aux autorisations"
+          }
+        }
+      }
+    },
+    "android.pair.again" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pair again"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Appairer à nouveau"
+          }
+        }
+      }
+    },
+    "android.pair.copy" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Copy link"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Copier le lien"
+          }
+        }
+      }
+    },
+    "android.pair.hide" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hide"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Masquer"
+          }
+        }
+      }
+    },
+    "android.pair.hint" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "In Coucou for Android, tap Scan QR code, or scan it with the phone's camera. This code lets a phone in: show it to no one. Pair again replaces it and disconnects the phone that had the old one."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dans Coucou pour Android, touchez « Scanner le QR code », ou scannez-le avec l'appareil photo du téléphone. Ce code fait entrer un téléphone : ne le montrez à personne. « Appairer à nouveau » le remplace et déconnecte le téléphone qui avait l'ancien."
+          }
+        }
+      }
+    },
+    "android.pair.qr" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pairing QR code"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "QR code d'appairage"
+          }
+        }
+      }
+    },
+    "android.pair.show" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Show pairing code"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Afficher le code d'appairage"
+          }
+        }
+      }
+    },
+    "android.status.listening %lld %lld" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Listening on port %1$lld · %2$lld phone(s) connected"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "À l'écoute sur le port %1$lld · %2$lld téléphone(s) connecté(s)"
+          }
+        }
+      }
+    },
+    "android.status.starting" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Starting…"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Démarrage…"
+          }
+        }
+      }
+    },
+    "android.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Android phone"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Téléphone Android"
+          }
+        }
+      }
+    },
     "iphone.sync.toggle" : {
       "localizations" : {
         "ar" : {

@@ -1,0 +1,105 @@
+name: Android link (Mac)
+
+# The Mac's Android link (NotchBuddy/Sources/App/AndroidLink): the portable core's tests on macOS
+# (CryptoKit), the Network.framework server against a pinned TLS client, the app builds that carry it
+# (Debug, Release) and the App Store build that must not. The Linux side of the same tests, and the
+# Kotlin client against the Swift server, run in Docker: scripts/docker-android-link.sh (job `docker`).
+# Builds nothing that is published and uploads no artifact.
+
+on:
+  push:
+    branches: [main, 'claude/android-link-mac-*']
+    paths:
+      - 'NotchBuddy/**'
+      - 'tests/android-link/**'
+      - 'tests/AndroidLinkMacTests.swift'
+      - 'docker/android-link/**'
+      - 'scripts/*android-link*'
+      - '.github/workflows/mac-android-link.yml'
+  pull_request:
+    paths:
+      - 'NotchBuddy/Sources/App/AndroidLink/**'
+      - 'NotchBuddy/project.yml'
+      - 'tests/android-link/**'
+      - 'tests/AndroidLinkMacTests.swift'
+      - 'docker/android-link/**'
+      - 'scripts/*android-link*'
+      - 'android/app/src/main/kotlin/com/coucou/android/link/**'
+      - '.github/workflows/mac-android-link.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  mac:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { persist-credentials: false }
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Xcode in use
+        run: xcodebuild -version
+
+      - name: Generate project, and the committed Info.plist is the generated one
+        run: |
+          cd NotchBuddy && xcodegen
+          git diff --exit-code Resources/Info.plist
+
+      - name: Portable core (CryptoKit)
+        run: bash scripts/test-android-link.sh
+
+      - name: Network.framework server, pinned TLS client
+        run: bash scripts/test-android-link-mac.sh
+
+      - name: Build Debug (with the link)
+        run: |
+          set -o pipefail
+          xcodebuild -project NotchBuddy/NotchBuddy.xcodeproj -scheme NotchBuddy -configuration Debug \
+            -derivedDataPath build/debug build CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO 2>&1 | tee debug.log || {
+              grep -E "error:" debug.log | sort -u | head -40 | sed 's/^/::error::/'
+              exit 1
+            }
+
+      - name: Build Release (GitHub build, with the link)
+        run: |
+          set -o pipefail
+          xcodebuild -project NotchBuddy/NotchBuddy.xcodeproj -scheme NotchBuddy -configuration Release \
+            -derivedDataPath build/release build CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO 2>&1 | tee release.log || {
+              grep -E "error:" release.log | sort -u | head -40 | sed 's/^/::error::/'
+              exit 1
+            }
+          # The whole symbol list is read (grep -q would close the pipe early and fail nm under pipefail).
+          nm build/release/Build/Products/Release/Coucou.app/Contents/MacOS/Coucou > release-symbols.txt
+          grep -c AndroidLinkController release-symbols.txt
+
+      - name: Build App Store target, without the link
+        run: |
+          set -o pipefail
+          xcodebuild -project NotchBuddy/NotchBuddy.xcodeproj -scheme CoucouAppStore -configuration Debug \
+            -derivedDataPath build/appstore build CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO 2>&1 | tee appstore.log || {
+              grep -E "error:" appstore.log | sort -u | head -40 | sed 's/^/::error::/'
+              exit 1
+            }
+          BIN=build/appstore/Build/Products/Debug/Coucou.app/Contents/MacOS/Coucou
+          [ -f "$BIN.debug.dylib" ] && BIN="$BIN.debug.dylib"
+          nm "$BIN" > appstore-symbols.txt
+          if grep -E "AndroidLink|LinkHub|LinkServer" appstore-symbols.txt; then
+            echo "::error::the App Store build carries Android link code"
+            exit 1
+          fi
+          if /usr/libexec/PlistBuddy -c "Print :NSBonjourServices" build/appstore/Build/Products/Debug/Coucou.app/Contents/Info.plist 2>/dev/null; then
+            echo "::error::the App Store build declares the Android link's Bonjour service"
+            exit 1
+          fi
+
+  docker:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with: { persist-credentials: false }
+      - name: Core tests in Docker, then the Kotlin client against the Swift server
+        run: ./scripts/docker-android-link.sh all
