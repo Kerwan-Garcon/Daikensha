@@ -11,6 +11,7 @@ mod desktop;
 mod files;
 mod flow;
 mod github;
+mod github_dl;
 mod hooks;
 mod i18n;
 mod identity;
@@ -42,6 +43,7 @@ mod tray;
 mod voice;
 #[cfg(windows)]
 mod webview_drop;
+mod whatsapp;
 
 use std::process::Command;
 use std::sync::atomic::Ordering;
@@ -141,6 +143,7 @@ fn save_settings(app: AppHandle, shared: State<'_, Shared>, settings: Settings) 
     integrations::settings_saved(&app, &settings.active_integrations);
     spotify::sync(&app, &settings.active_integrations);
     youtube_music::sync(&app, &settings.active_integrations);
+    whatsapp::sync(&settings.active_integrations);
     shell::settings_saved(&app, &settings);
     if shortcuts_changed || top_bar_changed {
         shortcuts::apply(&app, &shell::appbar::bindings(&settings));
@@ -961,6 +964,17 @@ pub fn run() {
             youtube_music::youtube_music_control,
             youtube_music::youtube_music_open,
             youtube_music::youtube_music_installed,
+            whatsapp::whatsapp_island,
+            whatsapp::whatsapp_open,
+            whatsapp::whatsapp_close,
+            whatsapp::whatsapp_send,
+            whatsapp::whatsapp_ignore,
+            whatsapp::whatsapp_unignore,
+            whatsapp::whatsapp_settings,
+            whatsapp::whatsapp_set_options,
+            whatsapp::whatsapp_save_gateway,
+            whatsapp::whatsapp_test,
+            whatsapp::whatsapp_install,
             flow::flow_status,
             flow::flow_set_prefs,
             flow::flow_history,
@@ -1055,6 +1069,8 @@ pub fn run() {
             integrations::start(handle.clone());
             spotify::sync(&handle, &loaded.active_integrations);
             youtube_music::sync(&handle, &loaded.active_integrations);
+            // WhatsApp (experimental): nothing runs unless it is turned on and its pill is active.
+            whatsapp::start(&handle, &loaded.active_integrations);
             // A taskbar left hidden by a crash comes back first; settings_saved hides it again if asked.
             shell::appbar::recover();
             shell::settings_saved(&handle, &loaded);
@@ -1079,6 +1095,8 @@ pub fn run() {
                 phone_link::stop_on_exit(app);
                 notes::shutdown(app);
                 shell::appbar::on_exit();
+                // GOWA started by Coucou stops with it; the conversations were only in memory.
+                whatsapp::shutdown();
             }
         });
 }

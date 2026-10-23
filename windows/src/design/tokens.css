@@ -78,6 +78,9 @@
   --color-danger-vivid: rgb(var(--color-danger-vivid-rgb)); /* #ff453a */
   --color-success-rgb: 34 197 94;
   --color-success: rgb(var(--color-success-rgb)); /* #22c55e */
+  /* WhatsApp's green: its pill and card. */
+  --color-whatsapp-rgb: 37 211 102;
+  --color-whatsapp: rgb(var(--color-whatsapp-rgb)); /* #25d366 */
   --color-success-alt-rgb: 52 211 153;
   --color-success-alt: rgb(var(--color-success-alt-rgb)); /* #34d399 */
   --color-warning-rgb: 245 165 36;

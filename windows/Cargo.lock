@@ -729,6 +729,7 @@ dependencies = [
  "keyring",
  "libc",
  "mdns-sd",
+ "miniz_oxide 0.8.9",
  "parking_lot",
  "qrcode",
  "rcgen",

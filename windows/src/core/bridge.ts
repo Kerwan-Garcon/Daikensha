@@ -10,6 +10,7 @@ import type { RecapHistory, RecapPrefs } from "../recap/summary";
 import type { SpotifyState } from "./spotify";
 import type { EventMap, EventName } from "./events";
 import type { YouTubeMusicState } from "./youtube-music";
+import type { WaIslandView, WaSettingsView, WaTestResult } from "./whatsapp";
 
 export const IS_TAURI =
   typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
@@ -481,6 +482,29 @@ export const Bridge = {
   youTubeMusicOpen: () => call<boolean>("youtube_music_open"),
   /** Whether there is a Pear Desktop to launch (Settings). */
   youTubeMusicInstalled: () => call<boolean>("youtube_music_installed"),
+
+  // ── WhatsApp (src-tauri/src/whatsapp) ─────────────────────────────────────
+  /** The island's copy, asked once at start (then the "whatsapp" event). Island only. */
+  whatsappIsland: () => call<WaIslandView>("whatsapp_island"),
+  /** A conversation opened in the card: its latest messages, the receipt if Settings says so. */
+  whatsappOpen: (chat: string) => call<null>("whatsapp_open", { chat }),
+  whatsappClose: (chat: string) => call<null>("whatsapp_close", { chat }),
+  /** Enter or the send button only. True once the gateway took it. */
+  whatsappSend: (chat: string, text: string) => call<boolean>("whatsapp_send", { chat, text }),
+  /** A chat id, or (Settings) a phone number. */
+  whatsappIgnore: (chat: string) => call<null>("whatsapp_ignore", { chat }),
+  whatsappUnignore: (chat: string) => call<null>("whatsapp_unignore", { chat }),
+  /** Settings only, from here down. */
+  whatsappSettings: () => call<WaSettingsView>("whatsapp_settings"),
+  whatsappSetOptions: (enabled: boolean, muteGroups: boolean, markReadOnOpen: boolean) =>
+    callOrThrow<null>("whatsapp_set_options", { enabled, muteGroups, markReadOnOpen }),
+  /** `credential`: null keeps the stored one, "" removes it. */
+  whatsappSaveGateway: (g: {
+    gateway: "gowa" | "openwa"; url: string; credential: string | null; port: number; autoStart: boolean; gowaPath: string;
+  }) => callOrThrow<null>("whatsapp_save_gateway", g),
+  whatsappTest: () => call<WaTestResult>("whatsapp_test"),
+  /** "Install WhatsApp" / "Update": GOWA from its GitHub releases, on this click only. */
+  whatsappInstall: () => call<null>("whatsapp_install"),
 };
 
 export type SpotifyAction = "playPause" | "next" | "previous" | "seek" | "shuffle" | "repeat" | "volume";

@@ -26,6 +26,8 @@ import { buildSpotifyCard, buildSpotifyPill, type SpotifyPillHost } from "./spot
 import { SPOTIFY_ID } from "../core/spotify";
 import { buildYouTubeMusicCard, buildYouTubeMusicPill } from "./youtube-music";
 import { YOUTUBE_MUSIC_ID } from "../core/youtube-music";
+import { buildWhatsAppCard } from "./whatsapp";
+import { WHATSAPP_ID } from "../core/whatsapp";
 import type { Outfit, OutfitSelection } from "../mochi/wardrobe";
 import { language, t, tl, type Msg } from "../i18n/i18n";
 import type { ViewCommand } from "../island/shortcuts";
@@ -73,6 +75,10 @@ export interface ViewActions {
   previewOutfit(outfit: Outfit | null): void;
   /** Wardrobe "Face" switch: Mochi's next face (src/mochi/look.ts). */
   nextLook(): void;
+  /** The island takes the keyboard (a text field in a card) or gives it back. */
+  keyboard(on: boolean): void;
+  /** Something is being typed in a card: the island stays open until it is sent or cleared. */
+  holdOpen(on: boolean): void;
 }
 
 export interface ViewHost {
@@ -222,6 +228,12 @@ function buildOverview(actions: ViewActions): ViewHost {
   // YouTube Music's, likewise.
   const youTubeMusicCard = buildYouTubeMusicCard();
   let youTubeMusicPill: SpotifyPillHost | null = null;
+  // WhatsApp's card too: its reply field keeps the draft and the keyboard while messages arrive.
+  const whatsappCard = buildWhatsAppCard({
+    openSettings: () => actions.openSettingsWindow(),
+    keyboard: (on) => actions.keyboard(on),
+    holdOpen: (on) => actions.holdOpen(on),
+  });
 
   const el = h("div", { class: "view overview" },
     h("div", { class: "left" }, left),
@@ -231,7 +243,7 @@ function buildOverview(actions: ViewActions): ViewHost {
   let pillIds = "";
   let detailOpen = false;
   let lastFocus: string | null = null;
-  let mode: "ticker" | "card" | "plan" | "diff" | "spotify" | "youtube-music" | null = null;
+  let mode: "ticker" | "card" | "plan" | "diff" | "spotify" | "youtube-music" | "whatsapp" | null = null;
   let cardKey = "";
   /** The list row highlighted at the last sync, to scroll only when it moves. */
   let shownSelection: number | null = null;
@@ -400,6 +412,15 @@ function buildOverview(actions: ViewActions): ViewHost {
           cardKey = "";
         }
         youTubeMusicCard.sync();
+      } else if (task?.id === WHATSAPP_ID) {
+        // Its own card in every state: not linked, no message, conversations, one open.
+        if (mode !== "whatsapp") {
+          clear(leftBody);
+          leftBody.append(whatsappCard.el);
+          mode = "whatsapp";
+          cardKey = "";
+        }
+        whatsappCard.sync();
       } else if (task) {
         const info = State.integrations[task.id];
         const key = [

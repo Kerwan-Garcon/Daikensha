@@ -1,0 +1,267 @@
+/* WhatsApp (views/whatsapp.ts) — WhatsAppCardView on macOS. Every class is the card's own. */
+
+.wa-card {
+  height: 100%;
+  box-sizing: border-box;
+  padding-top: 10px;
+}
+
+.wa-list,
+.wa-convo {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  height: 100%;
+}
+
+.wa-unread {
+  font: 600 10px var(--font-sans);
+  color: var(--color-whatsapp);
+  font-variant-numeric: tabular-nums;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: rgb(var(--color-whatsapp-rgb) / 0.14);
+}
+
+.wa-empty {
+  font: 400 11px var(--font-sans);
+  color: var(--color-text-faint);
+  padding: 8px 0 0 8px;
+}
+
+.wa-status-text {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+.wa-settings {
+  color: var(--color-text-subtle);
+  padding: 0;
+}
+
+.wa-rows {
+  overflow-y: auto;
+  min-height: 0;
+  padding-right: 12px;
+  scrollbar-width: none;
+}
+
+.wa-row {
+  border: 0;
+  background: transparent;
+  text-align: start;
+  width: 100%;
+  gap: 6px;
+  padding: 3px 6px;
+  cursor: default;
+  flex: 0 0 auto;
+}
+
+.wa-row:hover {
+  background: rgb(var(--color-overlay-rgb) / 0.05);
+}
+
+.wa-row.unread {
+  background: rgb(var(--color-whatsapp-rgb) / 0.08);
+}
+
+.wa-row.unread:hover {
+  background: rgb(var(--color-whatsapp-rgb) / 0.14);
+}
+
+.wa-row-name {
+  max-width: 92px;
+  flex: 0 1 auto;
+}
+
+.wa-row.unread .wa-row-name {
+  font-weight: 600;
+  color: var(--gray-918);
+}
+
+.wa-row.unread .wa-preview {
+  color: var(--color-text-subtle);
+}
+
+.wa-spacer {
+  flex: 1 1 0;
+}
+
+.wa-count {
+  font: 700 9px var(--font-sans);
+  color: var(--color-bg);
+  background: var(--color-whatsapp);
+  border-radius: 999px;
+  padding: 1px 5px;
+  font-variant-numeric: tabular-nums;
+  flex: 0 0 auto;
+}
+
+.wa-ignore {
+  color: var(--color-danger);
+  padding: 0;
+  flex: 0 0 auto;
+}
+
+.wa-avatar {
+  flex: 0 0 auto;
+  display: inline-grid;
+  place-items: center;
+  border-radius: 50%;
+  background: rgb(var(--color-whatsapp-rgb) / 0.22);
+  color: var(--color-whatsapp);
+  font-family: var(--font-sans);
+  font-weight: 700;
+  line-height: 1;
+}
+
+.wa-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  padding-right: 36px;
+  margin-left: -6px;
+}
+
+.wa-back {
+  width: 20px;
+  height: 20px;
+}
+
+.wa-name {
+  font: 600 11px var(--font-sans);
+  color: var(--color-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+.wa-messages {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 4px 12px 4px 0;
+  scrollbar-width: none;
+}
+
+.wa-line {
+  display: flex;
+  padding-right: 40px;
+}
+
+.wa-line.mine {
+  justify-content: flex-end;
+  padding-right: 0;
+  padding-left: 40px;
+}
+
+.wa-bubble {
+  padding: 3px 7px;
+  border-radius: 6px;
+  background: rgb(var(--color-overlay-rgb) / 0.06);
+  min-width: 0;
+  user-select: text;
+}
+
+.wa-bubble.mine {
+  background: rgb(var(--color-whatsapp-rgb) / 0.16);
+}
+
+.wa-sender {
+  font: 600 9px var(--font-sans);
+  color: rgb(var(--color-whatsapp-rgb) / 0.8);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.wa-media {
+  font: 500 10px var(--font-sans);
+  color: var(--color-text-muted);
+}
+
+.wa-text {
+  font: 400 10.5px/1.35 var(--font-sans);
+  color: var(--gray-788);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.wa-bubble.mine .wa-text {
+  color: var(--gray-918);
+}
+
+.wa-reply {
+  display: flex;
+  align-items: flex-end;
+  gap: 6px;
+  padding: 4px 8px;
+  margin-right: 12px;
+  border-radius: 7px;
+  background: rgb(var(--color-overlay-rgb) / 0.06);
+  flex: 0 0 auto;
+}
+
+.wa-field {
+  flex: 1 1 auto;
+  min-width: 0;
+  resize: none;
+  border: 0;
+  outline: none;
+  background: transparent;
+  color: var(--color-text);
+  font: 400 11px/1.35 var(--font-sans);
+  max-height: 44px;
+  padding: 1px 0;
+  field-sizing: content;
+}
+
+.wa-field::placeholder {
+  color: var(--color-text-faint);
+}
+
+.wa-send {
+  width: 16px;
+  height: 16px;
+  border: 0;
+  border-radius: 50%;
+  background: rgb(var(--color-whatsapp-rgb) / 0.3);
+  display: grid;
+  place-items: center;
+  cursor: default;
+  flex: 0 0 auto;
+}
+
+.wa-send.ready {
+  background: var(--color-whatsapp);
+}
+
+.wa-note {
+  font: 400 9.5px var(--font-sans);
+  min-height: 0;
+  padding: 2px 0 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.wa-note.warn {
+  color: var(--color-warning);
+}
+
+.wa-note.err {
+  color: var(--color-danger);
+}
+
+html[data-dir="rtl"] #views :is(.wa-text, .wa-field, .wa-preview) {
+  unicode-bidi: plaintext;
+  text-align: start;
+}
+

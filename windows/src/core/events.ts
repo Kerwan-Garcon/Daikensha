@@ -14,6 +14,7 @@ import type { GitHubEvent } from "./github";
 import type { Looked } from "./look";
 import type { SpotifyState } from "./spotify";
 import type { YouTubeMusicState } from "./youtube-music";
+import type { WaIslandView, WaPillEvent, WaSettingsView } from "./whatsapp";
 import type { Settings } from "./state";
 
 export interface EventMap {
@@ -41,6 +42,9 @@ export interface EventMap {
   "spotify-artwork": { artUrl: string; dataUrl: string };
   "youtube-music": YouTubeMusicState;
   "youtube-music-artwork": { artUrl: string; dataUrl: string };
+  "whatsapp": WaIslandView;
+  "whatsapp-pill": WaPillEvent;
+  "whatsapp-settings": WaSettingsView | null;
   // Coucou Shell
   "shell-confirm": ShellCard;
   "shell-clipboard": null;
