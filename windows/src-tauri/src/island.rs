@@ -133,10 +133,10 @@ pub fn window(app: &AppHandle) -> Option<WebviewWindow> {
 fn monitor_contains(m: &Monitor, x: f64, y: f64) -> bool {
     let p = m.position();
     let s = m.size();
-    x >= p.x as f64
-        && x < (p.x + s.width as i32) as f64
-        && y >= p.y as f64
-        && y < (p.y + s.height as i32) as f64
+    x >= f64::from(p.x)
+        && x < f64::from(p.x + s.width as i32)
+        && y >= f64::from(p.y)
+        && y < f64::from(p.y + s.height as i32)
 }
 
 /// A display's logical origin, the key `at:<x>,<y>` preferences are matched on.
@@ -144,7 +144,7 @@ fn monitor_contains(m: &Monitor, x: f64, y: f64) -> bool {
 fn logical_origin(m: &Monitor) -> (i32, i32) {
     let scale = m.scale_factor();
     let p = m.position();
-    ((p.x as f64 / scale).round() as i32, (p.y as f64 / scale).round() as i32)
+    ((f64::from(p.x) / scale).round() as i32, (f64::from(p.y) / scale).round() as i32)
 }
 
 /// One entry of the "Island lives on" list in Settings.
@@ -205,8 +205,8 @@ fn describe(m: &Monitor) -> DisplayId {
         name: m.name().cloned().unwrap_or_else(|| "Display".into()),
         x,
         y,
-        w: (s.width as f64 / scale).round() as i32,
-        h: (s.height as f64 / scale).round() as i32,
+        w: (f64::from(s.width) / scale).round() as i32,
+        h: (f64::from(s.height) / scale).round() as i32,
     }
 }
 
@@ -284,7 +284,7 @@ mod display_tests {
         let rescaled = [lap.clone(), d("DELL U2720Q", 1920, 0, 1920, 1080)];
         assert_eq!(pick_display(&key, &rescaled), Some(1));
         // Unplugged: nothing, so the caller falls back to the primary display.
-        assert_eq!(pick_display(&key, &[lap.clone()]), None);
+        assert_eq!(pick_display(&key, std::slice::from_ref(&lap)), None);
     }
 
     #[test]
@@ -378,10 +378,10 @@ pub fn screen_info(app: &AppHandle, pref: &str) -> ScreenInfo {
             let p = m.position();
             let s = m.size();
             ScreenInfo {
-                x: p.x as f64 / scale,
-                y: p.y as f64 / scale,
-                width: s.width as f64 / scale,
-                height: s.height as f64 / scale,
+                x: f64::from(p.x) / scale,
+                y: f64::from(p.y) / scale,
+                width: f64::from(s.width) / scale,
+                height: f64::from(s.height) / scale,
                 scale,
             }
         }
@@ -399,7 +399,7 @@ pub fn apply_geometry(app: &AppHandle, pref: &str, collapsed: bool) {
     let ms = *m.size();
 
     let shell = SHELL_OPEN.load(std::sync::atomic::Ordering::Relaxed);
-    let (lw, lh) = window_size(collapsed, shell, ms.width as f64 / scale, ms.height as f64 / scale);
+    let (lw, lh) = window_size(collapsed, shell, f64::from(ms.width) / scale, f64::from(ms.height) / scale);
     let pw = (lw * scale).round().max(1.0) as u32;
     let ph = (lh * scale).round().max(1.0) as u32;
     let x = mp.x + (ms.width as i32 - pw as i32) / 2;
@@ -471,13 +471,13 @@ pub fn spawn_cursor_poll(app: AppHandle, gate: Arc<PollGate>) {
                 // nobody can reach. Checked about twice a second — the cursor poll
                 // is already running, so this costs one monitor query.
                 ticks = ticks.wrapping_add(1);
-                if ticks % screen_every == 0 {
+                if ticks.is_multiple_of(screen_every) {
                     let now = current_screen_key(&app);
                     if now.is_some() && now != last_screen {
                         let first = last_screen.is_none();
                         last_screen = now;
                         if !first {
-                            crate::log::line("display layout changed — repositioning".to_string());
+                            crate::log::line("display layout changed — repositioning");
                             let _ = app.emit_to(WINDOW_LABEL, "screen-changed", ());
                         }
                     }
@@ -487,10 +487,10 @@ pub fn spawn_cursor_poll(app: AppHandle, gate: Arc<PollGate>) {
                 let Ok(origin) = win.outer_position() else { continue };
                 let scale = win.scale_factor().unwrap_or(1.0);
                 let Some((cx, cy)) = cursor_physical() else { continue };
-                let x = (cx - origin.x as f64) / scale;
-                let y = (cy - origin.y as f64) / scale;
+                let x = (cx - f64::from(origin.x)) / scale;
+                let y = (cy - f64::from(origin.y)) / scale;
                 let size = match win.inner_size() {
-                    Ok(s) => (s.width as f64 / scale, s.height as f64 / scale),
+                    Ok(s) => (f64::from(s.width) / scale, f64::from(s.height) / scale),
                     Err(_) => (PANEL_W, PANEL_H),
                 };
                 if (x - last.0).abs() < 1.0 && (y - last.1).abs() < 1.0 {

@@ -25,7 +25,7 @@ pub struct Brain {
 
 impl Default for Brain {
     fn default() -> Self {
-        Self { messages: Vec::new(), last: Instant::now(), cli: Default::default(), error: None }
+        Self { messages: Vec::new(), last: Instant::now(), cli: crate::claude_cli::voice::Voice::default(), error: None }
     }
 }
 

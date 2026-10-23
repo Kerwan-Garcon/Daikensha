@@ -72,6 +72,7 @@ impl History {
         self.entries.clone()
     }
 
+    #[cfg(test)]
     pub fn get(&self, id: u64) -> Option<String> {
         self.entries.iter().find(|e| e.id == id).map(|e| e.text.clone())
     }

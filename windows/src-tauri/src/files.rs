@@ -9,7 +9,7 @@ use serde::Serialize;
 
 use crate::settings;
 
-const KEEP_FOR: Duration = Duration::from_secs(7 * 24 * 60 * 60);
+const KEEP_FOR: Duration = Duration::from_hours(168);
 
 #[derive(Serialize, Clone)]
 #[serde(rename_all = "camelCase")]
@@ -31,7 +31,7 @@ pub fn inbox_dir() -> PathBuf {
 // drop objects on Windows (webview_drop.rs), Tauri's drag-drop window event
 // elsewhere (lib.rs). Each is good once, for a couple of minutes.
 
-const DROP_VALID_FOR: Duration = Duration::from_secs(120);
+const DROP_VALID_FOR: Duration = Duration::from_mins(2);
 const DROP_MAX_PENDING: usize = 64;
 
 static DROPPED: parking_lot::Mutex<Vec<(String, std::time::Instant)>> = parking_lot::Mutex::new(Vec::new());
@@ -158,7 +158,7 @@ mod tests {
         // An ancient source must not arrive already older than the sweep window.
         let old_source = tmp.join("ancient.txt");
         std::fs::write(&old_source, b"old").unwrap();
-        let long_ago = SystemTime::now() - KEEP_FOR - Duration::from_secs(60 * 60);
+        let long_ago = SystemTime::now() - KEEP_FOR - Duration::from_hours(1);
         std::fs::File::options()
             .write(true)
             .open(&old_source)

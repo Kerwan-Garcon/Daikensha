@@ -237,6 +237,7 @@ pub fn is_altgr_like(shortcut: &Shortcut) -> bool {
 /// The Windows virtual-key code global-hotkey registers for `code`, for the
 /// keys that can type a character. Others (arrows, F-keys…) never do: `None`.
 pub fn character_vk(code: Code) -> Option<u16> {
+    #[allow(clippy::enum_glob_use)] // a key table: every arm is a Code variant
     use Code::*;
     let letters = [
         KeyA, KeyB, KeyC, KeyD, KeyE, KeyF, KeyG, KeyH, KeyI, KeyJ, KeyK, KeyL, KeyM, KeyN,
@@ -866,7 +867,7 @@ mod tests {
 
     #[test]
     fn the_command_line_names_an_action() {
-        let args = |v: &[&str]| v.iter().map(|s| s.to_string()).collect::<Vec<_>>();
+        let args = |v: &[&str]| v.iter().map(std::string::ToString::to_string).collect::<Vec<_>>();
         assert_eq!(from_args(&args(&["coucou", "--shortcut", "openChat"])), Some("openChat"));
         assert_eq!(from_args(&args(&["coucou", "--shortcut", "wardrobeToggle"])), Some("wardrobeToggle"));
         assert_eq!(from_args(&args(&["coucou", "--shortcut"])), None);

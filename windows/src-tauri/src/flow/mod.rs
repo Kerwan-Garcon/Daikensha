@@ -457,7 +457,7 @@ pub struct FlowStatus {
 }
 
 #[tauri::command]
-pub fn flow_status(flow: State<Arc<Flow>>) -> FlowStatus {
+pub fn flow_status(flow: State<'_, Arc<Flow>>) -> FlowStatus {
     FlowStatus {
         prefs: flow.store.lock().prefs.clone(),
         models: speech::status(),
@@ -476,7 +476,7 @@ pub fn flow_status(flow: State<Arc<Flow>>) -> FlowStatus {
 }
 
 #[tauri::command]
-pub fn flow_set_prefs(app: AppHandle, flow: State<Arc<Flow>>, prefs: Prefs) {
+pub fn flow_set_prefs(app: AppHandle, flow: State<'_, Arc<Flow>>, prefs: Prefs) {
     let flow = flow.inner().clone();
     let before = {
         let mut store = flow.store.lock();
@@ -510,17 +510,17 @@ pub fn flow_set_prefs(app: AppHandle, flow: State<Arc<Flow>>, prefs: Prefs) {
 }
 
 #[tauri::command]
-pub fn flow_history(flow: State<Arc<Flow>>) -> Vec<Entry> {
+pub fn flow_history(flow: State<'_, Arc<Flow>>) -> Vec<Entry> {
     flow.store.lock().history.clone()
 }
 
 #[tauri::command]
-pub fn flow_delete(flow: State<Arc<Flow>>, id: String) {
+pub fn flow_delete(flow: State<'_, Arc<Flow>>, id: String) {
     flow.store.lock().delete(&id);
 }
 
 #[tauri::command]
-pub fn flow_clear(flow: State<Arc<Flow>>, everything: bool) {
+pub fn flow_clear(flow: State<'_, Arc<Flow>>, everything: bool) {
     let mut store = flow.store.lock();
     if everything {
         store.clear_everything();
@@ -552,7 +552,7 @@ pub struct StatsView {
 }
 
 #[tauri::command]
-pub fn flow_stats(flow: State<Arc<Flow>>) -> StatsView {
+pub fn flow_stats(flow: State<'_, Arc<Flow>>) -> StatsView {
     let store = flow.store.lock();
     let today = store::today();
     let totals = |from: Option<text::Day>| {
@@ -584,36 +584,36 @@ pub fn flow_stats(flow: State<Arc<Flow>>) -> StatsView {
 }
 
 #[tauri::command]
-pub fn flow_words(flow: State<Arc<Flow>>) -> Words {
+pub fn flow_words(flow: State<'_, Arc<Flow>>) -> Words {
     flow.store.lock().words.clone()
 }
 
 #[tauri::command]
-pub fn flow_set_words(flow: State<Arc<Flow>>, words: Words) {
+pub fn flow_set_words(flow: State<'_, Arc<Flow>>, words: Words) {
     let mut store = flow.store.lock();
     store.words = words;
     store.save_words();
 }
 
 #[tauri::command]
-pub fn flow_snippets(flow: State<Arc<Flow>>) -> Vec<Snippet> {
+pub fn flow_snippets(flow: State<'_, Arc<Flow>>) -> Vec<Snippet> {
     flow.store.lock().snippets.clone()
 }
 
 #[tauri::command]
-pub fn flow_set_snippets(flow: State<Arc<Flow>>, snippets: Vec<Snippet>) {
+pub fn flow_set_snippets(flow: State<'_, Arc<Flow>>, snippets: Vec<Snippet>) {
     let mut store = flow.store.lock();
     store.snippets = snippets;
     store.save_snippets();
 }
 
 #[tauri::command]
-pub fn flow_styles(flow: State<Arc<Flow>>) -> Vec<AppStyle> {
+pub fn flow_styles(flow: State<'_, Arc<Flow>>) -> Vec<AppStyle> {
     flow.store.lock().app_styles.clone()
 }
 
 #[tauri::command]
-pub fn flow_set_styles(flow: State<Arc<Flow>>, styles: Vec<AppStyle>) {
+pub fn flow_set_styles(flow: State<'_, Arc<Flow>>, styles: Vec<AppStyle>) {
     let mut store = flow.store.lock();
     store.app_styles = styles;
     store.save_styles();
@@ -638,7 +638,7 @@ pub fn flow_copy(text: String) -> bool {
 }
 
 #[tauri::command]
-pub fn flow_paste_again(app: AppHandle, flow: State<Arc<Flow>>) {
+pub fn flow_paste_again(app: AppHandle, flow: State<'_, Arc<Flow>>) {
     let flow = flow.inner().clone();
     std::thread::spawn(move || paste_again(&app, &flow));
 }
@@ -673,7 +673,7 @@ pub fn pill_hover(app: AppHandle, inside: bool) {
 }
 
 #[tauri::command]
-pub fn pill_action(app: AppHandle, flow: State<Arc<Flow>>, action: String, id: Option<u64>) {
+pub fn pill_action(app: AppHandle, flow: State<'_, Arc<Flow>>, action: String, id: Option<u64>) {
     let flow = flow.inner().clone();
     match action.as_str() {
         "dictate" => {

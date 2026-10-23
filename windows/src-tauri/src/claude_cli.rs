@@ -197,7 +197,7 @@ fn inline_settings(mode: Mode, guard: &str) -> String {
 }
 
 /// The only place a `claude` command line is made (layer 1).
-pub fn build_args(r: &Request) -> Result<Vec<String>, String> {
+pub fn build_args(r: &Request<'_>) -> Result<Vec<String>, String> {
     let mut args: Vec<String> = [
         "-p",
         "--input-format",
@@ -216,7 +216,7 @@ pub fn build_args(r: &Request) -> Result<Vec<String>, String> {
         "",
     ]
     .iter()
-    .map(|s| s.to_string())
+    .map(std::string::ToString::to_string)
     .collect();
     args.extend(["--model".into(), model_alias(r.model).to_string()]);
     args.extend(["--system-prompt".into(), r.system.to_string()]);
@@ -910,7 +910,7 @@ pub fn parse_status(version: &str, json: &Value) -> CliStatus {
 }
 
 async fn output(launcher: &Launcher, args: &[&str]) -> Option<String> {
-    let args: Vec<String> = args.iter().map(|s| s.to_string()).collect();
+    let args: Vec<String> = args.iter().map(std::string::ToString::to_string).collect();
     let dir = work_dir(Mode::Complete).ok()?;
     let mut cmd = command(launcher, &args, &dir);
     cmd.stdin(Stdio::null());

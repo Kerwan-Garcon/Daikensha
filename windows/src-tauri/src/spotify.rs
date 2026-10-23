@@ -533,7 +533,7 @@ mod linux {
     /// A call to Spotify never holds anything up for longer.
     const CALL: Duration = Duration::from_millis(1500);
     /// The listener sleeps on the bus; this only bounds a lost wake-up.
-    const IDLE_WAIT: Duration = Duration::from_secs(3600);
+    const IDLE_WAIT: Duration = Duration::from_hours(1);
     const FLATPAK_ID: &str = "com.spotify.Client";
 
     const RULES: [&str; 3] = [
@@ -838,7 +838,7 @@ mod linux {
             if !(s.active && s.generation == generation) {
                 return;
             }
-            s.owner = owner.clone();
+            s.owner.clone_from(&owner);
             s.state.running = owner.is_some();
             s.state.installed = owner.is_some() || installed();
             let now = now_ms();
@@ -885,7 +885,7 @@ mod linux {
                 return None;
             }
             if let Some((owner, props)) = read {
-                s.owner = owner.clone();
+                s.owner.clone_from(&owner);
                 s.state.running = owner.is_some();
                 s.state.installed = owner.is_some() || installed();
                 let now = now_ms();
@@ -1185,7 +1185,7 @@ mod linux {
         /// End to end against a fake Spotify on a private session bus:
         /// `dbus-run-session -- cargo test -p coucou --lib spotify -- --ignored`
         #[test]
-        #[ignore]
+        #[ignore = "needs a private D-Bus session bus (dbus-run-session)"]
         fn the_listener_follows_and_drives_a_fake_spotify_over_the_session_bus() {
             let calls = Arc::new(Mutex::new(Vec::<String>::new()));
             let stop = Arc::new(AtomicBool::new(false));
@@ -1299,7 +1299,7 @@ mod linux {
                         msg.method_return()
                     }
                     "SetPosition" => {
-                        let (path, us): (dbus::Path, i64) = msg.read2().unwrap();
+                        let (path, us): (dbus::Path<'_>, i64) = msg.read2().unwrap();
                         calls.lock().push(format!("SetPosition {path} {us}"));
                         position = us;
                         msg.method_return()
@@ -1334,7 +1334,7 @@ mod linux {
             conn.channel().flush();
         }
 
-        fn value_box(v: &Box<dyn RefArg>) -> Box<dyn RefArg> {
+        fn value_box(v: &dyn RefArg) -> Box<dyn RefArg> {
             v.box_clone()
         }
     }
@@ -1352,17 +1352,20 @@ mod linux {
 
 /// The media session ids Spotify registers: "Spotify.exe" (the installer from
 /// spotify.com) or "SpotifyAB.SpotifyMusic_…!Spotify" (the Microsoft Store).
+#[cfg(any(windows, test))]
 pub fn is_spotify_app(app_id: &str) -> bool {
     app_id.to_ascii_lowercase().contains("spotify")
 }
 
 /// Windows durations and timeline positions: 100 ns ticks → seconds.
+#[cfg(any(windows, test))]
 pub fn ticks_to_secs(ticks: i64) -> f64 {
     ticks.max(0) as f64 / 10_000_000.0
 }
 
 /// A Windows DateTime (100 ns ticks since 1601) → Unix milliseconds. Zero is
 /// "never updated".
+#[cfg(any(windows, test))]
 pub fn windows_time_to_unix_ms(universal: i64) -> Option<f64> {
     const UNIX_EPOCH_TICKS: i64 = 116_444_736_000_000_000;
     (universal > 0).then(|| (universal - UNIX_EPOCH_TICKS) as f64 / 10_000.0)
@@ -1372,6 +1375,7 @@ pub fn windows_time_to_unix_ms(universal: i64) -> Option<f64> {
 /// nothing is loaded. Windows gives no Spotify URI, so the id is made from the
 /// tags; an ad comes with a title and nothing else, and gets an ad id so the
 /// page treats it as the Mac does.
+#[cfg(any(windows, test))]
 pub fn windows_track(title: &str, artist: &str, album: &str, duration: f64) -> Option<Track> {
     let title = title.trim();
     if title.is_empty() {
@@ -1383,7 +1387,7 @@ pub fn windows_track(title: &str, artist: &str, album: &str, duration: f64) -> O
     // FNV-1a: a short, stable id for the same tags.
     let mut hash: u64 = 0xcbf2_9ce4_8422_2325;
     for byte in [artist, album, title].join("\u{1f}").bytes() {
-        hash ^= byte as u64;
+        hash ^= u64::from(byte);
         hash = hash.wrapping_mul(0x0100_0000_01b3);
     }
     Some(Track {
@@ -1752,7 +1756,7 @@ mod win {
             let Ok(process) = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, false, pid) else { return false };
             let mut buf = [0u16; 1024];
             let mut len = buf.len() as u32;
-            let named = QueryFullProcessImageNameW(process, PROCESS_NAME_WIN32, windows::core::PWSTR(buf.as_mut_ptr()), &mut len);
+            let named = QueryFullProcessImageNameW(process, PROCESS_NAME_WIN32, windows::core::PWSTR(buf.as_mut_ptr()), &raw mut len);
             let _ = CloseHandle(process);
             if named.is_err() {
                 return false;

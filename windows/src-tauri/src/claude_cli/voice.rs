@@ -25,7 +25,7 @@ const FORGET_AFTER: Duration = Duration::from_secs(90);
 /// and a new process starts in about a second (in parallel with the speech).
 const PROCESS_IDLE: Duration = Duration::from_secs(30);
 /// One spoken turn, tools and web search included.
-const TURN_TIMEOUT: Duration = Duration::from_secs(60);
+const TURN_TIMEOUT: Duration = Duration::from_mins(1);
 /// Turns kept to seed a replacement process.
 const KEPT_TURNS: usize = 12;
 
@@ -236,7 +236,7 @@ mod tests {
     /// `cargo test -p coucou --lib -- --ignored live_voice`: two spoken turns
     /// through the installed `claude` with a fake pills tool, and an injection.
     #[test]
-    #[ignore]
+    #[ignore = "needs the installed, signed-in `claude` CLI and uses the plan"]
     fn live_voice() {
         let rt = tokio::runtime::Builder::new_multi_thread().enable_all().build().unwrap();
         let calls = Arc::new(parking_lot::Mutex::new(Vec::<String>::new()));

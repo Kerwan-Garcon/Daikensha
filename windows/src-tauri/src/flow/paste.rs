@@ -49,7 +49,7 @@ pub enum Outcome {
 /// Pastes `text` in the app in front. `shift` sends Ctrl+Shift+V (terminals).
 pub fn paste(text: &str, shift: bool) -> Outcome {
     let previous = with_clipboard(|c| c.get_text().ok()).flatten();
-    if with_clipboard(|c| set_text(c, text)).map(|r| r.is_ok()) != Some(true) {
+    if with_clipboard(|c| set_text(c, text)).is_none_or(|r| r.is_err()) {
         return Outcome::Failed;
     }
     // Give the clipboard a moment to be announced before the app reads it.

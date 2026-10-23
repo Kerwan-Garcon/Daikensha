@@ -35,7 +35,7 @@ const HALF_TAPS: isize = 16;
 
 impl Resampler {
     pub fn new(input_rate: u32) -> Self {
-        let step = input_rate as f64 / SAMPLE_RATE as f64;
+        let step = f64::from(input_rate) / f64::from(SAMPLE_RATE);
         Self { step, pos: HALF_TAPS as f64, buf: vec![0.0; HALF_TAPS as usize], cutoff: (1.0 / step).min(1.0) * 0.92 }
     }
 
@@ -62,7 +62,7 @@ impl Resampler {
                 let n = (x + HALF_TAPS as f64) / (2.0 * HALF_TAPS as f64);
                 let w = 0.42 - 0.5 * (2.0 * std::f64::consts::PI * n).cos() + 0.08 * (4.0 * std::f64::consts::PI * n).cos();
                 let c = sinc * w;
-                acc += self.buf[idx as usize] as f64 * c;
+                acc += f64::from(self.buf[idx as usize]) * c;
                 norm += c;
             }
             out.push(if norm.abs() > 1e-9 { (acc / norm) as f32 } else { 0.0 });
@@ -91,7 +91,7 @@ pub struct BandMeter {
 
 impl Default for BandMeter {
     fn default() -> Self {
-        Self { pending: Vec::with_capacity(FFT), ranges: bands::bin_ranges(FFT, SAMPLE_RATE as f64, bands::COUNT), levels: [0.0; bands::COUNT] }
+        Self { pending: Vec::with_capacity(FFT), ranges: bands::bin_ranges(FFT, f64::from(SAMPLE_RATE), bands::COUNT), levels: [0.0; bands::COUNT] }
     }
 }
 
@@ -115,7 +115,7 @@ impl BandMeter {
         let mut im = vec![0.0f64; FFT];
         for (i, &s) in self.pending.iter().enumerate() {
             let w = 0.5 - 0.5 * (2.0 * std::f64::consts::PI * i as f64 / (FFT - 1) as f64).cos();
-            re[i] = s as f64 * w;
+            re[i] = f64::from(s) * w;
         }
         fft(&mut re, &mut im);
         for (b, &(from, to)) in self.ranges.iter().enumerate() {
@@ -366,7 +366,7 @@ fn build_stream(
         ),
         cpal::SampleFormat::I16 => device.build_input_stream::<i16, _, _>(
             config,
-            move |data: &[i16], _| push(&mut data.iter().map(|&s| s as f32 / 32768.0)),
+            move |data: &[i16], _| push(&mut data.iter().map(|&s| f32::from(s) / 32768.0)),
             err_fn,
             None,
         ),
@@ -378,7 +378,7 @@ fn build_stream(
         ),
         cpal::SampleFormat::U16 => device.build_input_stream::<u16, _, _>(
             config,
-            move |data: &[u16], _| push(&mut data.iter().map(|&s| (s as f32 - 32768.0) / 32768.0)),
+            move |data: &[u16], _| push(&mut data.iter().map(|&s| (f32::from(s) - 32768.0) / 32768.0)),
             err_fn,
             None,
         ),
@@ -403,7 +403,7 @@ pub struct Take {
 /// Long audio in stretches the model takes at once, each cut at the quietest
 /// 100 ms near its end. Returns (offset in samples, samples).
 pub fn split_for_model(samples: &[f32], rate: u32, max_seconds: f64) -> Vec<(usize, &[f32])> {
-    let max = (max_seconds * rate as f64) as usize;
+    let max = (max_seconds * f64::from(rate)) as usize;
     let window = (rate as usize) / 10;
     let mut out = Vec::new();
     let mut start = 0;
@@ -418,7 +418,7 @@ pub fn split_for_model(samples: &[f32], rate: u32, max_seconds: f64) -> Vec<(usi
         let mut best_energy = f64::MAX;
         let mut at = search_from;
         while at + window <= start + max {
-            let e: f64 = samples[at..at + window].iter().map(|&s| (s as f64) * (s as f64)).sum();
+            let e: f64 = samples[at..at + window].iter().map(|&s| f64::from(s) * f64::from(s)).sum();
             if e < best_energy {
                 best_energy = e;
                 best = at + window / 2;
@@ -458,7 +458,7 @@ impl WavWriter {
     /// Writes the sizes into the header and closes the file.
     pub fn finish(mut self) -> std::io::Result<()> {
         self.out.flush()?;
-        let mut file = self.out.into_inner().map_err(|e| e.into_error())?;
+        let mut file = self.out.into_inner().map_err(std::io::IntoInnerError::into_error)?;
         file.seek(SeekFrom::Start(0))?;
         write_header(&mut file, self.samples)?;
         file.flush()
@@ -489,7 +489,7 @@ pub fn read_wav(path: &Path) -> std::io::Result<Vec<f32>> {
     if bytes.len() < 44 || &bytes[0..4] != b"RIFF" {
         return Err(std::io::Error::new(std::io::ErrorKind::InvalidData, "not a WAV file"));
     }
-    Ok(bytes[44..].chunks_exact(2).map(|b| i16::from_le_bytes([b[0], b[1]]) as f32 / 32768.0).collect())
+    Ok(bytes[44..].chunks_exact(2).map(|b| f32::from(i16::from_le_bytes([b[0], b[1]])) / 32768.0).collect())
 }
 
 
@@ -507,8 +507,8 @@ mod tests {
     }
 
     fn tone(freq: f64, rate: u32, seconds: f64) -> Vec<f32> {
-        (0..(rate as f64 * seconds) as usize)
-            .map(|i| (2.0 * std::f64::consts::PI * freq * i as f64 / rate as f64).sin() as f32 * 0.5)
+        (0..(f64::from(rate) * seconds) as usize)
+            .map(|i| (2.0 * std::f64::consts::PI * freq * i as f64 / f64::from(rate)).sin() as f32 * 0.5)
             .collect()
     }
 
@@ -551,7 +551,7 @@ mod tests {
         samples.extend(tone(300.0, rate, 20.0));
         let parts = split_for_model(&samples, rate, 28.0);
         assert_eq!(parts.len(), 2);
-        let cut = parts[1].0 as f64 / rate as f64;
+        let cut = parts[1].0 as f64 / f64::from(rate);
         assert!((25.0..=26.0).contains(&cut), "cut at {cut}");
         assert_eq!(parts.iter().map(|p| p.1.len()).sum::<usize>(), samples.len());
         assert_eq!(split_for_model(&samples[..1000], rate, 28.0).len(), 1);

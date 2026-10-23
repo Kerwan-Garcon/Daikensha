@@ -44,7 +44,7 @@ const SILENCE: Duration = Duration::from_secs(80);
 const BAD_HANDSHAKES: u32 = 3;
 const QUIET: Duration = Duration::from_secs(10);
 const FIRST_RETRY: Duration = Duration::from_secs(2);
-const LONG_RETRY: Duration = Duration::from_secs(60);
+const LONG_RETRY: Duration = Duration::from_mins(1);
 
 // ── Where the relay is ───────────────────────────────────────────────────────────────────────────
 
@@ -290,7 +290,7 @@ async fn supervise(shared: Arc<Shared>, target: Target, creds: Arc<Credentials>,
 }
 
 fn tls_config() -> Arc<ClientConfig> {
-    let roots = RootCertStore::from_iter(webpki_roots::TLS_SERVER_ROOTS.iter().cloned());
+    let roots = webpki_roots::TLS_SERVER_ROOTS.iter().cloned().collect::<RootCertStore>();
     let config = ClientConfig::builder_with_provider(Arc::new(ring_provider::default_provider()))
         .with_protocol_versions(&[&TLS13, &TLS12])
         .expect("the ring provider supports TLS 1.2 and 1.3")
@@ -538,6 +538,8 @@ mod tests {
             loop {
                 let Ok((tcp, _)) = listener.accept().await else { return };
                 let seen = seen2.clone();
+                // tungstenite fixes this callback's signature, large error type included.
+                #[allow(clippy::result_large_err)]
                 let callback = move |req: &Request, mut resp: Response| -> Result<Response, ErrorResponse> {
                     let header = |n: &str| req.headers().get(n).and_then(|v| v.to_str().ok()).unwrap_or("").to_string();
                     seen.auth.lock().push(header("authorization"));
@@ -574,10 +576,10 @@ mod tests {
     impl Rig {
         async fn start() -> Rig {
             let (port, seen, conns) = fake_relay(None).await;
-            Rig::start_at(port, seen, conns).await
+            Rig::start_at(port, seen, conns)
         }
 
-        async fn start_at(port: u16, seen: Seen, conns: mpsc::UnboundedReceiver<Server>) -> Rig {
+        fn start_at(port: u16, seen: Seen, conns: mpsc::UnboundedReceiver<Server>) -> Rig {
             let store = MemStore::default();
             set_access_key(&store, &crypto::base64url_encode(&[7u8; 32])).unwrap();
             let creds = credentials(&store).unwrap();
@@ -619,9 +621,8 @@ mod tests {
             let n = crypto::fresh_nonce();
             ws.send(Message::Binary(crypto::init_frame(&rig.key(), &rig.room, n).into())).await.unwrap();
             let accept = loop {
-                match tokio::time::timeout(Duration::from_secs(5), ws.next()).await.expect("accept arrives").unwrap().unwrap() {
-                    Message::Binary(b) => break b,
-                    _ => continue,
+                if let Message::Binary(b) = tokio::time::timeout(Duration::from_secs(5), ws.next()).await.expect("accept arrives").unwrap().unwrap() {
+                    break b;
                 }
             };
             let session = crypto::finish_handshake(&rig.key(), &rig.room, &n, &accept).unwrap();
@@ -635,9 +636,8 @@ mod tests {
 
         async fn recv(&mut self) -> Value {
             loop {
-                match tokio::time::timeout(Duration::from_secs(5), self.ws.next()).await.expect("a frame arrives").unwrap().unwrap() {
-                    Message::Binary(b) => return serde_json::from_slice(&self.session.open(&b).unwrap()).unwrap(),
-                    _ => continue,
+                if let Message::Binary(b) = tokio::time::timeout(Duration::from_secs(5), self.ws.next()).await.expect("a frame arrives").unwrap().unwrap() {
+                    return serde_json::from_slice(&self.session.open(&b).unwrap()).unwrap();
                 }
             }
         }
@@ -941,7 +941,7 @@ mod tests {
         block_on(async {
             for (code, want) in [(401u16, State::AccessRefused), (429, State::TooMany), (404, State::Unreachable)] {
                 let (port, seen, conns) = fake_relay(Some(code)).await;
-                let rig = Rig::start_at(port, seen, conns).await;
+                let rig = Rig::start_at(port, seen, conns);
                 rig.wait_state(want).await;
                 rig.handle.stop();
             }
@@ -949,7 +949,7 @@ mod tests {
             let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
             let port = listener.local_addr().unwrap().port();
             drop(listener);
-            let rig = Rig::start_at(port, Seen::default(), mpsc::unbounded_channel().1).await;
+            let rig = Rig::start_at(port, Seen::default(), mpsc::unbounded_channel().1);
             rig.wait_state(State::Unreachable).await;
             rig.handle.stop();
         });
@@ -966,7 +966,7 @@ mod tests {
             let ended = tokio::time::timeout(Duration::from_secs(5), async {
                 loop {
                     match ws.next().await {
-                        None | Some(Err(_)) | Some(Ok(Message::Close(_))) => return,
+                        None | Some(Err(_) | Ok(Message::Close(_))) => return,
                         _ => {}
                     }
                 }

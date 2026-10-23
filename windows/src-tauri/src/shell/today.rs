@@ -10,7 +10,7 @@ use serde::{Deserialize, Serialize};
 
 const MAX_TODOS: usize = 50;
 const MAX_TODO_CHARS: usize = 200;
-const WEATHER_EVERY: Duration = Duration::from_secs(30 * 60);
+const WEATHER_EVERY: Duration = Duration::from_mins(30);
 const MAX_CITY_CHARS: usize = 80;
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

@@ -102,7 +102,7 @@ fn parse_date(d: &str) -> Option<i64> {
 
 pub fn now_minutes() -> i64 {
     let t = crate::platform::local_time();
-    days_from_civil(t.year as i64, t.month as i64, t.day as i64) * 1440 + t.hour as i64 * 60 + t.minute as i64
+    days_from_civil(i64::from(t.year), i64::from(t.month), i64::from(t.day)) * 1440 + i64::from(t.hour) * 60 + i64::from(t.minute)
 }
 
 /// The first time `when` is due at or after minute `from`; None once a one-off is past.
@@ -258,7 +258,7 @@ pub fn add(mut r: Routine) -> Result<(), String> {
 pub fn delete(id: u64) -> Result<Vec<Routine>, String> {
     let out = with_list(|l| {
         l.retain(|r| r.id != id);
-        save(l).map(|_| l.clone())
+        save(l).map(|()| l.clone())
     });
     WAKE.notify_all();
     out
@@ -297,7 +297,7 @@ pub fn start(app: &AppHandle) {
             // Nothing scheduled: sleep until a routine is added.
             None => WAKE.wait(&mut guard),
             Some(at) => {
-                let second = crate::platform::local_time().second as i64;
+                let second = i64::from(crate::platform::local_time().second);
                 let secs = ((at - now) * 60 - second).clamp(1, 15 * 60) as u64;
                 WAKE.wait_for(&mut guard, Duration::from_secs(secs));
             }

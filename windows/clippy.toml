@@ -1,0 +1,5 @@
+# Clippy configuration for the workspace (lint levels live in Cargo.toml [workspace.lints]).
+# Tests may unwrap: a failing unwrap there is a failing test, which is the point.
+allow-unwrap-in-tests = true
+allow-expect-in-tests = true
+allow-panic-in-tests = true

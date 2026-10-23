@@ -207,8 +207,8 @@ impl Client {
         loop {
             let mut line = String::new();
             match tokio::time::timeout(Duration::from_secs(3), self.r.read_line(&mut line)).await {
-                Ok(Ok(0)) | Ok(Err(_)) => return true,
-                Ok(Ok(_)) => continue, // a last word before closing
+                Ok(Ok(0) | Err(_)) => return true,
+                Ok(Ok(_)) => {} // a last word before closing
                 Err(_) => return false,
             }
         }
@@ -704,7 +704,7 @@ mod chat_tests {
             let m = c.recv().await.expect("the connection closed or went quiet");
             match m["type"].as_str() {
                 Some("chatDelta") if m["id"] == id => text.push_str(m["text"].as_str().unwrap()),
-                Some("chatDone") | Some("chatError") if m["id"] == id => return (text, m),
+                Some("chatDone" | "chatError") if m["id"] == id => return (text, m),
                 _ => {}
             }
         }
@@ -1006,7 +1006,7 @@ mod chat_tests {
                 let m = reason(code);
                 assert!(!m.contains("sk-") && !m.to_lowercase().contains("bearer") && !m.contains("key:"), "{m}");
             }
-            assert!(DONE_TEXT_MAX < 64 * 1024);
+            const { assert!(DONE_TEXT_MAX < 64 * 1024) };
         });
     }
 
@@ -1230,7 +1230,7 @@ mod answers_tests {
             assert_eq!(q["questions"][0]["question"], "Which engine?");
             assert_eq!(q["questions"][1]["multiSelect"], true);
             assert_eq!(q["questions"][0]["options"][1]["label"], "Meilisearch");
-            assert!(q["fingerprint"].as_str().unwrap().len() == 64);
+            assert_eq!(q["fingerprint"].as_str().unwrap().len(), 64);
             assert!(q.get("requestId").is_none() && !q.to_string().contains("r1"), "the island's request id stays on the computer");
             // the older phone is told nothing, not even that something was resolved
             rig.hub.publish_question(None, server::now_ms());

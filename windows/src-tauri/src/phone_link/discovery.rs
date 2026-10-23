@@ -207,7 +207,7 @@ pub mod tests {
         // The announcement is built from the name, the port and the fingerprint only: the token and the link are
         // not even inputs. Check the output anyway, as the rule is what matters.
         let ad = advert("Rhytam-PC", 47821, FP).unwrap();
-        let everything = format!("{:?}", ad).to_lowercase();
+        let everything = format!("{ad:?}").to_lowercase();
         for secret in [TOKEN.to_lowercase(), "coucou://".to_string(), "token".to_string(), "password".to_string()] {
             assert!(!everything.contains(&secret), "announcement contains {secret}");
         }

@@ -431,7 +431,7 @@ fn earlier_turns_ride_along_as_text() {
 /// real refusal through the installed `claude`, signed in, with the relay in
 /// place (settings::hook_exe_path). Uses a little of the plan.
 #[test]
-#[ignore]
+#[ignore = "needs the installed, signed-in `claude` CLI and uses the plan"]
 fn live_turn_and_injection() {
     let rt = tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap();
     let guard = guard_command(Mode::Complete);
@@ -454,7 +454,7 @@ fn live_turn_and_injection() {
 
 /// Two chat turns through `chat()`: the second one resumes the first's session.
 #[test]
-#[ignore]
+#[ignore = "needs the installed, signed-in `claude` CLI and uses the plan"]
 fn live_chat_resumes() {
     let rt = tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap();
     set_enabled(true);

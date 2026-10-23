@@ -102,4 +102,4 @@ Le relais ne stocke ni ne journalise rien, et construit lui-même le push : il n
 | Android | `./gradlew test assembleDebug lint` | `android.yml` |
 | macOS / iOS | `xcodebuild` + `scripts/test-*.sh` | `build.yml` |
 
-Politique de lints Rust : `[workspace.lints]` dans `windows/Cargo.toml` (`clippy::pedantic` + `unwrap_used`, avec chaque exception justifiée en commentaire) et `windows/clippy.toml`. Politique TypeScript : `windows/tsconfig.json` (`strict`, `noUncheckedIndexedAccess`, `exactOptionalPropertyTypes`) et `windows/eslint.config.js` (`strictTypeChecked`, chaque écart commenté).
+Politique de lints Rust : `[workspace.lints]` dans `windows/Cargo.toml` (`clippy::pedantic` + `unwrap_used`, avec chaque exception justifiée en commentaire) et `windows/clippy.toml` ; la toolchain est épinglée dans `windows/rust-toolchain.toml` (la monter volontairement, avec les correctifs que ses nouveaux lints demandent). Politique TypeScript : `windows/tsconfig.json` (`strict`, `noUncheckedIndexedAccess`, `exactOptionalPropertyTypes`) et `windows/eslint.config.js` (`strictTypeChecked`, chaque écart commenté).

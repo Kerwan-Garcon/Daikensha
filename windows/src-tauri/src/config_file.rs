@@ -134,7 +134,7 @@ pub fn text_edit<'a>(
 pub fn fingerprint(bytes: &[u8]) -> String {
     let mut hash: u64 = 0xcbf2_9ce4_8422_2325;
     for b in bytes {
-        hash ^= *b as u64;
+        hash ^= u64::from(*b);
         hash = hash.wrapping_mul(0x1000_0000_01b3);
     }
     format!("{hash:016x}")
@@ -150,7 +150,7 @@ fn fingerprint_of(bytes: Option<&[u8]>) -> String {
 }
 
 /// The diff, backups and fingerprint for a set of edits. Nothing is written.
-pub fn preview(edits: &[FileEdit]) -> Result<Plan, String> {
+pub fn preview(edits: &[FileEdit<'_>]) -> Result<Plan, String> {
     let mut diffs = Vec::new();
     let mut backups = Vec::new();
     let mut paths = Vec::new();
@@ -190,7 +190,7 @@ pub fn preview(edits: &[FileEdit]) -> Result<Plan, String> {
 /// written. A file that changed since the preview — another tool, another
 /// window, the user's own editor — stops everything: the only thing worse than
 /// not installing is silently reverting somebody else's edit.
-pub fn apply(edits: &[FileEdit], expected: &str) -> Result<Vec<PathBuf>, String> {
+pub fn apply(edits: &[FileEdit<'_>], expected: &str) -> Result<Vec<PathBuf>, String> {
     let wanted: Vec<&str> = expected.split(':').collect();
     if wanted.len() != edits.len() {
         return Err(t("The preview is out of date. Nothing was written — review the new diff."));
@@ -280,7 +280,8 @@ fn back_up(path: &Path, bytes: &[u8]) -> std::io::Result<PathBuf> {
                 }
                 return Ok(copy);
             }
-            Err(err) if err.kind() == ErrorKind::AlreadyExists => continue,
+            // The name is taken: try the next one.
+            Err(err) if err.kind() == ErrorKind::AlreadyExists => {}
             Err(err) => return Err(err),
         }
     }
@@ -408,9 +409,7 @@ pub fn unified_diff(before: &str, after: &str) -> String {
     for idx in changed {
         let lo = idx.saturating_sub(3);
         let hi = (idx + 4).min(out.len());
-        for k in lo..hi {
-            keep[k] = true;
-        }
+        keep[lo..hi].fill(true);
     }
     let mut result = String::new();
     let mut gap = false;

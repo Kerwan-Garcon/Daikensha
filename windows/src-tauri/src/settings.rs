@@ -182,7 +182,7 @@ impl Default for Settings {
             ollama_url: String::new(),
             lmstudio_url: String::new(),
             custom_url: String::new(),
-            shortcuts: Default::default(),
+            shortcuts: BTreeMap::default(),
             mochi_outfit: "auto".into(),
             mochi_look: "portrait".into(),
             pill_colors: BTreeMap::new(),
@@ -405,7 +405,8 @@ fn set_aside_as(
                 }
                 return written.map(|()| copy);
             }
-            Err(err) if err.kind() == ErrorKind::AlreadyExists => continue,
+            // The name is taken: try the next one.
+            Err(err) if err.kind() == ErrorKind::AlreadyExists => {}
             Err(err) => return Err(err),
         }
     }

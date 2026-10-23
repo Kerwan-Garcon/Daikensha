@@ -115,7 +115,7 @@ pub async fn poll_once(app: AppHandle, id: &str) {
         "integration_github" => {
             wake_github_pulse();
             github_refresh_if_stale("activity");
-            poll_github(app).await
+            poll_github(app).await;
         }
         "integration_vercel" => poll_vercel(app).await,
         "integration_n8n" => poll_n8n(app).await,
@@ -416,7 +416,7 @@ fn spawn_github_loops(app: AppHandle) {
         loop {
             let _ = tokio::time::timeout(wait, GITHUB.activity_wake.notified()).await;
             run_github_activity(&app).await;
-            wait = Duration::from_secs(1800);
+            wait = Duration::from_mins(30);
         }
     });
 }
@@ -828,7 +828,7 @@ async fn poll_calcom(app: AppHandle) {
                         .or_else(|| b.get("description").and_then(Value::as_str))
                         .filter(|s| !s.is_empty());
                     Some(json!({
-                        "id": b.get("id").map(|v| v.to_string()).unwrap_or_default(),
+                        "id": b.get("id").map(std::string::ToString::to_string).unwrap_or_default(),
                         "title": b.get("title").and_then(Value::as_str).unwrap_or("Meeting"),
                         "start": start,
                         "status": b.get("status").and_then(Value::as_str).unwrap_or("accepted"),

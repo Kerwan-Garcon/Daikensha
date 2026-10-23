@@ -1,0 +1,7 @@
+# The toolchain CI and contributors build with. Clippy runs with -D warnings, and
+# every Rust release adds lints: pinning keeps a new release from failing CI
+# overnight. Bump it on purpose, together with the fixes its new lints ask for.
+[toolchain]
+channel = "1.97.0"
+components = ["clippy", "rustfmt"]
+targets = ["x86_64-pc-windows-msvc", "x86_64-unknown-linux-gnu"]

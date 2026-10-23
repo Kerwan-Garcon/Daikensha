@@ -229,7 +229,7 @@ fn plan_json(p: &PlanIn) -> Option<serde_json::Value> {
     if let Some(w) = p.seven_day.as_ref().and_then(window_json) {
         v["sevenDay"] = w;
     }
-    if v.as_object().is_some_and(|o| o.is_empty()) {
+    if v.as_object().is_some_and(serde_json::Map::is_empty) {
         return None;
     }
     if let Some(n) = p.reset_credits {
@@ -701,7 +701,7 @@ impl Hub {
         if inner.usage.as_deref() == line.as_deref() {
             return;
         }
-        inner.usage = line.clone();
+        inner.usage.clone_from(&line);
         let shared: Arc<str> = line.unwrap_or_else(|| json!({ "type": "usage" }).to_string().into());
         inner.subs.retain(|s| {
             if !s.usage {
@@ -1927,7 +1927,7 @@ mod tests {
     }
 
     fn allowed(ids: &[&str]) -> Caps {
-        Caps { services: ids.iter().map(|s| s.to_string()).collect(), ..Caps::default() }
+        Caps { services: ids.iter().map(std::string::ToString::to_string).collect(), ..Caps::default() }
     }
 
     #[test]

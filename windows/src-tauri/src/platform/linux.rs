@@ -167,7 +167,7 @@ pub fn local_time() -> LocalTime {
     let mut tm: libc::tm = unsafe { std::mem::zeroed() };
     unsafe {
         let now = libc::time(std::ptr::null_mut());
-        libc::localtime_r(&now, &mut tm);
+        libc::localtime_r(&raw const now, &raw mut tm);
     }
     LocalTime {
         year: (tm.tm_year + 1900) as u32,
@@ -195,7 +195,7 @@ fn is_private_dir(dir: &Path) -> bool {
     use std::os::unix::fs::MetadataExt;
     std::fs::symlink_metadata(dir)
         .map(|m| {
-            m.file_type().is_dir() && m.uid() == unsafe { libc::getuid() } && m.mode() & 0o077 == 0
+            m.file_type().is_dir() && m.uid() == unsafe { libc::getuid() } && m.mode().trailing_zeros() >= 6
         })
         .unwrap_or(false)
 }
@@ -222,7 +222,7 @@ pub fn user_full_name() -> Option<String> {
         let mut pwd: libc::passwd = std::mem::zeroed();
         let mut result: *mut libc::passwd = std::ptr::null_mut();
         let mut buf = vec![0 as libc::c_char; 16 * 1024];
-        let rc = libc::getpwuid_r(libc::getuid(), &mut pwd, buf.as_mut_ptr(), buf.len(), &mut result);
+        let rc = libc::getpwuid_r(libc::getuid(), &raw mut pwd, buf.as_mut_ptr(), buf.len(), &raw mut result);
         if rc != 0 || result.is_null() || pwd.pw_gecos.is_null() {
             return None;
         }
@@ -743,8 +743,8 @@ pub fn set_layer_overlay(win: &WebviewWindow, on: bool) {
     let Ok(gw) = win.gtk_window() else { return };
     let ptr = gtk_window_ptr(&gw);
     unsafe {
-        layer::gtk_layer_set_anchor(ptr, layer::EDGE_RIGHT, on as i32);
-        layer::gtk_layer_set_anchor(ptr, layer::EDGE_BOTTOM, on as i32);
+        layer::gtk_layer_set_anchor(ptr, layer::EDGE_RIGHT, i32::from(on));
+        layer::gtk_layer_set_anchor(ptr, layer::EDGE_BOTTOM, i32::from(on));
         if on {
             layer::gtk_layer_set_margin(ptr, layer::EDGE_LEFT, 0);
             layer::gtk_layer_set_margin(ptr, layer::EDGE_TOP, 0);
@@ -766,7 +766,101 @@ pub fn layer_display(island: &WebviewWindow, mochi: &WebviewWindow) -> Option<(f
         unsafe { layer::gtk_layer_set_monitor(gtk_window_ptr(&gw), monitor.to_glib_none().0) };
     }
     let g = monitor.geometry();
-    Some((g.width() as f64, g.height() as f64))
+    Some((f64::from(g.width()), f64::from(g.height())))
+}
+
+// ── Flow dictation's pill ─────────────────────────────────────────────────────
+//
+// The pill rests at the bottom (or on the left or right edge) of the screen.
+// On X11 it is an ordinary always-on-top window placed with set_position; on a
+// layer-shell compositor a layer surface anchored to that edge. Either way the
+// input region is the pill and its bubble, so clicks anywhere else go through.
+
+/// The pill's input rectangles, re-applied on every map.
+static PILL_SHAPE: Mutex<Vec<(f64, f64, f64, f64)>> = Mutex::new(Vec::new());
+
+/// Sets the pill's window up before it is ever shown. Main thread.
+pub fn prepare_pill_window(win: &WebviewWindow, mode: super::DesktopMode) -> bool {
+    let Ok(gw) = win.gtk_window() else { return false };
+    gw.set_accept_focus(false);
+    let reapply = |w: &gtk::ApplicationWindow| apply_rects(w, &PILL_SHAPE.lock());
+    match mode {
+        super::DesktopMode::Layer => {
+            if gw.is_realized() {
+                return false;
+            }
+            gw.set_titlebar(None::<&gtk::Widget>);
+            let ptr = gtk_window_ptr(&gw);
+            unsafe {
+                layer::gtk_layer_init_for_window(ptr);
+                layer::gtk_layer_set_namespace(ptr, c"coucou-pill".as_ptr());
+                layer::gtk_layer_set_layer(ptr, layer::LAYER_OVERLAY);
+                layer::gtk_layer_set_anchor(ptr, layer::EDGE_BOTTOM, 1);
+                layer::gtk_layer_set_exclusive_zone(ptr, 0);
+                layer::gtk_layer_set_keyboard_mode(ptr, layer::KEYBOARD_NONE);
+            }
+            let remapped = std::cell::Cell::new(false);
+            gw.connect_map_event(move |w, _| {
+                reapply(w);
+                if !remapped.replace(true) {
+                    let w = w.clone();
+                    gtk::glib::idle_add_local_once(move || {
+                        w.hide();
+                        w.show_all();
+                        apply_rects(&w, &PILL_SHAPE.lock());
+                    });
+                }
+                gtk::glib::Propagation::Proceed
+            });
+            true
+        }
+        super::DesktopMode::Window => {
+            if !gw.is_realized() {
+                gw.set_type_hint(gtk::gdk::WindowTypeHint::Dock);
+            }
+            gw.set_keep_above(true);
+            gw.connect_map_event(move |w, _| {
+                reapply(w);
+                gtk::glib::Propagation::Proceed
+            });
+            true
+        }
+        _ => false,
+    }
+}
+
+/// Layer surface only: anchors the pill to its edge, centred along it. Main thread.
+pub fn set_pill_edge(win: &WebviewWindow, edge: &str) {
+    let Ok(gw) = win.gtk_window() else { return };
+    let ptr = gtk_window_ptr(&gw);
+    unsafe {
+        layer::gtk_layer_set_anchor(ptr, layer::EDGE_BOTTOM, i32::from(edge == "bottom"));
+        layer::gtk_layer_set_anchor(ptr, layer::EDGE_LEFT, i32::from(edge == "left"));
+        layer::gtk_layer_set_anchor(ptr, layer::EDGE_RIGHT, i32::from(edge == "right"));
+        layer::gtk_layer_set_anchor(ptr, layer::EDGE_TOP, 0);
+    }
+}
+
+/// The parts of the pill's window that take the mouse. Main thread.
+pub fn set_pill_input(win: &WebviewWindow, rects: Vec<(f64, f64, f64, f64)>) {
+    (*PILL_SHAPE.lock()).clone_from(&rects);
+    let Ok(gw) = win.gtk_window() else { return };
+    apply_rects(&gw, &rects);
+}
+
+fn apply_rects(gw: &impl IsA<gtk::Widget>, rects: &[(f64, f64, f64, f64)]) {
+    use gtk::cairo::{RectangleInt, Region};
+    let Some(gdk_window) = gw.window() else { return };
+    let region = Region::create_rectangle(&RectangleInt::new(0, 0, 0, 0));
+    for &(x, y, w, h) in rects {
+        let _ = region.union_rectangle(&RectangleInt::new(
+            x.floor() as i32,
+            y.floor() as i32,
+            w.ceil().max(0.0) as i32,
+            h.ceil().max(0.0) as i32,
+        ));
+    }
+    gdk_window.input_shape_combine_region(&region, 0, 0);
 }
 
 #[cfg(test)]
@@ -846,98 +940,4 @@ mod tests {
         assert_eq!(xdg_user_dir("XDG_PICTURES_DIR=\"pics\"", "XDG_PICTURES_DIR", home), None);
         assert_eq!(xdg_user_dir("", "XDG_PICTURES_DIR", home), None);
     }
-}
-
-// ── Flow dictation's pill ─────────────────────────────────────────────────────
-//
-// The pill rests at the bottom (or on the left or right edge) of the screen.
-// On X11 it is an ordinary always-on-top window placed with set_position; on a
-// layer-shell compositor a layer surface anchored to that edge. Either way the
-// input region is the pill and its bubble, so clicks anywhere else go through.
-
-/// The pill's input rectangles, re-applied on every map.
-static PILL_SHAPE: Mutex<Vec<(f64, f64, f64, f64)>> = Mutex::new(Vec::new());
-
-/// Sets the pill's window up before it is ever shown. Main thread.
-pub fn prepare_pill_window(win: &WebviewWindow, mode: super::DesktopMode) -> bool {
-    let Ok(gw) = win.gtk_window() else { return false };
-    gw.set_accept_focus(false);
-    let reapply = |w: &gtk::ApplicationWindow| apply_rects(w, &PILL_SHAPE.lock());
-    match mode {
-        super::DesktopMode::Layer => {
-            if gw.is_realized() {
-                return false;
-            }
-            gw.set_titlebar(None::<&gtk::Widget>);
-            let ptr = gtk_window_ptr(&gw);
-            unsafe {
-                layer::gtk_layer_init_for_window(ptr);
-                layer::gtk_layer_set_namespace(ptr, c"coucou-pill".as_ptr());
-                layer::gtk_layer_set_layer(ptr, layer::LAYER_OVERLAY);
-                layer::gtk_layer_set_anchor(ptr, layer::EDGE_BOTTOM, 1);
-                layer::gtk_layer_set_exclusive_zone(ptr, 0);
-                layer::gtk_layer_set_keyboard_mode(ptr, layer::KEYBOARD_NONE);
-            }
-            let remapped = std::cell::Cell::new(false);
-            gw.connect_map_event(move |w, _| {
-                reapply(w);
-                if !remapped.replace(true) {
-                    let w = w.clone();
-                    gtk::glib::idle_add_local_once(move || {
-                        w.hide();
-                        w.show_all();
-                        apply_rects(&w, &PILL_SHAPE.lock());
-                    });
-                }
-                gtk::glib::Propagation::Proceed
-            });
-            true
-        }
-        super::DesktopMode::Window => {
-            if !gw.is_realized() {
-                gw.set_type_hint(gtk::gdk::WindowTypeHint::Dock);
-            }
-            gw.set_keep_above(true);
-            gw.connect_map_event(move |w, _| {
-                reapply(w);
-                gtk::glib::Propagation::Proceed
-            });
-            true
-        }
-        _ => false,
-    }
-}
-
-/// Layer surface only: anchors the pill to its edge, centred along it. Main thread.
-pub fn set_pill_edge(win: &WebviewWindow, edge: &str) {
-    let Ok(gw) = win.gtk_window() else { return };
-    let ptr = gtk_window_ptr(&gw);
-    unsafe {
-        layer::gtk_layer_set_anchor(ptr, layer::EDGE_BOTTOM, (edge == "bottom") as i32);
-        layer::gtk_layer_set_anchor(ptr, layer::EDGE_LEFT, (edge == "left") as i32);
-        layer::gtk_layer_set_anchor(ptr, layer::EDGE_RIGHT, (edge == "right") as i32);
-        layer::gtk_layer_set_anchor(ptr, layer::EDGE_TOP, 0);
-    }
-}
-
-/// The parts of the pill's window that take the mouse. Main thread.
-pub fn set_pill_input(win: &WebviewWindow, rects: Vec<(f64, f64, f64, f64)>) {
-    *PILL_SHAPE.lock() = rects.clone();
-    let Ok(gw) = win.gtk_window() else { return };
-    apply_rects(&gw, &rects);
-}
-
-fn apply_rects(gw: &impl IsA<gtk::Widget>, rects: &[(f64, f64, f64, f64)]) {
-    use gtk::cairo::{RectangleInt, Region};
-    let Some(gdk_window) = gw.window() else { return };
-    let region = Region::create_rectangle(&RectangleInt::new(0, 0, 0, 0));
-    for &(x, y, w, h) in rects {
-        let _ = region.union_rectangle(&RectangleInt::new(
-            x.floor() as i32,
-            y.floor() as i32,
-            w.ceil().max(0.0) as i32,
-            h.ceil().max(0.0) as i32,
-        ));
-    }
-    gdk_window.input_shape_combine_region(&region, 0, 0);
 }

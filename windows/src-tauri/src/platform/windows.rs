@@ -173,22 +173,24 @@ pub fn codex_candidates() -> Vec<PathBuf> {
 pub fn current_user_sid() -> Option<String> {
     unsafe {
         let mut token = HANDLE::default();
-        OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &mut token).ok()?;
+        OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &raw mut token).ok()?;
 
         // First call sizes the buffer, second fills it.
         let mut needed = 0u32;
-        let _ = GetTokenInformation(token, TokenUser, None, 0, &mut needed);
+        let _ = GetTokenInformation(token, TokenUser, None, 0, &raw mut needed);
         if needed == 0 {
             let _ = CloseHandle(token);
             return None;
         }
-        let mut buf = vec![0u8; needed as usize];
+        // u64 words, not bytes: TOKEN_USER holds a pointer, so the buffer must be
+        // 8-aligned before it is read as one (a Vec<u8> is only 1-aligned).
+        let mut buf = vec![0u64; (needed as usize).div_ceil(8)];
         let ok = GetTokenInformation(
             token,
             TokenUser,
             Some(buf.as_mut_ptr().cast()),
             needed,
-            &mut needed,
+            &raw mut needed,
         )
         .is_ok();
         let _ = CloseHandle(token);
@@ -196,11 +198,11 @@ pub fn current_user_sid() -> Option<String> {
             return None;
         }
 
-        let user = &*(buf.as_ptr() as *const TOKEN_USER);
+        let user = &*buf.as_ptr().cast::<TOKEN_USER>();
         let mut text = PWSTR::null();
-        ConvertSidToStringSidW(user.User.Sid, &mut text).ok()?;
+        ConvertSidToStringSidW(user.User.Sid, &raw mut text).ok()?;
         let sid = text.to_string().ok();
-        let _ = LocalFree(Some(HLOCAL(text.0 as *mut _)));
+        let _ = LocalFree(Some(HLOCAL(text.0.cast())));
         sid
     }
 }
@@ -232,7 +234,7 @@ fn directory_display_name() -> Option<String> {
     let mut buf = [0u16; 256];
     let mut size = buf.len() as u32;
     // On success `size` is the length copied, without the terminating null.
-    let ok = unsafe { GetUserNameExW(NAME_DISPLAY, buf.as_mut_ptr(), &mut size) } != 0;
+    let ok = unsafe { GetUserNameExW(NAME_DISPLAY, buf.as_mut_ptr(), &raw mut size) } != 0;
     if !ok || size as usize > buf.len() {
         return None;
     }
@@ -245,11 +247,13 @@ fn local_full_name() -> Option<String> {
     let mut info: *mut u8 = std::ptr::null_mut();
     // Level 10 is USER_INFO_10 { name, comment, usr_comment, full_name }, four
     // wide-string pointers; any user may read it about themselves.
-    let status = unsafe { NetUserGetInfo(std::ptr::null(), wide.as_ptr(), 10, &mut info) };
+    let status = unsafe { NetUserGetInfo(std::ptr::null(), wide.as_ptr(), 10, &raw mut info) };
     if status != 0 || info.is_null() {
         return None;
     }
     unsafe {
+        // NetApiBufferAllocate memory is aligned for any structure it returns.
+        #[allow(clippy::cast_ptr_alignment)]
         let full = *(info as *const *const u16).add(3);
         let text = if full.is_null() {
             None
@@ -273,20 +277,20 @@ pub const CURSOR_POLL: bool = true;
 /// Cursor position in physical screen pixels.
 pub fn cursor_physical() -> Option<(f64, f64)> {
     let mut p = POINT::default();
-    unsafe { GetCursorPos(&mut p).ok()? };
-    Some((p.x as f64, p.y as f64))
+    unsafe { GetCursorPos(&raw mut p).ok()? };
+    Some((f64::from(p.x), f64::from(p.y)))
 }
 
 /// True while the left mouse button is held — the only signal we get that a
 /// drag might be in flight before it reaches the window.
 pub fn left_button_down() -> bool {
-    unsafe { (GetAsyncKeyState(VK_LBUTTON.0 as i32) as u16 & 0x8000) != 0 }
+    unsafe { (GetAsyncKeyState(i32::from(VK_LBUTTON.0)) as u16 & 0x8000) != 0 }
 }
 
 /// True while Alt is held: Mochi dropped on a window then lands on the desktop
 /// instead of looking at it (look.rs).
 pub fn alt_down() -> bool {
-    unsafe { (GetAsyncKeyState(VK_MENU.0 as i32) as u16 & 0x8000) != 0 }
+    unsafe { (GetAsyncKeyState(i32::from(VK_MENU.0)) as u16 & 0x8000) != 0 }
 }
 
 // ── Island window ─────────────────────────────────────────────────────────────
@@ -372,7 +376,7 @@ pub fn pin_to_monitor(_win: &WebviewWindow, _x: i32, _y: i32) {}
 /// The process on the other end of a relay connection.
 pub fn pipe_client_pid(handle: RawHandle) -> Option<u32> {
     let mut pid = 0u32;
-    unsafe { GetNamedPipeClientProcessId(HANDLE(handle), &mut pid).ok()? };
+    unsafe { GetNamedPipeClientProcessId(HANDLE(handle), &raw mut pid).ok()? };
     (pid != 0).then_some(pid)
 }
 
@@ -385,7 +389,7 @@ fn process_table() -> HashMap<u32, Proc> {
             dwSize: std::mem::size_of::<PROCESSENTRY32W>() as u32,
             ..Default::default()
         };
-        let mut more = Process32FirstW(snapshot, &mut entry).is_ok();
+        let mut more = Process32FirstW(snapshot, &raw mut entry).is_ok();
         while more {
             let len = entry.szExeFile.iter().position(|c| *c == 0).unwrap_or(entry.szExeFile.len());
             out.insert(
@@ -395,7 +399,7 @@ fn process_table() -> HashMap<u32, Proc> {
                     exe: String::from_utf16_lossy(&entry.szExeFile[..len]),
                 },
             );
-            more = Process32NextW(snapshot, &mut entry).is_ok();
+            more = Process32NextW(snapshot, &raw mut entry).is_ok();
         }
         let _ = CloseHandle(snapshot);
     }
@@ -417,7 +421,7 @@ fn top_windows() -> Vec<(isize, u32, String)> {
                 return true.into();
             }
             let mut pid = 0u32;
-            GetWindowThreadProcessId(hwnd, Some(&mut pid as *mut u32));
+            GetWindowThreadProcessId(hwnd, Some(&raw mut pid));
             let mut text = [0u16; 512];
             let len = GetWindowTextW(hwnd, &mut text);
             if len > 0 {
@@ -428,7 +432,7 @@ fn top_windows() -> Vec<(isize, u32, String)> {
     }
     let mut list: Vec<(isize, u32, String)> = Vec::new();
     unsafe {
-        let _ = EnumWindows(Some(collect), LPARAM(&mut list as *mut _ as isize));
+        let _ = EnumWindows(Some(collect), LPARAM(&raw mut list as isize));
     }
     list
 }
@@ -524,45 +528,11 @@ fn activate_claude_protocol() -> bool {
             nShow: SW_SHOWNORMAL.0,
             ..Default::default()
         };
-        let opened = ShellExecuteExW(&mut info).is_ok();
+        let opened = ShellExecuteExW(&raw mut info).is_ok();
         if initialized.is_ok() {
             CoUninitialize();
         }
         opened
-    }
-}
-
-#[cfg(test)]
-mod claude_launch_tests {
-    use super::open_claude_with;
-    use std::cell::RefCell;
-
-    #[test]
-    fn tries_launchers_in_order_and_stops_after_success() {
-        for (focus, squirrel, protocol, expected, calls) in [
-            (true, true, true, true, vec!["focus"]),
-            (false, true, true, true, vec!["focus", "squirrel"]),
-            (false, false, true, true, vec!["focus", "squirrel", "protocol"]),
-            (false, false, false, false, vec!["focus", "squirrel", "protocol"]),
-        ] {
-            let seen = RefCell::new(Vec::new());
-            let result = open_claude_with(
-                || {
-                    seen.borrow_mut().push("focus");
-                    focus
-                },
-                || {
-                    seen.borrow_mut().push("squirrel");
-                    squirrel
-                },
-                || {
-                    seen.borrow_mut().push("protocol");
-                    protocol
-                },
-            );
-            assert_eq!(result, expected);
-            assert_eq!(seen.into_inner(), calls);
-        }
     }
 }
 
@@ -647,3 +617,37 @@ pub fn prepare_pill_window(win: &WebviewWindow, _mode: super::DesktopMode) -> bo
 pub fn set_pill_edge(_win: &WebviewWindow, _edge: &str) {}
 
 pub fn set_pill_input(_win: &WebviewWindow, _rects: Vec<(f64, f64, f64, f64)>) {}
+
+#[cfg(test)]
+mod claude_launch_tests {
+    use super::open_claude_with;
+    use std::cell::RefCell;
+
+    #[test]
+    fn tries_launchers_in_order_and_stops_after_success() {
+        for (focus, squirrel, protocol, expected, calls) in [
+            (true, true, true, true, vec!["focus"]),
+            (false, true, true, true, vec!["focus", "squirrel"]),
+            (false, false, true, true, vec!["focus", "squirrel", "protocol"]),
+            (false, false, false, false, vec!["focus", "squirrel", "protocol"]),
+        ] {
+            let seen = RefCell::new(Vec::new());
+            let result = open_claude_with(
+                || {
+                    seen.borrow_mut().push("focus");
+                    focus
+                },
+                || {
+                    seen.borrow_mut().push("squirrel");
+                    squirrel
+                },
+                || {
+                    seen.borrow_mut().push("protocol");
+                    protocol
+                },
+            );
+            assert_eq!(result, expected);
+            assert_eq!(seen.into_inner(), calls);
+        }
+    }
+}

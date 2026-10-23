@@ -36,7 +36,7 @@ pub fn discard() {
 fn crc32(bytes: &[u8]) -> u32 {
     let mut crc = 0xFFFF_FFFFu32;
     for &b in bytes {
-        crc ^= b as u32;
+        crc ^= u32::from(b);
         for _ in 0..8 {
             crc = if crc & 1 != 0 { (crc >> 1) ^ 0xEDB8_8320 } else { crc >> 1 };
         }
@@ -48,7 +48,7 @@ fn adler32(bytes: &[u8]) -> u32 {
     let (mut a, mut b) = (1u32, 0u32);
     for chunk in bytes.chunks(5552) {
         for &x in chunk {
-            a += x as u32;
+            a += u32::from(x);
             b += a;
         }
         a %= 65521;
@@ -57,10 +57,10 @@ fn adler32(bytes: &[u8]) -> u32 {
     (b << 16) | a
 }
 
-fn chunk(out: &mut Vec<u8>, kind: &[u8; 4], data: &[u8]) {
+fn chunk(out: &mut Vec<u8>, kind: [u8; 4], data: &[u8]) {
     out.extend_from_slice(&(data.len() as u32).to_be_bytes());
     let start = out.len();
-    out.extend_from_slice(kind);
+    out.extend_from_slice(&kind);
     out.extend_from_slice(data);
     let crc = crc32(&out[start..]);
     out.extend_from_slice(&crc.to_be_bytes());
@@ -78,7 +78,7 @@ pub fn png(width: u32, height: u32, rgb: &[u8]) -> Vec<u8> {
     let mut z = vec![0x78, 0x01];
     let blocks: Vec<&[u8]> = raw.chunks(65_535).collect();
     for (i, block) in blocks.iter().enumerate() {
-        z.push(if i + 1 == blocks.len() { 1 } else { 0 });
+        z.push(u8::from(i + 1 == blocks.len()));
         let len = block.len() as u16;
         z.extend_from_slice(&len.to_le_bytes());
         z.extend_from_slice(&(!len).to_le_bytes());
@@ -94,9 +94,9 @@ pub fn png(width: u32, height: u32, rgb: &[u8]) -> Vec<u8> {
     ihdr.extend_from_slice(&width.to_be_bytes());
     ihdr.extend_from_slice(&height.to_be_bytes());
     ihdr.extend_from_slice(&[8, 2, 0, 0, 0]); // 8-bit RGB
-    chunk(&mut out, b"IHDR", &ihdr);
-    chunk(&mut out, b"IDAT", &z);
-    chunk(&mut out, b"IEND", &[]);
+    chunk(&mut out, *b"IHDR", &ihdr);
+    chunk(&mut out, *b"IDAT", &z);
+    chunk(&mut out, *b"IEND", &[]);
     out
 }
 
@@ -112,9 +112,9 @@ pub fn fit_rgb(width: u32, height: u32, bgra: &[u8], max: u32) -> (u32, u32, Vec
                 for dx in 0..step {
                     let (sx, sy) = ((x * step + dx).min(width - 1), (y * step + dy).min(height - 1));
                     let i = ((sy * width + sx) * 4) as usize;
-                    sum[0] += bgra[i + 2] as u32;
-                    sum[1] += bgra[i + 1] as u32;
-                    sum[2] += bgra[i] as u32;
+                    sum[0] += u32::from(bgra[i + 2]);
+                    sum[1] += u32::from(bgra[i + 1]);
+                    sum[2] += u32::from(bgra[i]);
                 }
             }
             let n = step * step;
@@ -156,7 +156,7 @@ pub fn start(app: &AppHandle) {
         .into_iter()
         .find(|m| {
             let (p, s) = (m.position(), m.size());
-            cx >= p.x as f64 && cy >= p.y as f64 && cx < p.x as f64 + s.width as f64 && cy < p.y as f64 + s.height as f64
+            cx >= f64::from(p.x) && cy >= f64::from(p.y) && cx < f64::from(p.x) + f64::from(s.width) && cy < f64::from(p.y) + f64::from(s.height)
         })
         .or_else(|| app.primary_monitor().ok().flatten());
     let Some(monitor) = monitor else { return };
@@ -286,10 +286,10 @@ mod tests {
         let (w, h, rgb) = fit_rgb(4000, 10, &bgra, MAX_SIDE);
         assert!(w <= MAX_SIDE && h >= 1);
         assert_eq!(&rgb[..3], &[30, 20, 10]);
-        let (w, h, _) = fit_rgb(100, 50, &[0u8; 100 * 50 * 4], MAX_SIDE);
+        let (w, h, _) = fit_rgb(100, 50, &vec![0u8; 100 * 50 * 4], MAX_SIDE);
         assert_eq!((w, h), (100, 50));
         // A thin strip never comes out empty.
-        let (w, h, rgb) = fit_rgb(4000, 1, &[0u8; 4000 * 4], MAX_SIDE);
+        let (w, h, rgb) = fit_rgb(4000, 1, &vec![0u8; 4000 * 4], MAX_SIDE);
         assert_eq!((h, rgb.len()), (1, (w * 3) as usize));
     }
 }

@@ -361,12 +361,12 @@ fn displays(app: &AppHandle, d: &Desktop) -> Vec<Display> {
         .map(|m| {
             let (p, s, wa) = (m.position(), m.size(), m.work_area());
             Display {
-                frame: Rect { x: p.x as f64, y: p.y as f64, w: s.width as f64, h: s.height as f64 },
+                frame: Rect { x: f64::from(p.x), y: f64::from(p.y), w: f64::from(s.width), h: f64::from(s.height) },
                 work: Rect {
-                    x: wa.position.x as f64,
-                    y: wa.position.y as f64,
-                    w: wa.size.width as f64,
-                    h: wa.size.height as f64,
+                    x: f64::from(wa.position.x),
+                    y: f64::from(wa.position.y),
+                    w: f64::from(wa.size.width),
+                    h: f64::from(wa.size.height),
                 },
                 scale: m.scale_factor(),
             }
@@ -384,7 +384,7 @@ fn island_anchor(app: &AppHandle, d: &Desktop) -> Option<(f64, f64, f64)> {
     let pos = win.outer_position().ok()?;
     let size = win.outer_size().ok()?;
     let scale = win.scale_factor().unwrap_or(1.0);
-    Some((pos.x as f64 + size.width as f64 / 2.0, pos.y as f64, scale))
+    Some((f64::from(pos.x) + f64::from(size.width) / 2.0, f64::from(pos.y), scale))
 }
 
 /// The window side in the mode's space.
@@ -420,13 +420,13 @@ fn from_island_client(app: &AppHandle, d: &Desktop, x: f64, y: f64) -> Option<(f
             // The island is anchored to the top edge and centred.
             let (dw, _) = d.inner.lock().display?;
             let scale = island.scale_factor().unwrap_or(1.0);
-            let iw = island.inner_size().ok()?.width as f64 / scale;
+            let iw = f64::from(island.inner_size().ok()?.width) / scale;
             Some(((dw - iw) / 2.0 + x, y))
         }
         DesktopMode::Window => {
             let pos = island.outer_position().ok()?;
             let scale = island.scale_factor().unwrap_or(1.0);
-            Some((pos.x as f64 + x * scale, pos.y as f64 + y * scale))
+            Some((f64::from(pos.x) + x * scale, f64::from(pos.y) + y * scale))
         }
         _ => None,
     }
@@ -677,7 +677,7 @@ fn spawn_poll(app: AppHandle, d: Arc<Desktop>) {
 
             let Ok(origin) = win.outer_position() else { continue };
             let scale = win.scale_factor().unwrap_or(1.0);
-            let local = ((cx - origin.x as f64) / scale, (cy - origin.y as f64) / scale);
+            let local = ((cx - f64::from(origin.x)) / scale, (cy - f64::from(origin.y)) / scale);
             let accept = logic::is_over_body(local, SIZE);
             {
                 let mut i = d.inner.lock();
@@ -697,7 +697,7 @@ fn spawn_poll(app: AppHandle, d: Arc<Desktop>) {
 // ── Commands ──────────────────────────────────────────────────────────────────
 
 #[tauri::command]
-pub fn desktop_mochi_info(app: AppHandle, desktop: State<Arc<Desktop>>) -> DesktopInfo {
+pub fn desktop_mochi_info(app: AppHandle, desktop: State<'_, Arc<Desktop>>) -> DesktopInfo {
     let on_desktop = app
         .try_state::<crate::Shared>()
         .map(|s| s.settings.lock().desktop_mochi.on_desktop)
@@ -773,7 +773,7 @@ pub async fn desktop_mochi_drag_begin(app: AppHandle) -> Option<(f64, f64)> {
             let win = window(&app)?;
             let (cx, cy) = platform::cursor_physical()?;
             let origin = win.outer_position().ok()?;
-            let grab = (cx - origin.x as f64, cy - origin.y as f64);
+            let grab = (cx - f64::from(origin.x), cy - f64::from(origin.y));
             d.inner.lock().carry = Some(Carry { grab, from: Source::Desktop });
             refresh(&app, &d);
         }
@@ -896,7 +896,7 @@ pub async fn desktop_mochi_fly_home(app: AppHandle, forget: bool) -> bool {
 
 /// The page dozed off (or woke up). Asleep, nothing polls.
 #[tauri::command]
-pub fn desktop_mochi_set_asleep(app: AppHandle, desktop: State<Arc<Desktop>>, asleep: bool) {
+pub fn desktop_mochi_set_asleep(app: AppHandle, desktop: State<'_, Arc<Desktop>>, asleep: bool) {
     let changed = {
         let mut i = desktop.inner.lock();
         let changed = i.asleep != asleep;

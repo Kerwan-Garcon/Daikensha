@@ -133,13 +133,10 @@ pub fn start(app: AppHandle) {
         let _ = std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o600));
         let uid = unsafe { libc::getuid() };
         loop {
-            let stream = match listener.accept().await {
-                Ok((stream, _)) => stream,
-                Err(_) => {
+            let Ok((stream, _)) = listener.accept().await else {
                     tokio::time::sleep(Duration::from_millis(200)).await;
                     continue;
-                }
-            };
+                };
             // Only the relay run by our own user may drive the island.
             if !matches!(stream.peer_cred(), Ok(c) if c.uid() == uid) {
                 log::line("refused a relay connection from another user");

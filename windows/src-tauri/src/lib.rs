@@ -76,7 +76,7 @@ pub struct BootInfo {
 }
 
 #[tauri::command]
-fn boot(app: AppHandle, shared: State<Shared>) -> BootInfo {
+fn boot(app: AppHandle, shared: State<'_, Shared>) -> BootInfo {
     let mut settings = shared.settings.lock().clone();
     // The real state of ~/.claude/settings.json wins over whatever we stored.
     let hooks_status = hooks::status();
@@ -93,7 +93,7 @@ fn boot(app: AppHandle, shared: State<Shared>) -> BootInfo {
 }
 
 #[tauri::command]
-fn save_settings(app: AppHandle, shared: State<Shared>, settings: Settings) {
+fn save_settings(app: AppHandle, shared: State<'_, Shared>, settings: Settings) {
     let (screen_changed, autostart_changed, shortcuts_changed, top_bar_changed, account_changed) = {
         let mut current = shared.settings.lock();
         let top_bar_changed = shell::appbar::wanted(&current) != shell::appbar::wanted(&settings);
@@ -110,10 +110,10 @@ fn save_settings(app: AppHandle, shared: State<Shared>, settings: Settings) {
         settings.phone_answers = current.phone_answers;
         settings.phone_diffs = current.phone_diffs;
         settings.phone_usage = current.phone_usage;
-        settings.phone_services = current.phone_services.clone();
+        settings.phone_services.clone_from(&current.phone_services);
         settings.phone_relay = current.phone_relay;
-        settings.phone_relay_url = current.phone_relay_url.clone();
-        settings.phone_chat_models = current.phone_chat_models.clone();
+        settings.phone_relay_url.clone_from(&current.phone_relay_url);
+        settings.phone_chat_models.clone_from(&current.phone_chat_models);
         claude_cli::set_enabled(settings.claude_subscription);
         let account_changed = current.claude_subscription != settings.claude_subscription;
         *current = settings;
@@ -175,7 +175,7 @@ fn language_changed(app: &AppHandle) {
 /// Hidden island → shrink the window to the invisible wake strip and park the
 /// cursor poll; anything else → full panel and 60 Hz polling.
 #[tauri::command]
-fn set_collapsed(app: AppHandle, shared: State<Shared>, collapsed: bool) {
+fn set_collapsed(app: AppHandle, shared: State<'_, Shared>, collapsed: bool) {
     let pref = shared.settings.lock().screen.clone();
     shared.gate.collapsed.store(collapsed, Ordering::Relaxed);
     island::apply_geometry(&app, &pref, collapsed);
@@ -188,7 +188,7 @@ fn set_collapsed(app: AppHandle, shared: State<Shared>, collapsed: bool) {
 /// « Coucou Shell »'s panel opens or closes: the window grows for it, and goes
 /// back to the usual panel after (shell/).
 #[tauri::command]
-fn set_shell_open(app: AppHandle, shared: State<Shared>, open: bool) {
+fn set_shell_open(app: AppHandle, shared: State<'_, Shared>, open: bool) {
     let open = open && shared.settings.lock().shell_panel;
     island::set_shell_open(open);
     let pref = shared.settings.lock().screen.clone();
@@ -199,7 +199,7 @@ fn set_shell_open(app: AppHandle, shared: State<Shared>, open: bool) {
 
 /// The front end pushes the island shape; Rust decides click-through from it.
 #[tauri::command]
-fn set_island_rect(app: AppHandle, shared: State<Shared>, x: f64, y: f64, width: f64, height: f64) {
+fn set_island_rect(app: AppHandle, shared: State<'_, Shared>, x: f64, y: f64, width: f64, height: f64) {
     shared.gate.set_rect(island::IslandRect { x, y, w: width, h: height });
     // Without the cursor poll the input region is the click-through: it follows the island.
     if !platform::CURSOR_POLL {
@@ -217,7 +217,7 @@ fn focus_window(app: AppHandle, focused: bool) {
 }
 
 #[tauri::command]
-fn reposition(app: AppHandle, shared: State<Shared>) {
+fn reposition(app: AppHandle, shared: State<'_, Shared>) {
     let pref = shared.settings.lock().screen.clone();
     let collapsed = shared.gate.collapsed.load(Ordering::Relaxed);
     island::apply_geometry(&app, &pref, collapsed);
@@ -388,7 +388,7 @@ fn hooks_preview(install: bool) -> Result<HookPreview, String> {
 #[tauri::command]
 fn hooks_apply(
     app: AppHandle,
-    shared: State<Shared>,
+    shared: State<'_, Shared>,
     install: bool,
     fingerprint: String,
 ) -> Result<String, String> {
@@ -443,7 +443,7 @@ fn status_line_preview(install: bool) -> Result<HookPreview, String> {
 #[tauri::command]
 fn status_line_apply(
     app: AppHandle,
-    shared: State<Shared>,
+    shared: State<'_, Shared>,
     install: bool,
     fingerprint: String,
 ) -> Result<String, String> {
@@ -543,7 +543,7 @@ fn local_set_key(url: String, key: String) -> Result<(), String> {
 }
 
 #[tauri::command]
-fn chat_reset(chat: State<Chat>) {
+fn chat_reset(chat: State<'_, Chat>) {
     chat.reset();
     if claude_cli::enabled() {
         claude_cli::forget(claude_cli::Mode::Chat);
@@ -663,7 +663,7 @@ fn shortcuts_status(app: AppHandle) -> shortcuts::Report {
 /// Settings is recording a new combination: let go of ours meanwhile, so the
 /// keys reach the recorder instead of running an action. `false` takes them back.
 #[tauri::command]
-fn shortcuts_suspend(app: AppHandle, shared: State<Shared>, suspended: bool) {
+fn shortcuts_suspend(app: AppHandle, shared: State<'_, Shared>, suspended: bool) {
     if suspended {
         shortcuts::suspend(&app);
     } else {

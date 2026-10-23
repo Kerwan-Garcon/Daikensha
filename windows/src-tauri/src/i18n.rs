@@ -122,7 +122,7 @@ pub fn set_system(languages: Vec<String>) -> bool {
 /// The language shown now.
 pub fn current() -> &'static str {
     #[cfg(test)]
-    return TEST_LANG.with(|c| c.get());
+    return TEST_LANG.with(std::cell::Cell::get);
     #[cfg(not(test))]
     state().read().resolved
 }
@@ -239,7 +239,7 @@ mod tests {
 
     #[test]
     fn resolves_like_the_webview() {
-        let sys = |v: &[&str]| v.iter().map(|s| s.to_string()).collect::<Vec<_>>();
+        let sys = |v: &[&str]| v.iter().map(std::string::ToString::to_string).collect::<Vec<_>>();
         assert_eq!(resolve("fr", &sys(&["ru"])), "fr");
         assert_eq!(resolve("", &sys(&["fr_FR.UTF-8"])), "fr");
         assert_eq!(resolve("", &sys(&["pt-PT"])), "pt-BR");

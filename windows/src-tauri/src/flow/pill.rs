@@ -114,7 +114,7 @@ pub fn setup(app: &AppHandle) {
             .focusable(false)
             .visible(park);
         if park {
-            builder = builder.position(PARKED.0 as f64, PARKED.1 as f64);
+            builder = builder.position(f64::from(PARKED.0), f64::from(PARKED.1));
         }
         match builder.build() {
             Ok(win) => {
@@ -228,7 +228,7 @@ fn monitor(app: &AppHandle, on_cursor: bool) -> Option<tauri::Monitor> {
             if let Ok(list) = app.available_monitors() {
                 if let Some(m) = list.into_iter().find(|m| {
                     let (p, s) = (m.position(), m.size());
-                    cx >= p.x as f64 && cx < (p.x + s.width as i32) as f64 && cy >= p.y as f64 && cy < (p.y + s.height as i32) as f64
+                    cx >= f64::from(p.x) && cx < f64::from(p.x + s.width as i32) && cy >= f64::from(p.y) && cy < f64::from(p.y + s.height as i32)
                 }) {
                     return Some(m);
                 }
@@ -274,7 +274,7 @@ fn place(app: &AppHandle, pill: &Pill, edge: &str, on_cursor: bool) {
 /// The page tells where the pill and its bubble are, in window-logical pixels.
 pub fn set_hot(app: &AppHandle, rects: Vec<(f64, f64, f64, f64)>) {
     let Some(pill) = get(app) else { return };
-    *pill.hot.lock() = rects.clone();
+    (*pill.hot.lock()).clone_from(&rects);
     if pill.mode != DesktopMode::Poll {
         if let Some(win) = window(app) {
             let _ = app.run_on_main_thread(move || platform::set_pill_input(&win, rects));
@@ -300,7 +300,7 @@ fn spawn_poll(app: AppHandle, pill: Arc<Pill>) {
             let Some(win) = window(&app) else { continue };
             let (Ok(origin), Some((cx, cy))) = (win.outer_position(), platform::cursor_physical()) else { continue };
             let scale = win.scale_factor().unwrap_or(1.0);
-            let (x, y) = ((cx - origin.x as f64) / scale, (cy - origin.y as f64) / scale);
+            let (x, y) = ((cx - f64::from(origin.x)) / scale, (cy - f64::from(origin.y)) / scale);
             let over = pill.hot.lock().iter().any(|&(rx, ry, rw, rh)| x >= rx && x <= rx + rw && y >= ry && y <= ry + rh);
             if ignoring != Some(!over) {
                 ignoring = Some(!over);

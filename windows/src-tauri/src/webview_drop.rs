@@ -44,7 +44,7 @@ pub fn install(app: &AppHandle) {
             let Ok(args) = args.cast::<ICoreWebView2WebMessageReceivedEventArgs2>() else { return Ok(()) };
             let Ok(objects) = args.AdditionalObjects() else { return Ok(()) };
             let mut count = 0u32;
-            objects.Count(&mut count)?;
+            objects.Count(&raw mut count)?;
             if count == 0 {
                 return Ok(());
             }
@@ -52,7 +52,7 @@ pub fn install(app: &AppHandle) {
             for i in 0..count {
                 let Ok(file) = objects.GetValueAtIndex(i)?.cast::<ICoreWebView2File>() else { continue };
                 let mut path = PWSTR::null();
-                file.Path(&mut path)?;
+                file.Path(&raw mut path)?;
                 paths.push(take_pwstr(path));
             }
             crate::files::allow_dropped(paths.iter().cloned());
@@ -60,7 +60,7 @@ pub fn install(app: &AppHandle) {
             Ok(())
         }));
         let mut token = 0i64;
-        if let Err(err) = core.add_WebMessageReceived(&handler, &mut token) {
+        if let Err(err) = core.add_WebMessageReceived(&handler, &raw mut token) {
             crate::log::line(format!("file drop: cannot listen: {err}"));
         }
     });

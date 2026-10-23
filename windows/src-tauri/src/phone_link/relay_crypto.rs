@@ -335,7 +335,7 @@ impl Session {
         if frame.len() < HEADER + TAG || frame[0] != VER || frame[1] != T_DATA {
             return Err(ChannelError::BadHeader);
         }
-        let counter = u64::from_be_bytes(frame[2..HEADER].try_into().unwrap());
+        let counter = u64::from_be_bytes(frame[2..HEADER].try_into().map_err(|_| ChannelError::BadHeader)?);
         if counter != self.recv_next || counter > LAST_COUNTER {
             return Err(ChannelError::BadCounter);
         }
@@ -363,10 +363,10 @@ fn pad(line: &[u8]) -> Vec<u8> {
 }
 
 fn unpad(plain: &[u8]) -> Result<Vec<u8>, ChannelError> {
-    if plain.len() < BLOCK || plain.len() % BLOCK != 0 {
+    if plain.len() < BLOCK || !plain.len().is_multiple_of(BLOCK) {
         return Err(ChannelError::BadPadding);
     }
-    let n = u32::from_be_bytes(plain[..4].try_into().unwrap()) as usize;
+    let n = u32::from_be_bytes(plain[..4].try_into().map_err(|_| ChannelError::BadPadding)?) as usize;
     if n > MAX_LINE || 4 + n > plain.len() || plain[4 + n..].iter().any(|b| *b != 0) {
         return Err(ChannelError::BadPadding);
     }
@@ -391,8 +391,8 @@ fn seal_with(key: &[u8; 32], room: &str, dir: Dir, counter: u64, line: &[u8]) ->
 
 /// Header already checked by the caller; verifies the tag under the direction's key and unpads.
 fn open_with(key: &[u8; 32], room: &str, dir: Dir, frame: &[u8]) -> Result<Vec<u8>, ChannelError> {
-    let h: [u8; HEADER] = frame[..HEADER].try_into().unwrap();
-    let counter = u64::from_be_bytes(h[2..].try_into().unwrap());
+    let h: [u8; HEADER] = frame[..HEADER].try_into().map_err(|_| ChannelError::BadHeader)?;
+    let counter = u64::from_be_bytes(h[2..].try_into().map_err(|_| ChannelError::BadHeader)?);
     let mut body = frame[HEADER..].to_vec();
     let plain = key_for(key)
         .open_in_place(aead::Nonce::assume_unique_for_key(nonce_for(dir, counter)), aead::Aad::from(aad(room, dir, &h)), &mut body)
@@ -409,7 +409,7 @@ const B64: &[u8; 64] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz012
 pub fn base64url_encode(bytes: &[u8]) -> String {
     let mut out = String::with_capacity(bytes.len().div_ceil(3) * 4);
     for chunk in bytes.chunks(3) {
-        let n = (chunk[0] as u32) << 16 | (*chunk.get(1).unwrap_or(&0) as u32) << 8 | *chunk.get(2).unwrap_or(&0) as u32;
+        let n = u32::from(chunk[0]) << 16 | u32::from(*chunk.get(1).unwrap_or(&0)) << 8 | u32::from(*chunk.get(2).unwrap_or(&0));
         out.push(B64[(n >> 18) as usize & 63] as char);
         out.push(B64[(n >> 12) as usize & 63] as char);
         if chunk.len() > 1 {
@@ -437,7 +437,7 @@ pub fn base64url_decode(text: &str) -> Option<Vec<u8>> {
         }
         let take = chunk.len() * 6 / 8;
         let b = n.to_be_bytes();
-        out.extend_from_slice(&b[1..1 + take]);
+        out.extend_from_slice(&b[1..=take]);
         let unused_bits = chunk.len() * 6 - take * 8;
         if unused_bits > 0 && (n >> (24 - chunk.len() as u32 * 6)) & ((1 << unused_bits) - 1) != 0 {
             return None;
@@ -588,7 +588,7 @@ mod tests {
                 };
                 let r = n.get("room").and_then(|r| r.as_str()).unwrap_or(&room).to_string();
                 let (n_phone, n_pc) = (n16(text(&v, &["inputs", "nPhone"])), n16(text(&v, &["inputs", "nPc"])));
-                let (init, _) = (init_frame(&k, &r, n_phone), ());
+                let (init, ()) = (init_frame(&k, &r, n_phone), ());
                 rx = accept_init(&k, &r, &init, n_pc).unwrap().1;
             }
             let expect = match text(n, &["expect"]) {

@@ -99,7 +99,7 @@ fn is_word_char(c: char) -> bool {
     c.is_alphanumeric()
 }
 
-/// The letters-and-digits runs of a phrase: "Rendez-vous !" → ["Rendez", "vous"].
+/// The letters-and-digits runs of a phrase: `"Rendez-vous !"` → `["Rendez", "vous"]`.
 pub fn tokens(s: &str) -> Vec<String> {
     let mut out = Vec::new();
     let mut current = String::new();
@@ -180,7 +180,7 @@ pub fn is_plain_word(word: &str) -> bool {
 
 /// Words as you would count them: "c'est" is one word, a lone "?" none.
 pub fn word_count(s: &str) -> usize {
-    s.split_whitespace().filter(|w| w.chars().any(|c| c.is_alphanumeric())).count()
+    s.split_whitespace().filter(|w| w.chars().any(char::is_alphanumeric)).count()
 }
 
 // ── Numbers ───────────────────────────────────────────────────────────────────
@@ -225,21 +225,21 @@ impl Day {
 
     /// Days since 1970-01-01 (proleptic Gregorian).
     pub fn ordinal(self) -> i64 {
-        let (y, m, d) = (self.year as i64, self.month as i64, self.day as i64);
+        let (y, m, d) = (i64::from(self.year), i64::from(self.month), i64::from(self.day));
         let y = if m <= 2 { y - 1 } else { y };
         let era = if y >= 0 { y } else { y - 399 } / 400;
         let yoe = y - era * 400;
         let mp = (m + 9) % 12;
         let doy = (153 * mp + 2) / 5 + d - 1;
         let doe = yoe * 365 + yoe / 4 - yoe / 100 + doy;
-        era * 146097 + doe - 719468
+        era * 146_097 + doe - 719_468
     }
 
     pub fn from_ordinal(z: i64) -> Day {
-        let z = z + 719468;
-        let era = if z >= 0 { z } else { z - 146096 } / 146097;
-        let doe = z - era * 146097;
-        let yoe = (doe - doe / 1460 + doe / 36524 - doe / 146096) / 365;
+        let z = z + 719_468;
+        let era = if z >= 0 { z } else { z - 146_096 } / 146_097;
+        let doe = z - era * 146_097;
+        let yoe = (doe - doe / 1460 + doe / 36524 - doe / 146_096) / 365;
         let y = yoe + era * 400;
         let doy = doe - (365 * yoe + yoe / 4 - yoe / 100);
         let mp = (5 * doy + 2) / 153;
@@ -341,7 +341,7 @@ mod tests {
     #[test]
     fn the_streak_counts_days_in_a_row_until_today_or_yesterday() {
         let today = Day { year: 2026, month: 10, day: 14 };
-        let set = |keys: &[&str]| keys.iter().map(|s| s.to_string()).collect::<HashSet<_>>();
+        let set = |keys: &[&str]| keys.iter().map(std::string::ToString::to_string).collect::<HashSet<_>>();
         assert_eq!(streak(&set(&["2026-10-14", "2026-10-13", "2026-10-11"]), today), 2);
         assert_eq!(streak(&set(&["2026-10-13", "2026-10-12"]), today), 2);
         assert_eq!(streak(&set(&["2026-10-12"]), today), 0);

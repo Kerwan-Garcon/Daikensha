@@ -107,7 +107,7 @@ pub struct RelayLink<'a> {
 }
 
 /// The link with the relay fields appended. Whoever holds this link holds K: it is shown only in Settings.
-pub fn pairing_link_with_relay(host: &str, port: u16, fingerprint: &str, token: &str, name: &str, relay: &RelayLink) -> String {
+pub fn pairing_link_with_relay(host: &str, port: u16, fingerprint: &str, token: &str, name: &str, relay: &RelayLink<'_>) -> String {
     format!(
         "{}&relay={}&room={}&key={}&access={}",
         pairing_link(host, port, fingerprint, token, name),
@@ -134,7 +134,7 @@ fn percent_encode(s: &str) -> String {
 pub fn qr_svg(link: &str) -> Option<String> {
     let code = qrcode::QrCode::new(link.as_bytes()).ok()?;
     Some(
-        code.render::<qrcode::render::svg::Color>()
+        code.render::<qrcode::render::svg::Color<'_>>()
             .min_dimensions(220, 220)
             .quiet_zone(true)
             .dark_color(qrcode::render::svg::Color("#000000"))

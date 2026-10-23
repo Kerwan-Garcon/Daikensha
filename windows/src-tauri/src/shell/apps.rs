@@ -29,7 +29,7 @@ pub fn tidy(mut apps: Vec<App>) -> Vec<App> {
 #[cfg(windows)]
 pub fn list() -> Result<Vec<App>, String> {
     let apps = tidy(super::win::list_apps()?);
-    *LISTED.lock() = apps.clone();
+    (*LISTED.lock()).clone_from(&apps);
     Ok(apps)
 }
 

@@ -435,7 +435,7 @@ pub(crate) fn base64(bytes: &[u8]) -> String {
     let mut out = String::with_capacity(bytes.len().div_ceil(3) * 4);
     for chunk in bytes.chunks(3) {
         let b = [chunk[0], *chunk.get(1).unwrap_or(&0), *chunk.get(2).unwrap_or(&0)];
-        let n = (b[0] as u32) << 16 | (b[1] as u32) << 8 | b[2] as u32;
+        let n = u32::from(b[0]) << 16 | u32::from(b[1]) << 8 | u32::from(b[2]);
         out.push(T[(n >> 18) as usize & 63] as char);
         out.push(T[(n >> 12) as usize & 63] as char);
         out.push(if chunk.len() > 1 { T[(n >> 6) as usize & 63] as char } else { '=' });
@@ -617,8 +617,8 @@ mod tests {
     fn a_quiet_stream_is_dead_only_while_listening() {
         assert!(!stream_is_dead(Duration::from_millis(4999), true));
         assert!(stream_is_dead(Duration::from_secs(5), true));
-        assert!(stream_is_dead(Duration::from_secs(60), true));
-        assert!(!stream_is_dead(Duration::from_secs(60), false));
+        assert!(stream_is_dead(Duration::from_mins(1), true));
+        assert!(!stream_is_dead(Duration::from_mins(1), false));
     }
 
     #[test]
@@ -647,12 +647,12 @@ mod tests {
 #[cfg(test)]
 mod with_models {
     #[test]
-    #[ignore]
+    #[ignore = "needs the downloaded speech models and COUCOU_TEST_WAKE_WAV"]
     fn hears_the_wake_phrase_in_a_recording() {
         let path = std::env::var("COUCOU_TEST_WAKE_WAV").expect("COUCOU_TEST_WAKE_WAV");
         let bytes = std::fs::read(&path).unwrap();
         let rate = u32::from_le_bytes([bytes[24], bytes[25], bytes[26], bytes[27]]);
-        let pcm: Vec<f32> = bytes[44..].chunks_exact(2).map(|b| i16::from_le_bytes([b[0], b[1]]) as f32 / 32768.0).collect();
+        let pcm: Vec<f32> = bytes[44..].chunks_exact(2).map(|b| f32::from(i16::from_le_bytes([b[0], b[1]])) / 32768.0).collect();
         let mut r = crate::speech::audio::Resampler::new(rate);
         let mut samples = Vec::new();
         r.process(&pcm, &mut samples);

@@ -35,6 +35,7 @@ const VK_LSHIFT: u32 = 0xA0;
 const VK_RSHIFT: u32 = 0xA1;
 const VK_LCONTROL: u32 = 0xA2;
 const VK_RCONTROL: u32 = 0xA3;
+#[allow(dead_code)] // part of the VK_LSHIFT..=VK_RMENU range below
 const VK_LMENU: u32 = 0xA4;
 const VK_RMENU: u32 = 0xA5;
 const VK_LWIN: u32 = 0x5B;
@@ -67,7 +68,7 @@ fn send(event: KeyEvent) {
     }
 }
 
-unsafe extern "system" fn hook(code: i32, wparam: WPARAM, lparam: LPARAM) -> LRESULT {
+unsafe extern "system" fn hook(code: i32, wparam: WPARAM, lparam: LPARAM) -> LRESULT { unsafe {
     if code >= 0 {
         let info = &*(lparam.0 as *const KBDLLHOOKSTRUCT);
         // Our own Ctrl+V, and other programs' synthetic keys, are not the user's.
@@ -78,7 +79,7 @@ unsafe extern "system" fn hook(code: i32, wparam: WPARAM, lparam: LPARAM) -> LRE
         }
     }
     CallNextHookEx(None, code, wparam, lparam)
-}
+}}
 
 fn on_key(vk: u32, down: bool, up: bool) {
     let key = KEY.load(Ordering::Relaxed);
@@ -158,9 +159,9 @@ pub fn listen(key: FlowKey, tx: Sender<(KeyEvent, Instant)>) -> Result<KeyListen
             };
             let _ = ready_tx.send(Ok(GetCurrentThreadId()));
             let mut msg = MSG::default();
-            while GetMessageW(&mut msg, None, 0, 0).as_bool() {
-                let _ = TranslateMessage(&msg);
-                DispatchMessageW(&msg);
+            while GetMessageW(&raw mut msg, None, 0, 0).as_bool() {
+                let _ = TranslateMessage(&raw const msg);
+                DispatchMessageW(&raw const msg);
             }
             let _ = UnhookWindowsHookEx(handle);
         })
@@ -230,14 +231,14 @@ pub fn send_paste(shift: bool) -> Result<(), String> {
 fn program_of(hwnd: HWND) -> Option<(String, String)> {
     unsafe {
         let mut pid = 0u32;
-        GetWindowThreadProcessId(hwnd, Some(&mut pid as *mut u32));
+        GetWindowThreadProcessId(hwnd, Some(&raw mut pid));
         if pid == 0 || pid == std::process::id() {
             return None;
         }
         let process = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, false, pid).ok()?;
         let mut buf = [0u16; 1024];
         let mut len = buf.len() as u32;
-        let ok = QueryFullProcessImageNameW(process, PROCESS_NAME_WIN32, PWSTR(buf.as_mut_ptr()), &mut len).is_ok();
+        let ok = QueryFullProcessImageNameW(process, PROCESS_NAME_WIN32, PWSTR(buf.as_mut_ptr()), &raw mut len).is_ok();
         let _ = CloseHandle(process);
         if !ok {
             return None;
@@ -259,7 +260,7 @@ pub fn foreground_app() -> Option<(String, String)> {
 
 /// Apps with a visible window, for "Add an app" in Styles.
 pub fn running_apps() -> Vec<(String, String)> {
-    unsafe extern "system" fn each(hwnd: HWND, lparam: LPARAM) -> windows::core::BOOL {
+    unsafe extern "system" fn each(hwnd: HWND, lparam: LPARAM) -> windows::core::BOOL { unsafe {
         let list = &mut *(lparam.0 as *mut Vec<(String, String)>);
         if IsWindowVisible(hwnd).as_bool() && GetWindowTextLengthW(hwnd) > 0 {
             if let Some(app) = program_of(hwnd) {
@@ -269,10 +270,10 @@ pub fn running_apps() -> Vec<(String, String)> {
             }
         }
         windows::core::BOOL(1)
-    }
+    }}
     let mut list: Vec<(String, String)> = Vec::new();
     unsafe {
-        let _ = EnumWindows(Some(each), LPARAM(&mut list as *mut _ as isize));
+        let _ = EnumWindows(Some(each), LPARAM(&raw mut list as isize));
     }
     list
 }

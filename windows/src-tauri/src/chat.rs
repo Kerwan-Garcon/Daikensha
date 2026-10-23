@@ -95,7 +95,8 @@ impl Chat {
     pub fn begin(&self, provider: &str) -> Turn {
         let mut c = self.inner.lock();
         if c.owner.as_deref() != Some(provider) {
-            c.native = c.plain.clone();
+            let Conversation { native, plain, .. } = &mut *c;
+            native.clone_from(plain);
             c.owner = Some(provider.to_string());
             // Its session lacks what another provider answered meanwhile.
             c.cli_session = None;

@@ -78,13 +78,13 @@ pub fn snap_rect(work: Rect, snap: Snap) -> Rect {
 
 /// The same place on another screen: kept in proportion, and kept inside it.
 pub fn move_to_screen(r: Rect, from: Rect, to: Rect) -> Rect {
-    let fx = |v: i32, a: i32, b: i32| if b == 0 { 0.0 } else { (v - a) as f64 / b as f64 };
-    let w = ((r.w as f64 / from.w.max(1) as f64) * to.w as f64).round() as i32;
-    let h = ((r.h as f64 / from.h.max(1) as f64) * to.h as f64).round() as i32;
+    let fx = |v: i32, a: i32, b: i32| if b == 0 { 0.0 } else { f64::from(v - a) / f64::from(b) };
+    let w = ((f64::from(r.w) / f64::from(from.w.max(1))) * f64::from(to.w)).round() as i32;
+    let h = ((f64::from(r.h) / f64::from(from.h.max(1))) * f64::from(to.h)).round() as i32;
     let w = w.clamp(1, to.w.max(1));
     let h = h.clamp(1, to.h.max(1));
-    let x = to.x + (fx(r.x, from.x, from.w) * to.w as f64).round() as i32;
-    let y = to.y + (fx(r.y, from.y, from.h) * to.h as f64).round() as i32;
+    let x = to.x + (fx(r.x, from.x, from.w) * f64::from(to.w)).round() as i32;
+    let y = to.y + (fx(r.y, from.y, from.h) * f64::from(to.h)).round() as i32;
     Rect { x: x.clamp(to.x, to.x + to.w - w), y: y.clamp(to.y, to.y + to.h - h), w, h }
 }
 
@@ -113,7 +113,7 @@ pub struct Layout {
 }
 
 pub fn placement(app: &str, screen: usize, r: Rect, work: Rect) -> Placement {
-    let f = |v: i32, len: i32| if len <= 0 { 0.0 } else { (v as f64 / len as f64).clamp(0.0, 1.0) };
+    let f = |v: i32, len: i32| if len <= 0 { 0.0 } else { (f64::from(v) / f64::from(len)).clamp(0.0, 1.0) };
     Placement {
         app: app.to_string(),
         screen,
@@ -125,7 +125,7 @@ pub fn placement(app: &str, screen: usize, r: Rect, work: Rect) -> Placement {
 }
 
 pub fn placed(p: &Placement, work: Rect) -> Rect {
-    let px = |f: f64, len: i32| (f.clamp(0.0, 1.0) * len as f64).round() as i32;
+    let px = |f: f64, len: i32| (f.clamp(0.0, 1.0) * f64::from(len)).round() as i32;
     Rect { x: work.x + px(p.x, work.w), y: work.y + px(p.y, work.h), w: px(p.w, work.w).max(1), h: px(p.h, work.h).max(1) }
 }
 

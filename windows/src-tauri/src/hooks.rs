@@ -415,7 +415,7 @@ fn install_relay(src: &Path, dest: &Path) {
     let temp = dest.with_extension(format!("new-{}", std::process::id()));
     let result = std::fs::copy(src, &temp)
         .and_then(|_| std::fs::set_permissions(&temp, std::fs::Permissions::from_mode(0o755)))
-        .and_then(|_| std::fs::rename(&temp, dest));
+        .and_then(|()| std::fs::rename(&temp, dest));
     if let Err(err) = result {
         let _ = std::fs::remove_file(&temp);
         crate::log::line(format!("could not install {}: {err}", platform::HOOK_EXE));
