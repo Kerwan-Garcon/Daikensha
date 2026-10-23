@@ -92,6 +92,8 @@ pub struct Settings {
     /// ("fr", "pt-BR", "zh-Hans"…). Kept as it comes, like `mochi_outfit`: a
     /// code this build doesn't know reads as "".
     pub language: String,
+    /// Linear: the team new issues go to (its id). Empty: the first team.
+    pub linear_team: String,
     /// Mochi on the desktop: whether he lives there, and his spot. Owned by
     /// the Rust side (desktop.rs) — what a webview sends back is ignored.
     pub desktop_mochi: DesktopMochiPref,
@@ -185,6 +187,7 @@ impl Default for Settings {
             mochi_look: "portrait".into(),
             pill_colors: BTreeMap::new(),
             language: String::new(),
+            linear_team: String::new(),
             desktop_mochi: DesktopMochiPref::default(),
             phone_link: false,
             phone_chat: false,
@@ -480,6 +483,7 @@ mod tests {
   "mochiLook": "slime",
   "pillColors": { "integration_claude": "#2DD4BF" },
   "language": "pt-BR",
+  "linearTeam": "team-1",
   "desktopMochi": { "onDesktop": true, "spot": { "x": 1500.5, "y": -300.0, "space": "screen" } },
   "phoneLink": true,
   "phoneChat": true,
@@ -1003,6 +1007,7 @@ mod tests {
                 "mochiLook",
                 "pillColors",
                 "language",
+                "linearTeam",
                 "desktopMochi",
                 "phoneLink",
                 "phoneChat",

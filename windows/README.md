@@ -314,6 +314,22 @@ minute while a CI is running, and as soon as you open the card on data older
 than a minute; contributions every 30 minutes. Nothing is fetched while the pill
 is off or Coucou is paused.
 
+## Linear
+
+With a personal API key (`lin_api_…`, from Linear → Settings → Security &
+access → Personal API keys) in **Settings… → Integrations → Linear**, the
+Linear pill lists the open issues assigned to you. Click a row to open the
+issue; the button at its end moves it to its next state, named as your team
+names it ("In Progress", then "Done"). The field at the bottom creates an issue
+assigned to you, in the team picked under the key (else your first team).
+Nothing changes in Linear without a click. The list is read every 2 minutes,
+only while the pill is on and Coucou isn't paused.
+
+To let Claude Code drive Linear too, Settings shows the command that adds
+Linear's MCP server (`claude mcp add --transport http linear
+https://mcp.linear.app/mcp`) with a **Copy** button. Coucou never runs it and
+never touches Claude Code's configuration.
+
 ## Build it yourself
 
 You need [Rust](https://rustup.rs), [Node 20+](https://nodejs.org), and the

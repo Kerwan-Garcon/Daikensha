@@ -41,6 +41,7 @@ const RENAMES = {
   "Uploading %@": ["name"],
   "Watching %lld of %lld": ["count", "total"],
   "file.ready %@": ["name"],
+  "linear.new-issue %@": ["team"],
   "mail.with %@": ["name"],
   "plan.hours-ago %lld": ["n"],
   "plan.mins-ago %lld": ["n"],

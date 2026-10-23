@@ -41,6 +41,7 @@ test("the catalog holds the Mac's pills with the Claude Code label for Windows a
     ["integration_vercel", "Vercel", "#7C5CFF", "service", "Integration"],
     ["integration_github", "GitHub", "#F4505E", "service", "Integration"],
     ["integration_notion", "Notion", "#8C8C8C", "service", "Integration"],
+    ["integration_linear", "Linear", "#5E6AD2", "service", "Integration"],
     ["integration_calcom", "Cal.com", "#C9956A", "service", "Integration"],
     ["integration_stripe", "Stripe", "#0570DE", "service", "Integration"],
     ["integration_music", "Apple Music", "#FA2D48", "service", "Integration"],

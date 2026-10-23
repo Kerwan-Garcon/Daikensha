@@ -56,6 +56,8 @@ enum EntityResolver {
         "guit hub":             "integration_github",
         "vercel":               "integration_vercel",
         "notion":               "integration_notion",
+        "linear":               "integration_linear",
+        "lineaire":             "integration_linear",
         "stripe":               "integration_stripe",
         "resend":               "integration_resend",
         "n8n":                  "integration_n8n",

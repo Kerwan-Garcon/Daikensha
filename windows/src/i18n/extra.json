@@ -6550,6 +6550,17 @@
    "pt-BR": "Clássico",
    "ru": "Классика",
    "id": "Klasik"
+  },
+  "Linear refused the change": {
+   "ar": "رفض Linear هذا التغيير",
+   "bn": "Linear পরিবর্তনটি প্রত্যাখ্যান করেছে",
+   "es": "Linear rechazó el cambio",
+   "fr": "Linear a refusé la modification",
+   "hi": "Linear ने यह बदलाव अस्वीकार कर दिया",
+   "id": "Linear menolak perubahan ini",
+   "pt-BR": "O Linear recusou a alteração",
+   "ru": "Linear отклонил изменение",
+   "zh-Hans": "Linear 拒绝了此更改"
   }
  }
 }

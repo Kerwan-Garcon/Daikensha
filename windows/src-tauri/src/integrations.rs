@@ -1,5 +1,6 @@
 // Integration pollers — the Rust side of StripePoller / GithubPoller /
-// VercelPoller / N8nPoller / ResendPoller / NotionPoller / CalcomPoller.
+// VercelPoller / N8nPoller / ResendPoller / NotionPoller / CalcomPoller, and
+// LinearController's reads (linear.rs).
 //
 // Same endpoints, same first-run delays and intervals as the Swift pollers. Each
 // one emits an `integration` event; the island owns the badge, the sound and the
@@ -43,11 +44,11 @@ pub struct IntegrationEvent {
     pub detail: Option<String>,
 }
 
-fn emit(app: &AppHandle, update: IntegrationUpdate) {
+pub(crate) fn emit(app: &AppHandle, update: IntegrationUpdate) {
     let _ = app.emit_to(WINDOW_LABEL, "integration", update);
 }
 
-fn client() -> reqwest::Client {
+pub(crate) fn client() -> reqwest::Client {
     reqwest::Client::builder()
         .timeout(TIMEOUT)
         .build()
@@ -71,7 +72,8 @@ pub fn start(app: AppHandle) {
     spawn(app.clone(), "integration_github", 7, 300, poll_github);
     spawn_github_loops(app.clone());
     spawn(app.clone(), "integration_calcom", 8, 300, poll_calcom);
-    spawn(app, "integration_notion", 9, 300, poll_notion);
+    spawn(app.clone(), "integration_notion", 9, 300, poll_notion);
+    spawn(app, crate::linear::ID, 11, 120, crate::linear::poll);
 }
 
 /// True when the user has this integration switched on in settings.
@@ -120,6 +122,7 @@ pub async fn poll_once(app: AppHandle, id: &str) {
         "integration_resend" => poll_resend(app).await,
         "integration_notion" => poll_notion(app).await,
         "integration_calcom" => poll_calcom(app).await,
+        crate::linear::ID => crate::linear::poll(app).await,
         _ => {}
     }
 }
@@ -142,7 +145,7 @@ fn is_new(key: &'static str, id: &str) -> bool {
 
 /// The card's error line, in the interface language (i18n.rs);
 /// `unauthorised_hint` comes translated.
-fn status_error(code: u16, unauthorised_hint: &str) -> String {
+pub(crate) fn status_error(code: u16, unauthorised_hint: &str) -> String {
     match code {
         401 => crate::i18n::t("Invalid API key (401)"),
         403 => unauthorised_hint.to_string(),

@@ -124,6 +124,8 @@ export const PILL_CATALOG: readonly PillDefinition[] = [
     subtitle: N_("Integration"), source: "n8n", support: "yes", connect: key("github-token") },
   { id: "integration_notion", name: "Notion", color: "#8C8C8C", category: "service",
     subtitle: N_("Integration"), source: "n8n", support: "yes", connect: key("notion-api-key") },
+  { id: "integration_linear", name: "Linear", color: "#5E6AD2", category: "service",
+    subtitle: N_("Integration"), source: "n8n", support: "yes", connect: key("linear-api-key") },
   { id: "integration_calcom", name: "Cal.com", color: "#C9956A", category: "service",
     subtitle: N_("Integration"), source: "n8n", support: "yes", connect: key("calcom-api-key") },
   { id: "integration_stripe", name: "Stripe", color: "#0570DE", category: "service",

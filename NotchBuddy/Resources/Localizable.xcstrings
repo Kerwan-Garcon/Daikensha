@@ -1,6 +1,526 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "linear.my-issues" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "مهامي"
+          }
+        },
+        "bn" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "আমার ইস্যু"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "My issues"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mis incidencias"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mes tickets"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "मेरे इश्यू"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Isu saya"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Minhas issues"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Мои задачи"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "我的事项"
+          }
+        }
+      }
+    },
+    "linear.no-issues" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "لا توجد مهام مفتوحة مسندة إليك"
+          }
+        },
+        "bn" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "আপনাকে দেওয়া কোনো খোলা ইস্যু নেই"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No open issue assigned to you"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No tienes incidencias abiertas asignadas"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aucun ticket ouvert à ton nom"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "आपको सौंपा गया कोई खुला इश्यू नहीं"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tidak ada isu terbuka untukmu"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nenhuma issue aberta atribuída a você"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Нет открытых задач, назначенных вам"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "没有分配给你的未完成事项"
+          }
+        }
+      }
+    },
+    "linear.new-issue %@" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "مهمة جديدة في %@…"
+          }
+        },
+        "bn" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@-এ নতুন ইস্যু…"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "New issue in %@…"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nueva incidencia en %@…"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nouveau ticket dans %@…"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ में नया इश्यू…"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Isu baru di %@…"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nova issue em %@…"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Новая задача в %@…"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在 %@ 中新建事项…"
+          }
+        }
+      }
+    },
+    "linear.no-team" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "هذا المفتاح لا يرى أي فريق في Linear"
+          }
+        },
+        "bn" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "এই কী দিয়ে কোনো Linear টিম দেখা যায় না"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This key can't see any Linear team"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Esta clave no ve ningún equipo de Linear"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cette clé ne voit aucune équipe Linear"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "इस कुंजी से कोई Linear टीम नहीं दिखती"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kunci ini tidak bisa melihat tim Linear mana pun"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Esta chave não vê nenhuma equipe do Linear"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Этот ключ не видит ни одной команды Linear"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "此密钥看不到任何 Linear 团队"
+          }
+        }
+      }
+    },
+    "linear.team" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "الفريق للمهام الجديدة"
+          }
+        },
+        "bn" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "নতুন ইস্যুর টিম"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Team for new issues"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Equipo para nuevas incidencias"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Équipe des nouveaux tickets"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "नए इश्यू के लिए टीम"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tim untuk isu baru"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Equipe para novas issues"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Команда для новых задач"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "新事项所属团队"
+          }
+        }
+      }
+    },
+    "linear.team-first" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "الفريق الأول"
+          }
+        },
+        "bn" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "প্রথম টিম"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "First team"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Primer equipo"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Première équipe"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "पहली टीम"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tim pertama"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Primeira equipe"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Первая команда"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "第一个团队"
+          }
+        }
+      }
+    },
+    "linear.hint" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Linear ← Settings ← Security & access ← Personal API keys. يعرض Coucou مهامك المفتوحة، وينقلها إلى الحالة التالية، وينشئ مهام جديدة، فقط عندما تنقر."
+          }
+        },
+        "bn" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Linear → Settings → Security & access → Personal API keys। Coucou আপনার খোলা ইস্যু দেখায়, সেগুলো পরের অবস্থায় নেয় এবং নতুন তৈরি করে, শুধু আপনি ক্লিক করলে।"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Linear → Settings → Security & access → Personal API keys. Coucou shows your open issues, moves them to the next state and creates new ones, only when you click."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Linear → Settings → Security & access → Personal API keys. Coucou muestra tus incidencias abiertas, las pasa al siguiente estado y crea nuevas, solo cuando haces clic."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Linear → Settings → Security & access → Personal API keys. Coucou affiche tes tickets ouverts, les passe à l'état suivant et en crée, seulement quand tu cliques."
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Linear → Settings → Security & access → Personal API keys. Coucou आपके खुले इश्यू दिखाता है, उन्हें अगली स्थिति में ले जाता है और नए बनाता है, केवल जब आप क्लिक करें।"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Linear → Settings → Security & access → Personal API keys. Coucou menampilkan isu terbukamu, memindahkannya ke status berikutnya, dan membuat yang baru, hanya saat kamu mengeklik."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Linear → Settings → Security & access → Personal API keys. O Coucou mostra suas issues abertas, passa-as para o próximo estado e cria novas, só quando você clica."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Linear → Settings → Security & access → Personal API keys. Coucou показывает ваши открытые задачи, переводит их в следующий статус и создаёт новые — только по вашему клику."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Linear → Settings → Security & access → Personal API keys。Coucou 显示你未完成的事项，将其推进到下一状态并新建事项，仅在你点击时执行。"
+          }
+        }
+      }
+    },
+    "linear.mcp-hint" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "لكي يتحكم Claude Code في Linear أيضًا، شغّل هذا الأمر في الطرفية: يضيف خادم MCP الخاص بـ Linear (تسجيل الدخول في المتصفح)."
+          }
+        },
+        "bn" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Claude Code দিয়েও Linear চালাতে, টার্মিনালে এই কমান্ডটি চালান: এটি Linear-এর MCP সার্ভার যোগ করে (ব্রাউজারে সাইন-ইন)।"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "To let Claude Code drive Linear too, run this command in a terminal: it adds Linear's MCP server (sign-in in the browser)."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Para que Claude Code también maneje Linear, ejecuta este comando en una terminal: añade el servidor MCP de Linear (inicio de sesión en el navegador)."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pour que Claude Code pilote aussi Linear, lance cette commande dans un terminal : elle ajoute le serveur MCP de Linear (connexion dans le navigateur)."
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Claude Code से भी Linear चलाने के लिए, यह कमांड टर्मिनल में चलाएँ: यह Linear का MCP सर्वर जोड़ता है (ब्राउज़र में साइन-इन)।"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Agar Claude Code juga bisa mengendalikan Linear, jalankan perintah ini di terminal: perintah ini menambahkan server MCP Linear (masuk lewat browser)."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Para o Claude Code também controlar o Linear, rode este comando em um terminal: ele adiciona o servidor MCP do Linear (login no navegador)."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Чтобы Claude Code тоже управлял Linear, выполните эту команду в терминале: она добавит MCP-сервер Linear (вход в браузере)."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "若想让 Claude Code 也能操作 Linear，请在终端运行此命令：它会添加 Linear 的 MCP 服务器（在浏览器中登录）。"
+          }
+        }
+      }
+    },
     "look.bubble" : {
       "extractionState" : "manual",
       "localizations" : {

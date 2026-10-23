@@ -5,6 +5,7 @@ import AppKit
 struct SettingsView: View {
     @ObservedObject private var state = AppState.shared
     @ObservedObject private var demoEngine = DemoEngine.shared
+    @ObservedObject private var linear = LinearController.shared
     @State private var apiKey: String = KeychainStore.shared.get("anthropic-api-key") ?? ""
 
     // Claude model — dynamic list fetched from the API, static fallback if unavailable
@@ -106,6 +107,9 @@ struct SettingsView: View {
     @State private var stripeKey: String    = KeychainStore.shared.get("stripe-api-key")  ?? ""
     @State private var calcomKey: String    = KeychainStore.shared.get("calcom-api-key")  ?? ""
     @State private var notionKey: String    = KeychainStore.shared.get("notion-api-key")  ?? ""
+    @State private var linearKey: String    = KeychainStore.shared.get(LinearSettings.keychainKey) ?? ""
+    @AppStorage(LinearSettings.teamKey) private var linearTeam = ""
+    @State private var linearMCPCopied = false
     @AppStorage(CryptoSettings.exchangeKey)     private var cryptoExchange = CryptoExchange.coinbase.rawValue
     @AppStorage(CryptoSettings.currencyKey)     private var cryptoCurrency = "EUR"
     @AppStorage(CryptoSettings.coinsKey)        private var cryptoCoins = CryptoSettings.defaultCoins
@@ -1319,6 +1323,45 @@ struct SettingsView: View {
                         .textFieldStyle(.roundedBorder)
                 }
 
+                // Linear: API key for the notch card; the MCP server is for coding agents.
+                VStack(alignment: .leading, spacing: 5) {
+                    HStack(spacing: 6) {
+                        Circle().fill(Color(hex: "#5E6AD2")).frame(width: 8, height: 8)
+                        Text(verbatim: "Linear").font(.system(size: 12, weight: .semibold))
+                    }
+                    SecureField("API key  (lin_api_…)", text: $linearKey)
+                        .textFieldStyle(.roundedBorder)
+                    if !linear.teams.isEmpty {
+                        Picker(String(localized: "linear.team"), selection: $linearTeam) {
+                            Text("linear.team-first").tag("")
+                            ForEach(linear.teams) { team in
+                                Text(verbatim: "\(team.name) (\(team.key))").tag(team.id)
+                            }
+                        }
+                    }
+                    Text("linear.hint")
+                        .font(.system(size: 10))
+                        .foregroundColor(Color(hex: "#8E939C"))
+                    HStack(spacing: 8) {
+                        Text(verbatim: LinearSettings.mcpCommand)
+                            .font(.system(size: 10, design: .monospaced))
+                            .foregroundColor(Color(hex: "#8E939C"))
+                            .lineLimit(1).truncationMode(.middle)
+                            .textSelection(.enabled)
+                        Spacer(minLength: 4)
+                        Button(linearMCPCopied ? String(localized: "notes.copied")
+                                               : String(localized: "hub.copy")) {
+                            NSPasteboard.general.clearContents()
+                            NSPasteboard.general.setString(LinearSettings.mcpCommand, forType: .string)
+                            linearMCPCopied = true
+                        }
+                        .controlSize(.small)
+                    }
+                    Text("linear.mcp-hint")
+                        .font(.system(size: 10))
+                        .foregroundColor(Color(hex: "#8E939C"))
+                }
+
                 // Crypto: public prices, no key. Changes apply at once.
                 VStack(alignment: .leading, spacing: 5) {
                     HStack(spacing: 6) {
@@ -2089,6 +2132,11 @@ struct SettingsView: View {
         saveKey("stripe-api-key",  value: stripeKey)
         saveKey("calcom-api-key",  value: calcomKey)
         saveKey("notion-api-key",  value: notionKey)
+        let prevLinearKey = KeychainStore.shared.get(LinearSettings.keychainKey)
+        saveKey(LinearSettings.keychainKey, value: linearKey.trimmingCharacters(in: .whitespacesAndNewlines))
+        if KeychainStore.shared.get(LinearSettings.keychainKey) != prevLinearKey {
+            LinearController.shared.keyChanged()
+        }
         statusMessage = String(localized: "status.integrations-saved")
     }
 
