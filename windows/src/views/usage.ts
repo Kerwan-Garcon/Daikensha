@@ -61,7 +61,7 @@ export function setClaudePlanUsage(usage: PlanUsage): void {
   State.planUsage = usage;
   if (!same) {
     try {
-      window.localStorage?.setItem(STORE_KEY, JSON.stringify(usage));
+      (window as Partial<Window>).localStorage?.setItem(STORE_KEY, JSON.stringify(usage));
     } catch {
       // Storage off or full: the numbers just will not outlive this run.
     }
@@ -74,7 +74,7 @@ export function setClaudePlanUsage(usage: PlanUsage): void {
 /** The last numbers seen, if any were kept. */
 export function storedClaudePlanUsage(): string | null {
   try {
-    return window.localStorage?.getItem(STORE_KEY) ?? null;
+    return (window as Partial<Window>).localStorage?.getItem(STORE_KEY) ?? null;
   } catch {
     return null;
   }

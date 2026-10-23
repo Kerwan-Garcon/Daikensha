@@ -4,6 +4,7 @@
 
 import type { Settings } from "./state";
 import { N_ } from "../i18n/i18n";
+import { itemAt } from "./arrays";
 
 export type ProviderId =
   | "anthropic" | "anthropic-subscription" | "openai" | "google" | "openrouter"
@@ -39,7 +40,29 @@ export const PROVIDERS: readonly ProviderDef[] = [
 export const CUSTOM_SERVER_KEY = "openai-compatible-key";
 
 export function providerDef(id: string): ProviderDef {
-  return PROVIDERS.find((p) => p.id === id) ?? PROVIDERS[0];
+  return PROVIDERS.find((p) => p.id === id) ?? itemAt(PROVIDERS, 0);
+}
+
+/** A cloud provider: its API key lives in the credential store. */
+export type KeyedProvider = ProviderDef & { readonly key: string };
+/** A model server the user points the chat at. */
+export type ServerProvider = ProviderDef & { readonly urlField: NonNullable<ProviderDef["urlField"]> };
+
+export const isKeyed = (p: ProviderDef): p is KeyedProvider => p.key !== null;
+export const isServer = (p: ProviderDef): p is ServerProvider => p.urlField !== null;
+
+/** The cloud provider `id`; throws for a provider without a key (a programming error). */
+export function keyedProvider(id: string): KeyedProvider {
+  const p = providerDef(id);
+  if (!isKeyed(p)) throw new Error(`${id} has no API key`);
+  return p;
+}
+
+/** The model server `id`; throws for a provider that is not one. */
+export function serverProvider(id: string): ServerProvider {
+  const p = providerDef(id);
+  if (!isServer(p)) throw new Error(`${id} is not a model server`);
+  return p;
 }
 
 /** The model the chat uses for the active provider. */
@@ -73,9 +96,10 @@ export function visibleProviders(settings: Settings): ProviderDef[] {
 export function pickModel(provider: ProviderDef, offered: string[], current: string): string | null {
   if (offered.length === 0) return null;
   if (offered.includes(current)) return current;
-  const preferred = provider.prefer ? offered.find((id) => id.includes(provider.prefer!)) : undefined;
+  const { prefer } = provider;
+  const preferred = prefer ? offered.find((id) => id.includes(prefer)) : undefined;
   if (preferred) return preferred;
-  return offered.includes(provider.defaultModel) ? provider.defaultModel : offered[0];
+  return offered.includes(provider.defaultModel) ? provider.defaultModel : itemAt(offered, 0);
 }
 
 // ── Where an address points ───────────────────────────────────────────────────

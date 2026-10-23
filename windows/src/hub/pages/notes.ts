@@ -10,6 +10,7 @@ import { emptyState, glowCard } from "../hero";
 import { button, iconButton, segmented } from "../ui";
 import { modelsControl } from "./flowsettings";
 import { colorHex } from "../../design/tokens";
+import { requireChild } from "../../core/elements";
 
 const lang = () => document.documentElement.lang || undefined;
 
@@ -57,7 +58,7 @@ export async function notesPage(page: HTMLElement, ctx: HubContext) {
       FlowBridge.startNote().then((id) => {
         selected = id;
         void reload();
-      }, (err) => {
+      }, (err: unknown) => {
         startError = String(err);
         drawList();
       });
@@ -95,7 +96,7 @@ export async function notesPage(page: HTMLElement, ctx: HubContext) {
         drawList();
         drawDetail();
       } }, h("span", { class: "t", text: n.title }), h("span", { class: "m", text: meta }));
-      if (n.status === "recording") item.querySelector(".m")!.prepend(h("span", { class: "hub-rec", style: "margin-inline-end:6px" }));
+      if (n.status === "recording") requireChild(item, ".m").prepend(h("span", { class: "hub-rec", style: "margin-inline-end:6px" }));
       listEl.append(item);
     }
     listEl.append(h("div", { style: "flex:1" }), h("div", { class: "hub-note", style: "padding:10px;border-radius:10px;background:rgb(var(--color-overlay-rgb) / 0.04)", text: t("Everything stays on this computer. Tell the people in the call that you are recording.") }));
@@ -111,7 +112,7 @@ export async function notesPage(page: HTMLElement, ctx: HubContext) {
     // Title, renamed in place.
     const title = h("h2", { text: note.title, title: t("Edit"), style: "cursor:text" });
     title.addEventListener("click", () => {
-      const input = h("input", { class: "hub-input", style: "font:700 20px var(--font-sans);width:100%" }) as HTMLInputElement;
+      const input = h("input", { class: "hub-input", style: "font:700 20px var(--font-sans);width:100%" });
       input.value = note.title;
       const done = () => void FlowBridge.renameNote(note.id, input.value);
       input.addEventListener("keydown", (e) => {
@@ -163,7 +164,7 @@ export async function notesPage(page: HTMLElement, ctx: HubContext) {
           h("span", { text: s.name }),
         );
         chip.addEventListener("click", () => {
-          const input = h("input", { class: "hub-input", placeholder: t("Name"), style: "width:150px" }) as HTMLInputElement;
+          const input = h("input", { class: "hub-input", placeholder: t("Name"), style: "width:150px" });
           input.value = s.name;
           const done = () => void FlowBridge.renameSpeaker(note.id, s.id, input.value);
           input.addEventListener("keydown", (e) => e.key === "Enter" && done());
@@ -220,7 +221,7 @@ export async function notesPage(page: HTMLElement, ctx: HubContext) {
     if (note.todos.length) {
       el.append(h("div", { class: "hub-label", text: t("To do") }));
       for (const todo of note.todos) {
-        const box = h("input", { type: "checkbox" }) as HTMLInputElement;
+        const box = h("input", { type: "checkbox" });
         box.checked = todo.done;
         box.addEventListener("change", () => void FlowBridge.toggleTodo(note.id, todo.id));
         const extra = [todo.owner, todo.due].filter(Boolean).join(" · ");
@@ -248,7 +249,7 @@ export async function notesPage(page: HTMLElement, ctx: HubContext) {
 
   drawList();
   drawDetail();
-  const unlisten = await onEvent<string>("notes-changed", () => void reload());
+  const unlisten = await onEvent("notes-changed", () => void reload());
   // The recording's clock in the list.
   const timer = window.setInterval(() => {
     if (!state.recording) return;

@@ -10,7 +10,7 @@ interface MiniBot {
   cssSize: number;
   taskId: string;
   /** Asked every frame: whether this one dances (the music pill's, MiniBotCanvasView). */
-  dancing?: () => boolean;
+  dancing: (() => boolean) | undefined;
 }
 
 const live = new Map<HTMLCanvasElement, MiniBot>();

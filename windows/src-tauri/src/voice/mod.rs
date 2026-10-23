@@ -18,9 +18,10 @@ pub mod wake;
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::mpsc;
-use std::sync::{Arc, Mutex, OnceLock};
+use std::sync::{Arc, OnceLock};
 use std::time::{Duration, Instant};
 
+use parking_lot::Mutex;
 use serde::Serialize;
 use serde_json::{json, Value};
 use tauri::{AppHandle, Emitter};
@@ -61,8 +62,8 @@ pub fn requirements_met() -> bool {
 
 /// Starts or stops listening to follow the preference.
 pub fn sync(app: &AppHandle) {
-    let wanted = crate::flow::get(app).is_some_and(|f| f.store.lock().unwrap().prefs.voice);
-    let mut running = RUNNING.lock().unwrap();
+    let wanted = crate::flow::get(app).is_some_and(|f| f.store.lock().prefs.voice);
+    let mut running = RUNNING.lock();
     match (wanted && requirements_met(), running.is_some()) {
         (true, false) => {
             let stop = Arc::new(AtomicBool::new(false));
@@ -77,7 +78,7 @@ pub fn sync(app: &AppHandle) {
             if let Some(r) = running.take() {
                 r.stop.store(true, Ordering::Relaxed);
             }
-            let dictation = crate::flow::get(app).is_some_and(|f| f.store.lock().unwrap().prefs.enabled);
+            let dictation = crate::flow::get(app).is_some_and(|f| f.store.lock().prefs.enabled);
             if !dictation && !crate::notes::is_recording(app) {
                 speech::unload();
             }
@@ -89,12 +90,12 @@ pub fn sync(app: &AppHandle) {
 
 /// « OK Coucou » is listening (the voice model stays loaded).
 pub fn is_listening() -> bool {
-    RUNNING.lock().unwrap().is_some()
+    RUNNING.lock().is_some()
 }
 
 /// Starts again on another microphone.
 pub fn restart(app: &AppHandle) {
-    if let Some(r) = RUNNING.lock().unwrap().take() {
+    if let Some(r) = RUNNING.lock().take() {
         r.stop.store(true, Ordering::Relaxed);
     }
     sync(app);
@@ -130,7 +131,7 @@ fn stream_is_dead(since_last_frame: Duration, listening: bool) -> bool {
 }
 
 fn open_mic(app: &AppHandle, tx: &mpsc::Sender<Vec<f32>>) -> Result<audio::Capture, String> {
-    let mic = crate::flow::get(app).map(|f| f.store.lock().unwrap().prefs.mic.clone()).unwrap_or_default();
+    let mic = crate::flow::get(app).map(|f| f.store.lock().prefs.mic.clone()).unwrap_or_default();
     let tx = tx.clone();
     audio::Capture::start(audio::Source::Mic(if mic.is_empty() { None } else { Some(mic) }), move |s| {
         let _ = tx.send(s.to_vec());
@@ -143,7 +144,7 @@ fn run(app: AppHandle, stop: Arc<AtomicBool>) {
         Ok(c) => Some(c),
         Err(err) => {
             crate::log::line(format!("voice: microphone: {err}"));
-            *RUNNING.lock().unwrap() = None;
+            *RUNNING.lock() = None;
             return;
         }
     };
@@ -325,7 +326,7 @@ struct Say {
 fn speak(app: &AppHandle, text: &str) {
     let (output, gender) = crate::flow::get(app)
         .map(|f| {
-            let p = &f.store.lock().unwrap().prefs;
+            let p = &f.store.lock().prefs;
             (p.voice_output.clone(), p.voice_gender.clone())
         })
         .unwrap_or_else(|| ("system".into(), "female".into()));
@@ -336,17 +337,17 @@ fn speak(app: &AppHandle, text: &str) {
     let audio = if output == "elevenlabs" { elevenlabs(text, &gender).map(|mp3| base64(&mp3)) } else { None };
     let id = NEXT_ID.fetch_add(1, Ordering::Relaxed);
     let (tx, rx) = mpsc::channel();
-    pending().lock().unwrap().insert(id, tx);
+    pending().lock().insert(id, tx);
     let _ = app.emit_to(pill::LABEL, "voice-say", Say { id, text: text.into(), lang: wake::speech_lang(text), audio, gender });
     let words = crate::flow::text::word_count(text) as u64;
     let _ = rx.recv_timeout(Duration::from_millis(4000 + words * 600));
-    pending().lock().unwrap().remove(&id);
+    pending().lock().remove(&id);
 }
 
 /// The pill says it has finished speaking (`id`), or the island answers a question.
 #[tauri::command]
 pub fn voice_done(id: u64, text: Option<String>) {
-    if let Some(tx) = pending().lock().unwrap().remove(&id) {
+    if let Some(tx) = pending().lock().remove(&id) {
         let _ = tx.send(text.unwrap_or_default());
     }
 }
@@ -434,7 +435,7 @@ pub(crate) fn base64(bytes: &[u8]) -> String {
     let mut out = String::with_capacity(bytes.len().div_ceil(3) * 4);
     for chunk in bytes.chunks(3) {
         let b = [chunk[0], *chunk.get(1).unwrap_or(&0), *chunk.get(2).unwrap_or(&0)];
-        let n = (b[0] as u32) << 16 | (b[1] as u32) << 8 | b[2] as u32;
+        let n = u32::from(b[0]) << 16 | u32::from(b[1]) << 8 | u32::from(b[2]);
         out.push(T[(n >> 18) as usize & 63] as char);
         out.push(T[(n >> 12) as usize & 63] as char);
         out.push(if chunk.len() > 1 { T[(n >> 6) as usize & 63] as char } else { '=' });
@@ -449,10 +450,10 @@ pub(crate) fn base64(bytes: &[u8]) -> String {
 pub fn ask_island(app: &AppHandle, kind: &str, input: Value) -> Option<String> {
     let id = NEXT_ID.fetch_add(1, Ordering::Relaxed);
     let (tx, rx) = mpsc::channel();
-    pending().lock().unwrap().insert(id, tx);
+    pending().lock().insert(id, tx);
     let _ = app.emit_to(crate::island::WINDOW_LABEL, "voice-ask", json!({ "id": id, "kind": kind, "input": input }));
     let answer = rx.recv_timeout(Duration::from_secs(5)).ok();
-    pending().lock().unwrap().remove(&id);
+    pending().lock().remove(&id);
     answer
 }
 
@@ -697,8 +698,8 @@ mod tests {
     fn a_quiet_stream_is_dead_only_while_listening() {
         assert!(!stream_is_dead(Duration::from_millis(4999), true));
         assert!(stream_is_dead(Duration::from_secs(5), true));
-        assert!(stream_is_dead(Duration::from_secs(60), true));
-        assert!(!stream_is_dead(Duration::from_secs(60), false));
+        assert!(stream_is_dead(Duration::from_mins(1), true));
+        assert!(!stream_is_dead(Duration::from_mins(1), false));
     }
 
     #[test]
@@ -727,12 +728,12 @@ mod tests {
 #[cfg(test)]
 mod with_models {
     #[test]
-    #[ignore]
+    #[ignore = "needs the downloaded speech models and COUCOU_TEST_WAKE_WAV"]
     fn hears_the_wake_phrase_in_a_recording() {
         let path = std::env::var("COUCOU_TEST_WAKE_WAV").expect("COUCOU_TEST_WAKE_WAV");
         let bytes = std::fs::read(&path).unwrap();
         let rate = u32::from_le_bytes([bytes[24], bytes[25], bytes[26], bytes[27]]);
-        let pcm: Vec<f32> = bytes[44..].chunks_exact(2).map(|b| i16::from_le_bytes([b[0], b[1]]) as f32 / 32768.0).collect();
+        let pcm: Vec<f32> = bytes[44..].chunks_exact(2).map(|b| f32::from(i16::from_le_bytes([b[0], b[1]])) / 32768.0).collect();
         let mut r = crate::speech::audio::Resampler::new(rate);
         let mut samples = Vec::new();
         r.process(&pcm, &mut samples);

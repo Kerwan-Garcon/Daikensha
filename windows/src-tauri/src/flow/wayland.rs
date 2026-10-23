@@ -14,13 +14,14 @@
 
 use std::collections::HashMap;
 use std::sync::mpsc::Sender;
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 use std::time::{Duration, Instant};
 
 use dbus::arg::{PropMap, RefArg, Variant};
 use dbus::blocking::{BlockingSender, Connection};
 use dbus::message::MatchRule;
 use dbus::Path;
+use parking_lot::Mutex;
 
 use super::KeyEvent;
 use crate::portal;
@@ -98,18 +99,18 @@ fn request(conn: &Connection, method: &str, args: impl FnOnce(&str) -> dbus::Mes
     let rule = MatchRule::new_signal("org.freedesktop.portal.Request", "Response").with_path(Path::from(path.clone()));
     let id = conn
         .add_match(rule, move |(): (), _, msg| {
-            *slot.lock().unwrap() = Some(portal::parse_response(msg));
+            *slot.lock() = Some(portal::parse_response(msg));
             false
         })
         .map_err(|e| e.to_string())?;
     let msg = args(&token);
     conn.send_with_reply_and_block(msg, Duration::from_secs(10)).map_err(|e| format!("{method}: {e}"))?;
-    let until = Instant::now() + Duration::from_secs(120);
-    while answer.lock().unwrap().is_none() && Instant::now() < until {
+    let until = Instant::now() + Duration::from_mins(2);
+    while answer.lock().is_none() && Instant::now() < until {
         conn.process(Duration::from_millis(200)).map_err(|e| e.to_string())?;
     }
     let _ = conn.remove_match(id);
-    let result = answer.lock().unwrap().take();
+    let result = answer.lock().take();
     match result {
         Some(Ok(results)) => Ok(results),
         Some(Err(code)) => Err(format!("{method} refused ({code})")),
@@ -120,7 +121,7 @@ fn request(conn: &Connection, method: &str, args: impl FnOnce(&str) -> dbus::Mes
 fn open() -> Result<Remote, String> {
     let conn = Connection::new_session().map_err(|e| e.to_string())?;
     let mut tokens = 0;
-    let call = |member: &str| dbus::Message::new_method_call(DEST, OBJECT, IFACE, member).map_err(|e| e.to_string());
+    let call = |member: &str| dbus::Message::new_method_call(DEST, OBJECT, IFACE, member).map_err(|e| e.clone());
 
     let session_token = format!("coucoupastes{}", std::process::id());
     let create = call("CreateSession")?;
@@ -160,29 +161,24 @@ fn open() -> Result<Remote, String> {
 
 fn key(remote: &Remote, keysym: i32, pressed: bool) -> Result<(), String> {
     let msg = dbus::Message::new_method_call(DEST, OBJECT, IFACE, "NotifyKeyboardKeysym")
-        .map_err(|e| e.to_string())?
+        .map_err(|e| e.clone())?
         .append3(Path::from(remote.session.clone()), PropMap::new(), keysym)
-        .append1(pressed as u32);
+        .append1(u32::from(pressed));
     remote.conn.send_with_reply_and_block(msg, Duration::from_secs(5)).map_err(|e| e.to_string())?;
     Ok(())
 }
 
 /// Ctrl+V (Ctrl+Shift+V) through the RemoteDesktop portal.
 pub fn send_paste(shift: bool) -> Result<(), String> {
-    if *REFUSED.lock().unwrap() {
+    if *REFUSED.lock() {
         return Err("remote desktop refused".into());
     }
-    let mut slot = REMOTE.lock().unwrap();
-    if slot.is_none() {
-        match open() {
-            Ok(r) => *slot = Some(r),
-            Err(err) => {
-                *REFUSED.lock().unwrap() = true;
-                return Err(err);
-            }
-        }
-    }
-    let remote = slot.as_ref().unwrap();
+    let mut slot = REMOTE.lock();
+    let remote = match &mut *slot {
+        Some(remote) => remote,
+        // First paste: open the portal session once; a refusal is remembered.
+        empty => empty.insert(open().inspect_err(|_| *REFUSED.lock() = true)?),
+    };
     let mut seq = vec![(XK_CONTROL_L, true)];
     if shift {
         seq.push((XK_SHIFT_L, true));

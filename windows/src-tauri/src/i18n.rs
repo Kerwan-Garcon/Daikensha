@@ -8,9 +8,10 @@
 // system: the languages the island's webview reports at launch, else (Linux)
 // the LANGUAGE / LC_ALL / LC_MESSAGES / LANG variables, else English.
 
+use parking_lot::RwLock;
 use serde_json::{Map, Value};
 use std::collections::HashMap;
-use std::sync::{OnceLock, RwLock};
+use std::sync::OnceLock;
 
 pub const LANGUAGES: [&str; 10] = ["en", "zh-Hans", "hi", "es", "ar", "fr", "bn", "pt-BR", "ru", "id"];
 
@@ -101,7 +102,7 @@ pub fn resolve(picked: &str, system: &[String]) -> &'static str {
 
 /// Records Settings.language. Returns true when the shown language changed.
 pub fn set_picked(picked: &str) -> bool {
-    let mut s = state().write().unwrap_or_else(|e| e.into_inner());
+    let mut s = state().write();
     s.picked = picked.to_string();
     let next = resolve(&s.picked, &s.system);
     std::mem::replace(&mut s.resolved, next) != next
@@ -110,7 +111,7 @@ pub fn set_picked(picked: &str) -> bool {
 /// Records the system's languages as the webview sees them. Returns true when
 /// the shown language changed.
 pub fn set_system(languages: Vec<String>) -> bool {
-    let mut s = state().write().unwrap_or_else(|e| e.into_inner());
+    let mut s = state().write();
     if !languages.is_empty() {
         s.system = languages;
     }
@@ -121,9 +122,9 @@ pub fn set_system(languages: Vec<String>) -> bool {
 /// The language shown now.
 pub fn current() -> &'static str {
     #[cfg(test)]
-    return TEST_LANG.with(|c| c.get());
+    return TEST_LANG.with(std::cell::Cell::get);
     #[cfg(not(test))]
-    state().read().unwrap_or_else(|e| e.into_inner()).resolved
+    state().read().resolved
 }
 
 // Tests run in parallel and many check English text: each test thread has its
@@ -238,7 +239,7 @@ mod tests {
 
     #[test]
     fn resolves_like_the_webview() {
-        let sys = |v: &[&str]| v.iter().map(|s| s.to_string()).collect::<Vec<_>>();
+        let sys = |v: &[&str]| v.iter().map(std::string::ToString::to_string).collect::<Vec<_>>();
         assert_eq!(resolve("fr", &sys(&["ru"])), "fr");
         assert_eq!(resolve("", &sys(&["fr_FR.UTF-8"])), "fr");
         assert_eq!(resolve("", &sys(&["pt-PT"])), "pt-BR");

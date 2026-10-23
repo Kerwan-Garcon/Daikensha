@@ -48,6 +48,9 @@ const CLAUDE_DESKTOP_ID = "agent_claude-desktop";
 const BOT_SIDE = 24;
 /** Same margin as the Rust hit test (src-tauri/src/island.rs). */
 const HIT_MARGIN = 14;
+/** A look waits for a pending chat answer this often, and at most this long. */
+const LOOK_WAIT_STEP_MS = 250;
+const LOOK_WAIT_MAX_MS = 120_000;
 
 /** The three views the drop sequence owns; leaving them stops the engine. */
 const UPLOAD_VIEWS: ReadonlySet<IslandViewName> = new Set(["upload", "uploading", "choose"]);
@@ -230,7 +233,10 @@ export class Island {
         } else if (task.id === "integration_n8n") void Bridge.openN8n();
         else if (task.id === SPOTIFY_ID) void Bridge.spotifyOpen();
         else if (task.id === YOUTUBE_MUSIC_ID) void Bridge.youTubeMusicOpen();
-        else if (urls[task.id]) void Bridge.openUrl(urls[task.id]);
+        else {
+          const url = urls[task.id];
+          if (url) void Bridge.openUrl(url);
+        }
       },
       openUrl: (url) => {
         if (url) void Bridge.openUrl(url);
@@ -511,6 +517,8 @@ export class Island {
       window.addEventListener("resize", done);
       window.setTimeout(done, 150);
     });
+    // Read again after the awaits above: a request may have arrived meanwhile.
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- narrowed before the awaits, not after
     if (State.pendingApproval || !State.settings.shellPanel) {
       if (!this.shellOn) void Bridge.setShellOpen(false);
       return;
@@ -542,7 +550,7 @@ export class Island {
     }
     Sound.play("approve");
     this.setView(State.defaultView());
-    Bridge.shellConfirm(card.token).catch((err) => {
+    Bridge.shellConfirm(card.token).catch((err: unknown) => {
       State.noteMessage = String(err).replace(/^Error:\s*/, "");
       this.setView("note");
       window.setTimeout(() => this.setView(State.defaultView()), 3000);
@@ -572,9 +580,18 @@ export class Island {
 
   /**
    * Mochi was dropped on a window and is back: a fresh chat about it, asked at
-   * once (the Mac's WindowLook). Rust holds the picture until it is answered.
+   * once (the Mac's WindowLook). Rust holds the picture for that one turn.
    */
-  private onLooked(look: Looked) {
+  private onLooked(look: Looked, waitedMs = 0) {
+    // An answer is on its way: resetting now would drop the look question
+    // (the chat ignores a send while one is pending) and land that answer in
+    // the new chat. Ask right after it instead, as the newChat shortcut waits.
+    if (State.stateOverride === "thinking" && !look.error) {
+      if (waitedMs < LOOK_WAIT_MAX_MS) {
+        window.setTimeout(() => this.onLooked(look, waitedMs + LOOK_WAIT_STEP_MS), LOOK_WAIT_STEP_MS);
+      }
+      return;
+    }
     if (look.error) {
       State.noteMessage = look.error;
       Sound.play("error");
@@ -608,7 +625,7 @@ export class Island {
     this.barClock.classList.toggle("on", on);
     if (on === (this.barClockTimer != null)) return;
     if (!on) {
-      window.clearInterval(this.barClockTimer!);
+      window.clearInterval(this.barClockTimer ?? undefined);
       this.barClockTimer = null;
       return;
     }
@@ -836,7 +853,7 @@ export class Island {
         State.promptContext = { kind: "file", name: file.name, path: file.path };
         State.notify();
       })
-      .catch((err) => {
+      .catch((err: unknown) => {
         if (State.droppedFile?.path !== path) return;
         UploadSeq.deactivate();
         State.noteMessage = String(err).replace(/^Error:\s*/, "");
@@ -1044,10 +1061,10 @@ export class Island {
     });
 
     void onDragDrop((e) => this.onDragDrop(e));
-    void onEvent<ShellCard>("shell-confirm", (card) => this.showCard(card));
-    void onEvent<null>("circle-captured", () => void this.onCaptured());
+    void onEvent("shell-confirm", (card) => this.showCard(card));
+    void onEvent("circle-captured", () => void this.onCaptured());
     // A routine ran (shell/routines.rs): say so for a moment, unless a card is waiting.
-    void onEvent<string>("shell-routine-ran", (message) => {
+    void onEvent("shell-routine-ran", (message) => {
       if (State.pendingApproval || State.shellCard) return;
       State.noteMessage = message;
       this.alert("note");

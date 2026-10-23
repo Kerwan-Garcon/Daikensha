@@ -11,8 +11,8 @@ import { State } from "../core/state";
 import type { SpotifyHost } from "./spotify";
 
 export function registerYouTubeMusicHandlers(island: SpotifyHost) {
-  void onEvent<YouTubeMusicState>("youtube-music", (s) => applyYouTubeMusic(island, s));
-  void onEvent<{ artUrl: string; dataUrl: string }>("youtube-music-artwork", (art) => {
+  void onEvent("youtube-music", (s) => applyYouTubeMusic(island, s));
+  void onEvent("youtube-music-artwork", (art) => {
     YouTubeMusic.artwork = art;
     State.notify();
   });

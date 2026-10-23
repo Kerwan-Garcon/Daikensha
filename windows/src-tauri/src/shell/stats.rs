@@ -3,9 +3,9 @@
 // background: the panel asks for a sample once a second while it is open, and
 // each sample is the difference with the one before. Closed, it costs nothing.
 
-use std::sync::Mutex;
 use std::time::Instant;
 
+use parking_lot::Mutex;
 use serde::Serialize;
 
 /// What the system reports at one moment, before any difference is taken.
@@ -121,13 +121,13 @@ impl Sampler {
         let now = Instant::now();
         #[cfg(windows)]
         let cur = {
-            let mut gpu = self.gpu.lock().unwrap();
+            let mut gpu = self.gpu.lock();
             super::win::read_stats(with_top, &mut gpu)
         };
         #[cfg(not(windows))]
         let cur = linux::read(with_top);
-        let mut last = self.last.lock().unwrap();
-        let mut base = self.procs.lock().unwrap();
+        let mut last = self.last.lock();
+        let mut base = self.procs.lock();
         let secs = last.as_ref().map(|(_, at)| now.duration_since(*at).as_secs_f64()).unwrap_or(0.0);
         let sample = compute(last.as_ref().map(|(r, _)| r), &cur, secs, std::process::id(), base.as_ref());
         let mut cur = cur;
@@ -140,8 +140,8 @@ impl Sampler {
 
     /// The panel closed: forget the base, so a reopened panel starts clean.
     pub fn reset(&self) {
-        *self.last.lock().unwrap() = None;
-        *self.procs.lock().unwrap() = None;
+        *self.last.lock() = None;
+        *self.procs.lock() = None;
     }
 }
 

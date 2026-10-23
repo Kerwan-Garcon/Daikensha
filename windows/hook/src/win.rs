@@ -69,7 +69,7 @@ pub fn pipe_server_is_same_user(handle: HANDLE) -> bool {
     let Some(mine) = current_user_sid() else { return false };
     unsafe {
         let mut pid = 0u32;
-        if GetNamedPipeServerProcessId(handle, &mut pid).is_err() || pid == 0 {
+        if GetNamedPipeServerProcessId(handle, &raw mut pid).is_err() || pid == 0 {
             return false;
         }
         let Ok(process) = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, false, pid) else {
@@ -82,24 +82,26 @@ pub fn pipe_server_is_same_user(handle: HANDLE) -> bool {
 }
 
 /// The user SID behind a process handle. `process` is borrowed, never closed.
-unsafe fn token_sid(process: HANDLE) -> Option<String> {
+unsafe fn token_sid(process: HANDLE) -> Option<String> { unsafe {
     let mut token = HANDLE::default();
-    OpenProcessToken(process, TOKEN_QUERY, &mut token).ok()?;
+    OpenProcessToken(process, TOKEN_QUERY, &raw mut token).ok()?;
 
     // First call sizes the buffer, second fills it.
     let mut needed = 0u32;
-    let _ = GetTokenInformation(token, TokenUser, None, 0, &mut needed);
+    let _ = GetTokenInformation(token, TokenUser, None, 0, &raw mut needed);
     if needed == 0 {
         let _ = CloseHandle(token);
         return None;
     }
-    let mut buf = vec![0u8; needed as usize];
+    // u64 words, not bytes: TOKEN_USER holds a pointer, so the buffer must be
+    // 8-aligned before it is read as one (a Vec<u8> is only 1-aligned).
+    let mut buf = vec![0u64; (needed as usize).div_ceil(8)];
     let ok = GetTokenInformation(
         token,
         TokenUser,
         Some(buf.as_mut_ptr().cast()),
         needed,
-        &mut needed,
+        &raw mut needed,
     )
     .is_ok();
     let _ = CloseHandle(token);
@@ -107,10 +109,10 @@ unsafe fn token_sid(process: HANDLE) -> Option<String> {
         return None;
     }
 
-    let user = &*(buf.as_ptr() as *const TOKEN_USER);
+    let user = &*buf.as_ptr().cast::<TOKEN_USER>();
     let mut text = PWSTR::null();
-    ConvertSidToStringSidW(user.User.Sid, &mut text).ok()?;
+    ConvertSidToStringSidW(user.User.Sid, &raw mut text).ok()?;
     let sid = text.to_string().ok();
-    let _ = LocalFree(Some(HLOCAL(text.0 as *mut _)));
+    let _ = LocalFree(Some(HLOCAL(text.0.cast())));
     sid
-}
+}}

@@ -232,7 +232,7 @@ mod x11 {
             .get_property(false, root, client_list, AtomEnum::WINDOW, 0, 4096)?
             .reply()?
             .value32()
-            .map(|v| v.collect())
+            .map(std::iter::Iterator::collect)
             .unwrap_or_default();
         // Every window's process in one round trip; a window gone meanwhile is skipped.
         let cookies: Vec<_> = clients

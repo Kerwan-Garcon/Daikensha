@@ -74,15 +74,15 @@ export class DesktopLink {
     this.mode = info.mode;
     this.controller.enabled = info.onDesktop;
 
-    await onEvent<{ from: "island" | "desktop"; home: boolean; look?: Looked | null }>(DESKTOP_EVENTS.dropped, (e) => {
+    await onEvent(DESKTOP_EVENTS.dropped, (e) => {
       this.onDropped(e.from, e.home);
       if (e.look) this.host.looked(e.look);
     });
-    await onEvent<null>(DESKTOP_EVENTS.home, () => void this.controller.flyHome());
-    await onEvent<null>(DESKTOP_EVENTS.wardrobe, () => this.host.wardrobeFromDesktop());
-    await onEvent<null>(DESKTOP_EVENTS.dizzy, () => this.host.dizzyFromDesktop());
+    await onEvent(DESKTOP_EVENTS.home, () => void this.controller.flyHome());
+    await onEvent(DESKTOP_EVENTS.wardrobe, () => this.host.wardrobeFromDesktop());
+    await onEvent(DESKTOP_EVENTS.dizzy, () => this.host.dizzyFromDesktop());
     // The window's page (re)loaded: it knows nothing yet.
-    await onEvent<null>(DESKTOP_EVENTS.ready, () => {
+    await onEvent(DESKTOP_EVENTS.ready, () => {
       this.pushed = "";
       this.push();
     });

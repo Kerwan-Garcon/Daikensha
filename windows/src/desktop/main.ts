@@ -8,7 +8,6 @@
 // all while he sleeps.
 
 import { Bridge, emitToWindow, onEvent, type DesktopMode } from "../core/bridge";
-import type { BotEmoteName } from "../core/layout";
 import { Sound } from "../core/sound";
 import { BotEngine } from "../mochi/engine";
 import { DEFAULT_LOOK } from "../mochi/look";
@@ -79,21 +78,21 @@ class DesktopMochi {
     const info = await Bridge.desktopInfo();
     if (info) this.mode = info.mode;
 
-    await onEvent<DesktopSnapshot>(DESKTOP_EVENTS.state, (s) => this.onSnapshot(s));
-    await onEvent<{ emote: BotEmoteName; duration: number }>(DESKTOP_EVENTS.emote, (e) => {
+    await onEvent(DESKTOP_EVENTS.state, (s) => this.onSnapshot(s));
+    await onEvent(DESKTOP_EVENTS.emote, (e) => {
       this.lastAgentActive = performance.now();
       this.wake();
       this.engine.triggerEmote(e.emote, e.duration);
       this.schedule();
     });
-    await onEvent<Point>(DESKTOP_EVENTS.cursor, (p) => this.notePointer(p));
-    await onEvent<boolean>(DESKTOP_EVENTS.visible, (on) => this.setVisible(on));
-    await onEvent<string>(DESKTOP_EVENTS.flight, (kind) => {
+    await onEvent(DESKTOP_EVENTS.cursor, (p) => this.notePointer(p));
+    await onEvent(DESKTOP_EVENTS.visible, (on) => this.setVisible(on));
+    await onEvent(DESKTOP_EVENTS.flight, (kind) => {
       // He fades in on the way out of the island (alphaValue 0 → 1 on macOS).
       if (kind !== "out") return;
       this.canvas.style.transition = "none";
       this.canvas.style.opacity = "0";
-      void this.canvas.offsetWidth;
+      this.canvas.getBoundingClientRect(); // forces a reflow, so the fade restarts
       this.canvas.style.transition = "";
       this.canvas.style.opacity = "1";
     });

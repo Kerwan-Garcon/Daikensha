@@ -54,6 +54,9 @@ jobs:
       - name: Type check
         run: npx tsc --noEmit
 
+      - name: Lint (typescript-eslint, strict and type-aware)
+        run: npm run lint
+
       - name: Island tests
         run: npm test
 
@@ -62,6 +65,11 @@ jobs:
       # step: PowerShell carries on after a failed command in the same step.
       - name: Build the relay
         run: cargo build --release -p coucou-hook
+
+      # Lint levels live in Cargo.toml [workspace.lints]; the toolchain is pinned
+      # in rust-toolchain.toml, so a new Rust release can't fail this overnight.
+      - name: Clippy
+        run: cargo clippy --workspace --all-targets --locked -- -D warnings
 
       - name: Rust tests
         run: cargo test --workspace --locked

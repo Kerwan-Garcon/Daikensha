@@ -1,12 +1,12 @@
 // Preferences, stored as plain JSON in settings.json under platform::config_dir().
 // No secret ever lands here — API keys live in the OS keychain (see secrets.rs).
 
+use parking_lot::{Mutex, MutexGuard};
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
 use std::collections::BTreeMap;
 use std::io::ErrorKind;
 use std::path::{Path, PathBuf};
-use std::sync::{Mutex, MutexGuard, PoisonError};
 
 /// A field the file lacks takes its value from `Default`, so a settings.json
 /// written by an older build still loads, whatever has been added since.
@@ -182,7 +182,7 @@ impl Default for Settings {
             ollama_url: String::new(),
             lmstudio_url: String::new(),
             custom_url: String::new(),
-            shortcuts: Default::default(),
+            shortcuts: BTreeMap::default(),
             mochi_outfit: "auto".into(),
             mochi_look: "portrait".into(),
             pill_colors: BTreeMap::new(),
@@ -233,7 +233,7 @@ const MAX_COPIES_PER_SECOND: u32 = 100;
 static NOT_LOADED: Mutex<Vec<PathBuf>> = Mutex::new(Vec::new());
 
 fn not_loaded() -> MutexGuard<'static, Vec<PathBuf>> {
-    NOT_LOADED.lock().unwrap_or_else(PoisonError::into_inner)
+    NOT_LOADED.lock()
 }
 
 /// One line in coucou.log. Tests must never write to the real one.
@@ -405,7 +405,8 @@ fn set_aside_as(
                 }
                 return written.map(|()| copy);
             }
-            Err(err) if err.kind() == ErrorKind::AlreadyExists => continue,
+            // The name is taken: try the next one.
+            Err(err) if err.kind() == ErrorKind::AlreadyExists => {}
             Err(err) => return Err(err),
         }
     }

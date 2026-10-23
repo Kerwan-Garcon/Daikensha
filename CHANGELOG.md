@@ -6,6 +6,16 @@
 - **YouTube Music pill** *(also macOS, GitHub build)* — the Spotify card and pill for YouTube Music: cover, title, progress bar, play/pause, previous/next, shuffle, repeat (all, one) and volume, and Mochi dances while it plays. YouTube Music has no desktop app of its own, so it goes through [Pear Desktop](https://github.com/pear-devs/pear-desktop) and its **API Server** plugin on `127.0.0.1:26538`: click **Connect…** on the card, then **Allow** in Pear's dialog. The token Pear gives is kept in the Keychain / Credential Manager / Secret Service. See docs/YOUTUBE_MUSIC.md
 - **Claude subscription mode** — Settings → Claude → Account: **Claude subscription**. The chat, the phone's chat, « OK Coucou », the dictation clean-up and the Notetaker's summary then go through your own Claude Code (the `claude` CLI, signed in to your Pro or Max plan) instead of an API key, and count against your plan's limits. Coucou runs `claude` as published and never sees a token. The API key stays the default, and nothing falls back to it silently: not installed, not signed in or out of quota is said in the island. The chat and the completions get no tool at all; the voice gets web search and its own five tools, through a local MCP server only it can reach. Four independent safeguards keep any tool that runs code, reads or writes files or fetches a page out of reach (docs/SUBSCRIPTION_MODE.md)
 
+- A question asked with an empty list of choices no longer breaks the island's question card: it says to answer in the terminal, as when there is no list
+- Linear: the new-issue field no longer stays greyed out with the last title after creating an issue, and a new or removed key shows on the card at once
+- Dropping Mochi on a window while an answer is on its way now asks right after it, instead of losing the question; the window's picture is dropped after its question even when it failed, and on New chat
+- A local model server is told it gets no screenshot of the window, instead of describing one it never saw
+- Under the hood: stricter TypeScript (`noUncheckedIndexedAccess`, typescript-eslint strict, typed IPC events), clippy pedantic with no `unwrap()` outside tests, `parking_lot` locks. See docs/AUDIT.md
+
+## Live Activity relay — unreleased
+
+- The 4 KB request limit now holds for a chunked request without `Content-Length` (it used to be read whole first); the relay has tests and a CI workflow
+
 ## 0.5.1 — October 18, 2026
 
 - **WhatsApp in one click** *(macOS, GitHub build)* — no more GitHub, zip or Terminal: Settings → Integrations → WhatsApp → **Install WhatsApp**. Coucou downloads GOWA, the open-source gateway, for your Mac (about 15 MB, once), checks it against the SHA-256 GOWA publishes, starts it, and shows the QR code to scan. It starts and stops with Coucou, and **Update** fetches GOWA's latest version. Your own gateway (GOWA by hand, OpenWA, another address) moves under **Advanced**

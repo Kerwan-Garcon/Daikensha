@@ -11,9 +11,10 @@ pub mod builder;
 
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 use std::time::Duration;
 
+use parking_lot::Mutex;
 use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Emitter, Manager, State};
 
@@ -147,7 +148,7 @@ fn get(app: &AppHandle) -> Option<Arc<NoteTaker>> {
 }
 
 pub fn is_recording(app: &AppHandle) -> bool {
-    get(app).is_some_and(|n| n.recording.lock().unwrap().is_some())
+    get(app).is_some_and(|n| n.recording.lock().is_some())
 }
 
 fn now_ms() -> u64 {
@@ -164,7 +165,7 @@ fn person_name(n: usize) -> String {
 }
 
 impl NoteTaker {
-    fn save(&self, note: &Note) {
+    fn save(note: &Note) {
         let dir = note_dir(&note.id);
         if crate::platform::ensure_private_dir(&dir).is_err() {
             return;
@@ -178,18 +179,18 @@ impl NoteTaker {
     }
 
     fn note(&self, id: &str) -> Option<Note> {
-        self.notes.lock().unwrap().iter().find(|n| n.id == id).cloned()
+        self.notes.lock().iter().find(|n| n.id == id).cloned()
     }
 
     /// Writes a change onto the note as it is now (it may have been renamed meanwhile).
     fn change(&self, app: &AppHandle, id: &str, f: impl FnOnce(&mut Note)) -> Option<Note> {
         let updated = {
-            let mut notes = self.notes.lock().unwrap();
+            let mut notes = self.notes.lock();
             let note = notes.iter_mut().find(|n| n.id == id)?;
             f(note);
             note.clone()
         };
-        self.save(&updated);
+        Self::save(&updated);
         let _ = app.emit_to(crate::HUB_LABEL, "notes-changed", &updated.id);
         Some(updated)
     }
@@ -206,7 +207,7 @@ pub fn setup(app: &AppHandle) {
             }
         }
     }
-    notes.sort_by(|a, b| b.start.cmp(&a.start));
+    notes.sort_by_key(|b| std::cmp::Reverse(b.start));
     // A call left recording or being written when Coucou last quit: written now.
     let unfinished: Vec<String> = notes
         .iter()
@@ -246,7 +247,7 @@ pub fn toggle(app: &AppHandle) {
 
 pub fn start(app: &AppHandle) -> Result<String, String> {
     let taker = get(app).ok_or("not ready")?;
-    if taker.recording.lock().unwrap().is_some() || taker.starting.swap(true, Ordering::Relaxed) {
+    if taker.recording.lock().is_some() || taker.starting.swap(true, Ordering::Relaxed) {
         return Err("already recording".into());
     }
     let result = start_inner(app, &taker);
@@ -280,10 +281,10 @@ fn start_inner(app: &AppHandle, taker: &Arc<NoteTaker>) -> Result<String, String
     let dir = note_dir(&id);
     crate::platform::ensure_private_dir(&dir).map_err(|e| e.to_string())?;
     let mic_channel = Arc::new(Mutex::new(Channel::new(&dir.join("mic.wav")).map_err(|e| e.to_string())?));
-    let mic_pref = crate::flow::get(app).map(|f| f.store.lock().unwrap().prefs.mic.clone()).unwrap_or_default();
+    let mic_pref = crate::flow::get(app).map(|f| f.store.lock().prefs.mic.clone()).unwrap_or_default();
     let sink = mic_channel.clone();
     let mic = audio::Capture::start(audio::Source::Mic(if mic_pref.is_empty() { None } else { Some(mic_pref) }), move |s| {
-        sink.lock().unwrap().push(s)
+        sink.lock().push(s);
     })
     .map_err(|err| {
         crate::log::line(format!("notes: microphone: {err}"));
@@ -295,7 +296,7 @@ fn start_inner(app: &AppHandle, taker: &Arc<NoteTaker>) -> Result<String, String
         Ok(channel) => {
             let channel = Arc::new(Mutex::new(channel));
             let sink = channel.clone();
-            match audio::Capture::start(audio::Source::System, move |s| sink.lock().unwrap().push(s)) {
+            match audio::Capture::start(audio::Source::System, move |s| sink.lock().push(s)) {
                 Ok(capture) => (Some(capture), Some(channel)),
                 Err(err) => {
                     crate::log::line(format!("notes: system sound unavailable: {err}"));
@@ -307,9 +308,9 @@ fn start_inner(app: &AppHandle, taker: &Arc<NoteTaker>) -> Result<String, String
         Err(_) => (None, None),
     };
     let stop_live = Arc::new(AtomicBool::new(false));
-    taker.notes.lock().unwrap().insert(0, note.clone());
-    taker.save(&note);
-    *taker.recording.lock().unwrap() = Some(Recording {
+    taker.notes.lock().insert(0, note.clone());
+    NoteTaker::save(&note);
+    *taker.recording.lock() = Some(Recording {
         id: id.clone(),
         mic,
         system,
@@ -344,14 +345,14 @@ fn spawn_live(
                 channels.push((s.clone(), "others"));
             }
             for (channel, speaker) in channels {
-                let chunk = channel.lock().unwrap().take_chunk();
+                let chunk = channel.lock().take_chunk();
                 let Some((start, samples)) = chunk else { continue };
                 let Some(transcript) = speech::transcribe(&samples) else { continue };
                 let text = transcript.text.trim().to_string();
                 if text.is_empty() || stop.load(Ordering::Relaxed) {
                     continue;
                 }
-                let end = start + samples.len() as f64 / speech::SAMPLE_RATE as f64;
+                let end = start + samples.len() as f64 / f64::from(speech::SAMPLE_RATE);
                 taker.change(&app, &id, |n| {
                     n.lines.push(Line { id: crate::flow::text::new_id(), speaker: speaker.into(), start, end, text });
                     n.lines.sort_by(|a, b| a.start.partial_cmp(&b.start).unwrap_or(std::cmp::Ordering::Equal));
@@ -363,15 +364,15 @@ fn spawn_live(
 
 pub fn stop(app: &AppHandle) {
     let Some(taker) = get(app) else { return };
-    let Some(mut rec) = taker.recording.lock().unwrap().take() else { return };
+    let Some(mut rec) = taker.recording.lock().take() else { return };
     rec.stop_live.store(true, Ordering::Relaxed);
     rec.mic.stop();
     if let Some(s) = rec.system.as_mut() {
         s.stop();
     }
-    rec.mic_channel.lock().unwrap().close();
+    rec.mic_channel.lock().close();
     if let Some(c) = &rec.system_channel {
-        c.lock().unwrap().close();
+        c.lock().close();
     }
     taker.change(app, &rec.id, |n| {
         n.end = Some(now_ms());
@@ -387,15 +388,15 @@ pub fn stop(app: &AppHandle) {
 /// transcript is written at the next launch.
 pub fn shutdown(app: &AppHandle) {
     let Some(taker) = get(app) else { return };
-    let Some(mut rec) = taker.recording.lock().unwrap().take() else { return };
+    let Some(mut rec) = taker.recording.lock().take() else { return };
     rec.stop_live.store(true, Ordering::Relaxed);
     rec.mic.stop();
     if let Some(s) = rec.system.as_mut() {
         s.stop();
     }
-    rec.mic_channel.lock().unwrap().close();
+    rec.mic_channel.lock().close();
     if let Some(c) = &rec.system_channel {
-        c.lock().unwrap().close();
+        c.lock().close();
     }
     taker.change(app, &rec.id, |n| {
         n.end = Some(now_ms());
@@ -416,7 +417,7 @@ fn words_in(path: &std::path::Path) -> Result<(Vec<TimedWord>, Vec<f32>), String
 fn process(app: &AppHandle, id: &str) {
     let Some(taker) = get(app) else { return };
     {
-        let mut working = taker.working.lock().unwrap();
+        let mut working = taker.working.lock();
         if working.iter().any(|w| w == id) {
             return;
         }
@@ -431,9 +432,9 @@ fn process(app: &AppHandle, id: &str) {
             n.error = Some(err.clone());
         });
     }
-    taker.working.lock().unwrap().retain(|w| w != id);
+    taker.working.lock().retain(|w| w != id);
     if result.is_ok() {
-        let engine = crate::flow::get(app).map(|f| f.store.lock().unwrap().prefs.summary_engine).unwrap_or_default();
+        let engine = crate::flow::get(app).map(|f| f.store.lock().prefs.summary_engine).unwrap_or_default();
         if engine == SummaryEngine::Claude && crate::flow::cleanup::has_key() {
             summarize(app, id);
         }
@@ -508,11 +509,11 @@ fn summarize(app: &AppHandle, id: &str) {
     if note.lines.is_empty() {
         return;
     }
-    taker.working.lock().unwrap().push(id.to_string());
+    taker.working.lock().push(id.to_string());
     let _ = app.emit_to(crate::HUB_LABEL, "notes-changed", id);
     let model = app
         .try_state::<crate::Shared>()
-        .map(|s| s.settings.lock().unwrap().model.clone())
+        .map(|s| s.settings.lock().model.clone())
         .filter(|m| !m.is_empty())
         .unwrap_or_else(|| crate::claude::DEFAULT_MODEL.to_string());
     let mut transcript = plain_transcript(&note);
@@ -525,14 +526,14 @@ fn summarize(app: &AppHandle, id: &str) {
     }
     let user = format!("<transcript>\n{transcript}\n</transcript>");
     let reply = tauri::async_runtime::block_on(async {
-        match crate::claude::complete(&model, builder::SUMMARY_INSTRUCTIONS, &user, 2048, Duration::from_secs(120)).await {
+        match crate::claude::complete(&model, builder::SUMMARY_INSTRUCTIONS, &user, 2048, Duration::from_mins(2)).await {
             Ok(text) => Some(text),
-            Err(_) => crate::claude::complete(crate::flow::cleanup::MODEL, builder::SUMMARY_INSTRUCTIONS, &user, 2048, Duration::from_secs(120))
+            Err(_) => crate::claude::complete(crate::flow::cleanup::MODEL, builder::SUMMARY_INSTRUCTIONS, &user, 2048, Duration::from_mins(2))
                 .await
                 .ok(),
         }
     });
-    taker.working.lock().unwrap().retain(|w| w != id);
+    taker.working.lock().retain(|w| w != id);
     let Some(reply) = reply else {
         let _ = app.emit_to(crate::HUB_LABEL, "notes-changed", id);
         return;
@@ -611,11 +612,11 @@ pub struct NotesState {
 }
 
 #[tauri::command]
-pub fn notes_state(taker: State<Arc<NoteTaker>>) -> NotesState {
+pub fn notes_state(taker: State<'_, Arc<NoteTaker>>) -> NotesState {
     NotesState {
-        notes: taker.notes.lock().unwrap().clone(),
-        recording: taker.recording.lock().unwrap().as_ref().map(|r| r.id.clone()),
-        working: taker.working.lock().unwrap().clone(),
+        notes: taker.notes.lock().clone(),
+        recording: taker.recording.lock().as_ref().map(|r| r.id.clone()),
+        working: taker.working.lock().clone(),
     }
 }
 
@@ -634,7 +635,7 @@ pub fn notes_stop(app: AppHandle) {
 }
 
 #[tauri::command]
-pub fn notes_rename(app: AppHandle, taker: State<Arc<NoteTaker>>, id: String, title: String) {
+pub fn notes_rename(app: AppHandle, taker: State<'_, Arc<NoteTaker>>, id: String, title: String) {
     let title = title.trim().to_string();
     if title.is_empty() {
         return;
@@ -646,7 +647,7 @@ pub fn notes_rename(app: AppHandle, taker: State<Arc<NoteTaker>>, id: String, ti
 }
 
 #[tauri::command]
-pub fn notes_rename_speaker(app: AppHandle, taker: State<Arc<NoteTaker>>, id: String, speaker: String, name: String) {
+pub fn notes_rename_speaker(app: AppHandle, taker: State<'_, Arc<NoteTaker>>, id: String, speaker: String, name: String) {
     let name = name.trim().to_string();
     if name.is_empty() {
         return;
@@ -659,7 +660,7 @@ pub fn notes_rename_speaker(app: AppHandle, taker: State<Arc<NoteTaker>>, id: St
 }
 
 #[tauri::command]
-pub fn notes_toggle_todo(app: AppHandle, taker: State<Arc<NoteTaker>>, id: String, todo: String) {
+pub fn notes_toggle_todo(app: AppHandle, taker: State<'_, Arc<NoteTaker>>, id: String, todo: String) {
     taker.change(&app, &id, |n| {
         if let Some(t) = n.todos.iter_mut().find(|t| t.id == todo) {
             t.done = !t.done;
@@ -668,11 +669,11 @@ pub fn notes_toggle_todo(app: AppHandle, taker: State<Arc<NoteTaker>>, id: Strin
 }
 
 #[tauri::command]
-pub fn notes_delete(app: AppHandle, taker: State<Arc<NoteTaker>>, id: String) {
-    if taker.recording.lock().unwrap().as_ref().is_some_and(|r| r.id == id) {
+pub fn notes_delete(app: AppHandle, taker: State<'_, Arc<NoteTaker>>, id: String) {
+    if taker.recording.lock().as_ref().is_some_and(|r| r.id == id) {
         return;
     }
-    taker.notes.lock().unwrap().retain(|n| n.id != id);
+    taker.notes.lock().retain(|n| n.id != id);
     let _ = std::fs::remove_dir_all(note_dir(&id));
     let _ = app.emit_to(crate::HUB_LABEL, "notes-changed", &id);
 }
@@ -688,13 +689,13 @@ pub fn notes_retry(app: AppHandle, id: String) {
 }
 
 #[tauri::command]
-pub fn notes_markdown(taker: State<Arc<NoteTaker>>, id: String) -> Option<String> {
+pub fn notes_markdown(taker: State<'_, Arc<NoteTaker>>, id: String) -> Option<String> {
     taker.note(&id).map(|n| markdown(&n))
 }
 
 /// Saves the note as Markdown in Documents (or the home folder) and shows it.
 #[tauri::command]
-pub fn notes_export(taker: State<Arc<NoteTaker>>, id: String) -> Result<String, String> {
+pub fn notes_export(taker: State<'_, Arc<NoteTaker>>, id: String) -> Result<String, String> {
     let note = taker.note(&id).ok_or("no such note")?;
     let home = crate::platform::home_dir();
     let dir = [home.join("Documents"), home.clone()].into_iter().find(|d| d.is_dir()).unwrap_or(home);

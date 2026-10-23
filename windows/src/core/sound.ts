@@ -34,7 +34,9 @@ class SoundEngine {
   preload(): Promise<void> {
     if (this.loading) return this.loading;
     this.loading = (async () => {
-      const Ctor = window.AudioContext ?? (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+      // Older WebKitGTK builds only have the prefixed constructor.
+      const w = window as { AudioContext?: typeof AudioContext; webkitAudioContext?: typeof AudioContext };
+      const Ctor = w.AudioContext ?? w.webkitAudioContext;
       if (!Ctor) return;
       const ctx = new Ctor();
       this.ctx = ctx;
@@ -101,7 +103,7 @@ class SoundEngine {
    * would clip it — and `play()` resumes the context on its own.
    */
   idle() {
-    if (!this.ctx || this.ctx.state !== "running" || this.idleTimer != null) return;
+    if (this.ctx?.state !== "running" || this.idleTimer != null) return;
     this.idleTimer = window.setTimeout(() => {
       this.idleTimer = null;
       void this.ctx?.suspend();
@@ -117,7 +119,8 @@ class SoundEngine {
     this.enabled = on;
   }
 
-  play(name: SoundName | string) {
+  /** `name` is a SoundName, or the name of a sound the user dropped in the sounds folder. */
+  play(name: string) {
     if (!this.enabled) return;
     const ctx = this.ctx;
     const master = this.master;

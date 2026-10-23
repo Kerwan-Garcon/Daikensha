@@ -113,7 +113,7 @@ fn answers_fit(question: &Value, answers: &Map<String, Value>) -> bool {
             .and_then(|o| o.as_array())
             .map(|opts| opts.iter().filter_map(|o| o.get("label").and_then(|l| l.as_str())).collect())
             .unwrap_or_default();
-        let multi = item.get("multiSelect").and_then(|m| m.as_bool()).unwrap_or(false);
+        let multi = item.get("multiSelect").and_then(serde_json::Value::as_bool).unwrap_or(false);
         match answers.get(text) {
             Some(Value::String(pick)) if !multi => labels.contains(&pick.as_str()),
             Some(Value::Array(picks)) if multi => {
@@ -148,7 +148,7 @@ mod tests {
         let text = v.to_string();
         // Any decision counts as one, except "ask" (Antigravity's PreToolUse): that hands the
         // choice back to the agent's own prompt.
-        let decided = v.get("decision").map_or(false, |d| d.as_str() != Some("ask"));
+        let decided = v.get("decision").is_some_and(|d| d.as_str() != Some("ask"));
         text.contains("allow") || decided || v.get("permission").is_some() || v.get("continue").is_some()
     }
 

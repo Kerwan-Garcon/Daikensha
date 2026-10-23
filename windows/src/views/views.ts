@@ -32,6 +32,7 @@ import { buildShell } from "./shell";
 import { buildConfirm } from "./confirm";
 import { buildCircle } from "./circle";
 import { colorHex } from "../design/tokens";
+import { itemAt } from "../core/arrays";
 
 export interface ViewActions {
   setView(v: IslandViewName): void;
@@ -75,7 +76,7 @@ export interface ViewHost {
   /** Called when the view becomes active, for views with a text field. */
   focus?(): void;
   /** Called every frame while the view is on screen. True = needs another frame. */
-  tick?(nowMs: number): boolean | void;
+  tick?(nowMs: number): boolean | undefined;
   /** Ctrl+O / Ctrl+E while the view is on screen (island/shortcuts.ts). */
   command?(command: ViewCommand): void;
 }
@@ -270,7 +271,10 @@ function buildOverview(actions: ViewActions): ViewHost {
       if (planTimer != null) window.clearInterval(planTimer);
       planTimer = null;
     };
-    if (!open) return stop();
+    if (!open) {
+      stop();
+      return;
+    }
     if (planTimer != null) return;
     planTimer = window.setInterval(() => {
       if (planCardOpen() && State.mode === "expanded") State.notify();
@@ -373,7 +377,7 @@ function buildOverview(actions: ViewActions): ViewHost {
           }));
         }
         ticker.sync(task);
-      } else if (task && task.id === SPOTIFY_ID) {
+      } else if (task?.id === SPOTIFY_ID) {
         // Its own card for every state: playing, idle, not installed.
         if (mode !== "spotify") {
           clear(leftBody);
@@ -382,7 +386,7 @@ function buildOverview(actions: ViewActions): ViewHost {
           cardKey = "";
         }
         spotifyCard.sync();
-      } else if (task && task.id === YOUTUBE_MUSIC_ID) {
+      } else if (task?.id === YOUTUBE_MUSIC_ID) {
         // Its own card for every state: playing, idle, not connected, not installed.
         if (mode !== "youtube-music") {
           clear(leftBody);
@@ -456,7 +460,7 @@ export function hasSessionTicker(task: AgentTask): boolean {
 }
 
 function buildPill(task: AgentTask, actions: ViewActions): HTMLElement {
-  const label = task.id === "integration_claude" ? pillDefinition(task.id)!.name : task.name;
+  const label = task.id === "integration_claude" ? (pillDefinition(task.id)?.name ?? task.name) : task.name;
   const canvas = createMiniBot(task, 24);
   const pill = h(
     "div",
@@ -607,13 +611,15 @@ function buildQuestion(actions: ViewActions): ViewHost {
   return {
     el,
     sync() {
-      const questions = State.pendingApproval?.questions;
+      const pending = State.pendingApproval;
+      const questions = pending?.questions;
       clear(who);
       // Only a request that is waiting can be folded away and come back.
       fold.style.display = State.pendingApproval ? "" : "none";
 
-      // A question that arrived as a notification has nothing to pick from.
-      if (!questions) {
+      // A question that arrived as a notification has nothing to pick from (and an
+      // empty list would leave `q` below undefined).
+      if (!pending || !questions || questions.length === 0) {
         who.append(agentWho(State.focusTask, t("is asking a question")));
         const task = State.focusTask;
         title.textContent = (task && lastTextStep(task.steps)) ?? t("Claude needs an answer.");
@@ -625,13 +631,13 @@ function buildQuestion(actions: ViewActions): ViewHost {
         return;
       }
 
-      if (State.pendingApproval!.requestId !== requestId) {
-        requestId = State.pendingApproval!.requestId;
+      if (pending.requestId !== requestId) {
+        requestId = pending.requestId;
         index = 0;
         answers = {};
         picked = new Set();
       }
-      const q = questions[Math.min(index, questions.length - 1)];
+      const q = itemAt(questions, Math.min(index, questions.length - 1));
       const asking = questions.length > 1
         ? t("is asking ({index} of {total})", { index: index + 1, total: questions.length })
         : t("is asking");
@@ -761,7 +767,7 @@ function buildSettings(actions: ViewActions): ViewHost {
   const volume = h("input", {
     type: "range", min: "0", max: "0.2", step: "0.005",
     oninput: (e: Event) => actions.setVolume(Number((e.target as HTMLInputElement).value)),
-  }) as HTMLInputElement;
+  });
   const autoLabel = h("span", {});
   const segButtons = [10, 15, 30].map((s) =>
     h("button", { onclick: () => actions.setAutoClose(s) }, `${s}s`),

@@ -150,7 +150,7 @@ export const MAX_DECLARED = 4;
 
 /** The OS this page runs on. Only the Windows webview says "Windows". */
 export const HOST_OS: HostOs =
-  typeof navigator !== "undefined" && /Windows/.test(navigator.userAgent ?? "") ? "windows" : "linux";
+  typeof navigator !== "undefined" && navigator.userAgent.includes("Windows") ? "windows" : "linux";
 
 export function pillDefinition(id: string): PillDefinition | undefined {
   return PILL_CATALOG.find((p) => p.id === id);
@@ -202,7 +202,8 @@ export interface Declared {
  * without the main pill, which never takes a slot. Same rules as
  * AppState.loadIntegrationTasks on macOS.
  */
-export function sanitizeDeclared(d: Declared, os: HostOs = HOST_OS): Declared {
+/** `d` may come from a settings file written by an older build, without the list. */
+export function sanitizeDeclared(d: Pick<Declared, "mainPill"> & Partial<Declared>, os: HostOs = HOST_OS): Declared {
   const mains = new Set(mainPillChoices(os).map((p) => p.id));
   const mainPill = mains.has(d.mainPill) ? d.mainPill : DEFAULT_MAIN_PILL;
   const offered = new Set(availablePills(os).map((p) => p.id));
@@ -245,7 +246,7 @@ export function chooseMainPill(d: Declared, id: string, os: HostOs = HOST_OS): D
  */
 export function orderPills<T extends { id: string }>(tasks: T[], mainPill: string): T[] {
   const index = new Map(PILL_CATALOG.map((p, i) => [p.id, i]));
-  const rank = (t: T) => (t.id === mainPill ? -2 : index.has(t.id) ? index.get(t.id)! : -1);
+  const rank = (t: T) => (t.id === mainPill ? -2 : (index.get(t.id) ?? -1));
   return tasks
     .map((t, i) => ({ t, i }))
     .sort((a, b) => rank(a.t) - rank(b.t) || a.i - b.i)

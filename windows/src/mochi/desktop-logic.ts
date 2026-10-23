@@ -122,7 +122,7 @@ export function agentActive(state: BotStateName): boolean {
  */
 export function alertActive(s: {
   pendingApproval: { questions?: unknown } | null;
-  tasks: ReadonlyArray<{ state: BotStateName }>;
+  tasks: readonly { state: BotStateName }[];
 }): boolean {
   if (s.pendingApproval != null) return true;
   return s.tasks.some((t) => t.state === "question");
@@ -229,6 +229,8 @@ export class DesktopMochiController {
     this.phase = "flyingOut";
     this.port.setAway(true);
     const ok = await this.port.flyOut(anywhere);
+    // The phase may have changed during the flight (an alert, a drag).
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- narrowed before the await, not after
     if (this.phase !== "flyingOut") return;
     if (!ok) {
       // His spot is on a display that is gone: he stays home.

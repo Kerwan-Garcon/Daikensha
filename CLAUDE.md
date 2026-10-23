@@ -12,6 +12,9 @@ Coucou is a native macOS app (`NotchBuddy/`); `windows/` is the Tauri version fo
 - `docs/*.html` — the GitHub Pages site (privacy, terms, support, legal notice).
 - `relay/` — the Coucou relay, a stateless Cloudflare Worker that forwards the iPhone Live Activity pushes (it holds the APNs key, which must never ship in an app). See `relay/README.md`.
 
+## Agent skills
+`.claude/skills/` vendors [Superpowers](https://github.com/obra/superpowers) (brainstorming, writing-plans, test-driven-development, systematic-debugging, verification-before-completion, code review…), `karpathy-guidelines` and `i-have-adhd` (opt-in: `/i-have-adhd`). Invoke them by their plain name. Start with `using-superpowers`; follow `karpathy-guidelines` when writing or reviewing code. Never edit them by hand: bump the pinned commit in `scripts/sync-agent-skills.sh` and re-run it (`--check` detects drift).
+
 ## Build
 ```
 cd NotchBuddy && xcodegen && xcodebuild -scheme NotchBuddy -configuration Debug build

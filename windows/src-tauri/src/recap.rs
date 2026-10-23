@@ -18,9 +18,9 @@
 use std::collections::{HashMap, HashSet};
 use std::io::{ErrorKind, Write};
 use std::path::{Path, PathBuf};
-use std::sync::{Mutex, MutexGuard, PoisonError};
 use std::time::{SystemTime, UNIX_EPOCH};
 
+use parking_lot::{Mutex, MutexGuard};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use tauri::{AppHandle, Emitter, Manager, State};
@@ -640,7 +640,8 @@ fn write_unique(dir: &Path, stem: &str, bytes: &[u8]) -> std::io::Result<PathBuf
                 }
                 return Ok(path);
             }
-            Err(err) if err.kind() == ErrorKind::AlreadyExists => continue,
+            // The name is taken: try the next one.
+            Err(err) if err.kind() == ErrorKind::AlreadyExists => {}
             Err(err) => return Err(err),
         }
     }
@@ -676,7 +677,7 @@ pub struct Store(Mutex<Recap>);
 
 impl Store {
     fn lock(&self) -> MutexGuard<'_, Recap> {
-        self.0.lock().unwrap_or_else(PoisonError::into_inner)
+        self.0.lock()
     }
 }
 
@@ -718,38 +719,38 @@ pub fn record_decision(app: &AppHandle, request_id: &str, decision: &str) {
 }
 
 #[tauri::command]
-pub fn recap_history(store: State<Store>, since: i64) -> HistoryView {
+pub fn recap_history(store: State<'_, Store>, since: i64) -> HistoryView {
     store.lock().view(since)
 }
 
 #[tauri::command]
-pub fn recap_prefs(store: State<Store>) -> Prefs {
+pub fn recap_prefs(store: State<'_, Store>) -> Prefs {
     store.lock().prefs().clone()
 }
 
 #[tauri::command]
-pub fn recap_set_enabled(store: State<Store>, enabled: bool) {
+pub fn recap_set_enabled(store: State<'_, Store>, enabled: bool) {
     store.lock().set_enabled(enabled);
 }
 
 #[tauri::command]
-pub fn recap_set_hide_projects(store: State<Store>, hide: bool) {
+pub fn recap_set_hide_projects(store: State<'_, Store>, hide: bool) {
     store.lock().set_hide_projects(hide);
 }
 
 #[tauri::command]
-pub fn recap_mark_shown(store: State<Store>, week: String) {
+pub fn recap_mark_shown(store: State<'_, Store>, week: String) {
     store.lock().mark_shown(&week);
 }
 
 #[tauri::command]
-pub fn recap_clear(store: State<Store>) {
+pub fn recap_clear(store: State<'_, Store>) {
     store.lock().clear();
 }
 
 /// `data` is the canvas's PNG as a data URL. Returns where it was written.
 #[tauri::command]
-pub fn recap_save_png(store: State<Store>, data: String, week: String) -> Result<String, String> {
+pub fn recap_save_png(store: State<'_, Store>, data: String, week: String) -> Result<String, String> {
     let path = save_png(&platform::picture_dirs(), &data, &week)?;
     let shown = path.to_string_lossy().to_string();
     store.lock().last_saved = Some(path);
@@ -758,7 +759,7 @@ pub fn recap_save_png(store: State<Store>, data: String, week: String) -> Result
 
 /// Opens the folder of the image saved last — never a path from the page.
 #[tauri::command]
-pub fn recap_reveal_saved(store: State<Store>) {
+pub fn recap_reveal_saved(store: State<'_, Store>) {
     let dir = store.lock().last_saved.as_ref().and_then(|p| p.parent().map(Path::to_path_buf));
     if let Some(dir) = dir {
         platform::reveal_folder(&dir.to_string_lossy());
@@ -1035,14 +1036,14 @@ mod tests {
         let missing = dir.join("missing");
         let png = "data:image/png;base64,iVBORw0KGgo=";
         let first = save_png(&[missing.clone(), dir.clone()], png, "2026-10-05").unwrap();
-        let second = save_png(&[dir.clone()], png, "2026-10-05").unwrap();
+        let second = save_png(std::slice::from_ref(&dir), png, "2026-10-05").unwrap();
         assert_eq!(first, dir.join("Coucou weekly recap 2026-10-05.png"));
         assert_eq!(second, dir.join("Coucou weekly recap 2026-10-05 (2).png"));
         // The week is a date or nothing: no path tricks through it.
-        let third = save_png(&[dir.clone()], png, "../../x").unwrap();
+        let third = save_png(std::slice::from_ref(&dir), png, "../../x").unwrap();
         assert_eq!(third, dir.join("Coucou weekly recap.png"));
         // Not a PNG: refused.
-        assert!(save_png(&[dir.clone()], "data:image/png;base64,aGVsbG8=", "").is_err());
+        assert!(save_png(std::slice::from_ref(&dir), "data:image/png;base64,aGVsbG8=", "").is_err());
         assert!(save_png(&[missing], png, "").is_err());
         let _ = std::fs::remove_dir_all(&dir);
     }

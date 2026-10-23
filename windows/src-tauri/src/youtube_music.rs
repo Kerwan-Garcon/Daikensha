@@ -321,10 +321,11 @@ pub fn first_video_id(found: &Json) -> Option<String> {
 
 // ── Runtime ───────────────────────────────────────────────────────────────────
 
-use std::sync::{LazyLock, Mutex};
+use std::sync::LazyLock;
 use std::time::Duration;
 
 use futures_util::StreamExt;
+use parking_lot::Mutex;
 use tokio::sync::mpsc;
 use tokio_tungstenite::tungstenite::protocol::frame::coding::CloseCode;
 use tokio_tungstenite::tungstenite::Message;
@@ -374,7 +375,7 @@ fn emit(app: &AppHandle, state: &YtmState) {
 /// Changes the shared state, and tells the island when it changed.
 fn update(app: &AppHandle, f: impl FnOnce(&mut YtmState)) {
     let state = {
-        let mut s = SHARED.lock().unwrap();
+        let mut s = SHARED.lock();
         if !s.active {
             return;
         }
@@ -389,7 +390,7 @@ fn update(app: &AppHandle, f: impl FnOnce(&mut YtmState)) {
 }
 
 fn wake(w: Wake) {
-    if let Some(tx) = &SHARED.lock().unwrap().wake {
+    if let Some(tx) = &SHARED.lock().wake {
         let _ = tx.send(w);
     }
 }
@@ -399,7 +400,7 @@ fn wake(w: Wake) {
 pub fn sync(app: &AppHandle, active_integrations: &[String]) {
     let on = active_integrations.iter().any(|id| id == PILL_ID);
     let (old, rx) = {
-        let mut s = SHARED.lock().unwrap();
+        let mut s = SHARED.lock();
         if s.active == on {
             return;
         }
@@ -512,7 +513,7 @@ async fn session(
     loop {
         tokio::select! {
             w = rx.recv() => match w {
-                Some(Wake::Retry) => continue,
+                Some(Wake::Retry) => {}
                 Some(Wake::Stop) | None => {
                     let _ = ws.close(None).await;
                     return Ended::Stop;
@@ -539,7 +540,7 @@ async fn session(
 
 fn on_message(app: &AppHandle, json: &Json) {
     let (state, applied, art) = {
-        let mut s = SHARED.lock().unwrap();
+        let mut s = SHARED.lock();
         if !s.active {
             return;
         }
@@ -547,7 +548,7 @@ fn on_message(app: &AppHandle, json: &Json) {
         let art = s.state.track.as_ref().and_then(|t| t.art_url.clone());
         let fetch = art.filter(|a| s.artwork_for.as_deref() != Some(a.as_str()));
         if fetch.is_some() {
-            s.artwork_for = fetch.clone();
+            s.artwork_for.clone_from(&fetch);
         }
         (s.state.clone(), applied, fetch)
     };
@@ -627,7 +628,7 @@ pub async fn search_and_play(app: &AppHandle, query: &str) -> Result<(), String>
 #[tauri::command]
 pub fn youtube_music_refresh() -> Option<YtmState> {
     let state = {
-        let s = SHARED.lock().unwrap();
+        let s = SHARED.lock();
         if !s.active {
             return None;
         }
@@ -644,14 +645,14 @@ pub fn youtube_music_refresh() -> Option<YtmState> {
 #[tauri::command]
 pub async fn youtube_music_connect(app: AppHandle) -> bool {
     {
-        let s = SHARED.lock().unwrap();
+        let s = SHARED.lock();
         if !s.active || s.state.link == Link::Waiting {
             return false;
         }
     }
     update(&app, |s| s.link = Link::Waiting);
     // The dialog waits for the user.
-    let Some(client) = client(Duration::from_secs(120)) else { return false };
+    let Some(client) = client(Duration::from_mins(2)) else { return false };
     let response = client.post(format!("{}/auth/{CLIENT_ID}", base())).send().await;
     let status = response.as_ref().map(|r| r.status().as_u16()).unwrap_or(0);
     let token = match response {
@@ -682,7 +683,7 @@ pub async fn youtube_music_connect(app: AppHandle) -> bool {
 #[tauri::command]
 pub async fn youtube_music_control(app: AppHandle, action: String, value: Option<f64>) -> bool {
     let (state, token) = {
-        let s = SHARED.lock().unwrap();
+        let s = SHARED.lock();
         (s.state.clone(), token())
     };
     if state.link != Link::Connected {
@@ -979,6 +980,8 @@ mod tests {
         tokio::spawn(async move {
             let (tcp, _) = listener.accept().await.unwrap();
             let mut path = None;
+            // tungstenite fixes this callback's signature, large error type included.
+            #[allow(clippy::result_large_err)]
             let callback = |req: &Request, resp: Response| {
                 path = Some(req.uri().to_string());
                 Ok(resp)

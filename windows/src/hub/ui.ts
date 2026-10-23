@@ -81,7 +81,7 @@ export function button(text: string, onclick: () => void, kind: "" | "primary" |
     class: ["hub-btn", kind, small ? "small" : ""].filter(Boolean).join(" "),
     text,
     onclick,
-  }) as HTMLButtonElement;
+  });
 }
 
 /** The settings window's switch, so both windows look alike. */
@@ -110,7 +110,7 @@ export function segmented<T extends string>(options: [T, string][], value: T, on
 }
 
 export function select<T extends string>(options: [T, string][], value: T, onChange: (v: T) => void): HTMLSelectElement {
-  const el = h("select", { class: "hub-select" }) as HTMLSelectElement;
+  const el = h("select", { class: "hub-select" });
   for (const [id, text] of options) el.append(h("option", { value: id, text }));
   el.value = value;
   el.addEventListener("change", () => onChange(el.value as T));

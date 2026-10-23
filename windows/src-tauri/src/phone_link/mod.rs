@@ -29,8 +29,9 @@ mod server;
 mod tests;
 
 use std::net::{Ipv4Addr, SocketAddr, TcpListener as StdListener};
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 
+use parking_lot::Mutex;
 use serde::Serialize;
 use tauri::{AppHandle, Emitter, Manager, State, WebviewWindow};
 
@@ -96,24 +97,24 @@ struct TauriFeatures {
 
 impl server::Features for TauriFeatures {
     fn details(&self) -> bool {
-        self.app.state::<Shared>().settings.lock().unwrap().phone_details
+        self.app.state::<Shared>().settings.lock().phone_details
     }
     fn answers(&self) -> bool {
-        self.app.state::<Shared>().settings.lock().unwrap().phone_answers
+        self.app.state::<Shared>().settings.lock().phone_answers
     }
     fn diffs(&self) -> bool {
-        self.app.state::<Shared>().settings.lock().unwrap().phone_diffs
+        self.app.state::<Shared>().settings.lock().phone_diffs
     }
     fn usage(&self) -> bool {
-        self.app.state::<Shared>().settings.lock().unwrap().phone_usage
+        self.app.state::<Shared>().settings.lock().phone_usage
     }
     fn relay(&self) -> bool {
-        self.app.state::<Shared>().settings.lock().unwrap().phone_relay
+        self.app.state::<Shared>().settings.lock().phone_relay
     }
     fn services(&self) -> Vec<String> {
         // Only ids the link knows, whatever the file held.
-        let ticked = self.app.state::<Shared>().settings.lock().unwrap().phone_services.clone();
-        hub::SERVICE_IDS.iter().filter(|id| ticked.iter().any(|t| t == *id)).map(|id| id.to_string()).collect()
+        let ticked = self.app.state::<Shared>().settings.lock().phone_services.clone();
+        hub::SERVICE_IDS.iter().filter(|id| ticked.iter().any(|t| t == *id)).map(std::string::ToString::to_string).collect()
     }
 }
 
@@ -148,13 +149,13 @@ impl PhoneLink {
     /// (Re)starts the relay connection from the settings and the keystore, or stops it. Never fails the link: a
     /// problem is only a status the user can read in Settings.
     fn sync_relay(&self) {
-        if let Some(old) = self.relay.lock().unwrap().take() {
+        if let Some(old) = self.relay.lock().take() {
             old.stop();
         }
-        let Some(shared) = self.running.lock().unwrap().as_ref().map(|r| r.shared.clone()) else { return };
+        let Some(shared) = self.running.lock().as_ref().map(|r| r.shared.clone()) else { return };
         let (on, url) = {
             let s = self.app.state::<Shared>();
-            let s = s.settings.lock().unwrap();
+            let s = s.settings.lock();
             (s.phone_relay, s.phone_relay_url.clone())
         };
         if !on {
@@ -170,13 +171,13 @@ impl PhoneLink {
         };
         let handle = tauri::async_runtime::block_on(async move { relay_client::start(shared, target, creds) });
         log::line("phone link: connecting to the relay");
-        *self.relay.lock().unwrap() = Some(handle);
+        *self.relay.lock() = Some(handle);
     }
 
     /// Starts listening. Fails without side effects if the keystore is missing:
     /// nothing is ever kept on disk instead.
     pub fn start(&self) -> Result<(), String> {
-        let mut running = self.running.lock().unwrap();
+        let mut running = self.running.lock();
         if running.is_some() {
             return Ok(());
         }
@@ -190,14 +191,14 @@ impl PhoneLink {
                     Err(e) => log::line(format!("phone link: not announced on the local network: {e}")),
                 }
                 *running = Some(r);
-                *self.error.lock().unwrap() = None;
+                *self.error.lock() = None;
                 drop(running);
                 self.sync_relay();
                 Ok(())
             }
             Err(e) => {
                 log::line(format!("phone link: could not start: {e}"));
-                *self.error.lock().unwrap() = Some(e.clone());
+                *self.error.lock() = Some(e.clone());
                 Err(e)
             }
         }
@@ -227,11 +228,11 @@ impl PhoneLink {
     }
 
     pub fn stop(&self) {
-        if let Some(relay) = self.relay.lock().unwrap().take() {
+        if let Some(relay) = self.relay.lock().take() {
             relay.stop();
         }
         self.advertiser.stop();
-        if let Some(r) = self.running.lock().unwrap().take() {
+        if let Some(r) = self.running.lock().take() {
             r.handle.stop();
             log::line("phone link: stopped");
         }
@@ -268,7 +269,7 @@ pub struct Pairing {
 }
 
 fn status_of(link: &PhoneLink, enabled: bool) -> Status {
-    let running = link.running.lock().unwrap();
+    let running = link.running.lock();
     Status {
         enabled,
         running: running.is_some(),
@@ -276,14 +277,14 @@ fn status_of(link: &PhoneLink, enabled: bool) -> Status {
         host: pairing::lan_address().map(|ip| ip.to_string()).unwrap_or_default(),
         name: pairing::computer_name(),
         clients: link.hub.clients(),
-        error: link.error.lock().unwrap().clone(),
-        relay_state: link.relay.lock().unwrap().as_ref().map_or(relay_client::State::Off, |h| h.state()),
+        error: link.error.lock().clone(),
+        relay_state: link.relay.lock().as_ref().map_or(relay_client::State::Off, relay_client::Handle::state),
     }
 }
 
 #[tauri::command]
-pub fn phone_link_status(link: State<PhoneLink>, shared: State<Shared>) -> Status {
-    let enabled = shared.settings.lock().unwrap().phone_link;
+pub fn phone_link_status(link: State<'_, PhoneLink>, shared: State<'_, Shared>) -> Status {
+    let enabled = shared.settings.lock().phone_link;
     status_of(&link, enabled)
 }
 
@@ -292,8 +293,8 @@ pub fn phone_link_status(link: State<PhoneLink>, shared: State<Shared>) -> Statu
 pub fn phone_link_set_enabled(
     app: AppHandle,
     window: WebviewWindow,
-    link: State<PhoneLink>,
-    shared: State<Shared>,
+    link: State<'_, PhoneLink>,
+    shared: State<'_, Shared>,
     enabled: bool,
 ) -> Result<Status, String> {
     // It starts a network server: only the switch in Settings may do it.
@@ -304,7 +305,7 @@ pub fn phone_link_set_enabled(
         link.stop();
     }
     let updated = {
-        let mut current = shared.settings.lock().unwrap();
+        let mut current = shared.settings.lock();
         current.phone_link = enabled;
         if let Err(err) = settings::save(&current) {
             log::line(format!("could not save settings: {err}"));
@@ -318,9 +319,9 @@ pub fn phone_link_set_enabled(
 /// The pairing link and its QR code. Only the settings window may ask: the token
 /// is the secret that lets a phone in.
 #[tauri::command]
-pub fn phone_link_pairing(window: WebviewWindow, link: State<PhoneLink>) -> Result<Pairing, String> {
+pub fn phone_link_pairing(window: WebviewWindow, link: State<'_, PhoneLink>) -> Result<Pairing, String> {
     only_settings(&window)?;
-    let running = link.running.lock().unwrap();
+    let running = link.running.lock();
     let r = running.as_ref().ok_or("the phone link is off")?;
     pairing_of(&link, r)
 }
@@ -328,10 +329,10 @@ pub fn phone_link_pairing(window: WebviewWindow, link: State<PhoneLink>) -> Resu
 fn pairing_of(link: &PhoneLink, r: &Running) -> Result<Pairing, String> {
     let host = pairing::lan_address().map(|ip| ip.to_string()).ok_or("no local network address found")?;
     let name = r.shared.name.clone();
-    let token = r.shared.token.lock().unwrap().clone();
+    let token = r.shared.token.lock().clone();
     let (on, url) = {
         let s = link.app.state::<Shared>();
-        let s = s.settings.lock().unwrap();
+        let s = s.settings.lock();
         (s.phone_relay, s.phone_relay_url.clone())
     };
     // The relay fields go in only when the switch is on and everything for it is there.
@@ -354,7 +355,7 @@ fn pairing_of(link: &PhoneLink, r: &Running) -> Result<Pairing, String> {
 /// reported afterwards instead of leaving the phones connected.
 fn renew_pairing(hub: &Hub, token: &Mutex<String>, store: &dyn SecretStore) -> Result<(), String> {
     hub.kick_all("auth", "unpaired");
-    *token.lock().unwrap() = pairing::new_token(store)?;
+    *token.lock() = pairing::new_token(store)?;
     // "Pair again" also makes a new room and a new K: a phone that held the old ones can no longer reach this computer
     // through the relay, whatever it still remembers.
     relay_client::new_pairing(store)?;
@@ -364,9 +365,9 @@ fn renew_pairing(hub: &Hub, token: &Mutex<String>, store: &dyn SecretStore) -> R
 /// A new pairing code: the phone that had the old one is disconnected and must
 /// pair again.
 #[tauri::command]
-pub fn phone_link_new_pairing(window: WebviewWindow, link: State<PhoneLink>) -> Result<Pairing, String> {
+pub fn phone_link_new_pairing(window: WebviewWindow, link: State<'_, PhoneLink>) -> Result<Pairing, String> {
     only_settings(&window)?;
-    let running = link.running.lock().unwrap();
+    let running = link.running.lock();
     let r = running.as_ref().ok_or("the phone link is off")?;
     renew_pairing(&link.hub, &r.shared.token, &*link.store)?;
     log::line("phone link: new pairing code, phones disconnected");
@@ -390,17 +391,17 @@ pub struct RelayStatus {
 }
 
 fn relay_status_of(link: &PhoneLink, shared: &Shared) -> RelayStatus {
-    let s = shared.settings.lock().unwrap();
+    let s = shared.settings.lock();
     RelayStatus {
         enabled: s.phone_relay,
         url: s.phone_relay_url.clone(),
         has_access: relay_client::access_key(&*link.store).is_some(),
-        state: link.relay.lock().unwrap().as_ref().map_or(relay_client::State::Off, |h| h.state()),
+        state: link.relay.lock().as_ref().map_or(relay_client::State::Off, relay_client::Handle::state),
     }
 }
 
 #[tauri::command]
-pub fn phone_relay_status(link: State<PhoneLink>, shared: State<Shared>) -> RelayStatus {
+pub fn phone_relay_status(link: State<'_, PhoneLink>, shared: State<'_, Shared>) -> RelayStatus {
     relay_status_of(&link, &shared)
 }
 
@@ -410,8 +411,8 @@ pub fn phone_relay_status(link: State<PhoneLink>, shared: State<Shared>) -> Rela
 pub fn phone_relay_set(
     app: AppHandle,
     window: WebviewWindow,
-    link: State<PhoneLink>,
-    shared: State<Shared>,
+    link: State<'_, PhoneLink>,
+    shared: State<'_, Shared>,
     enabled: bool,
     url: String,
 ) -> Result<RelayStatus, String> {
@@ -427,7 +428,7 @@ pub fn phone_relay_set(
         }
     }
     let updated = {
-        let mut current = shared.settings.lock().unwrap();
+        let mut current = shared.settings.lock();
         current.phone_relay = enabled;
         current.phone_relay_url = clean;
         if let Err(err) = settings::save(&current) {
@@ -447,15 +448,15 @@ pub fn phone_relay_set(
 pub fn phone_relay_set_access(
     app: AppHandle,
     window: WebviewWindow,
-    link: State<PhoneLink>,
-    shared: State<Shared>,
+    link: State<'_, PhoneLink>,
+    shared: State<'_, Shared>,
     access: String,
 ) -> Result<RelayStatus, String> {
     only_settings(&window)?;
     relay_client::set_access_key(&*link.store, &access)?;
     if relay_client::access_key(&*link.store).is_none() {
         let updated = {
-            let mut current = shared.settings.lock().unwrap();
+            let mut current = shared.settings.lock();
             current.phone_relay = false;
             if let Err(err) = settings::save(&current) {
                 log::line(format!("could not save settings: {err}"));
@@ -482,8 +483,8 @@ pub struct DetailsStatus {
 }
 
 #[tauri::command]
-pub fn phone_details_status(shared: State<Shared>) -> DetailsStatus {
-    DetailsStatus { enabled: shared.settings.lock().unwrap().phone_details }
+pub fn phone_details_status(shared: State<'_, Shared>) -> DetailsStatus {
+    DetailsStatus { enabled: shared.settings.lock().phone_details }
 }
 
 /// "Show session details on the phone". Off by default. A change disconnects the phones once so they
@@ -492,13 +493,13 @@ pub fn phone_details_status(shared: State<Shared>) -> DetailsStatus {
 pub fn phone_details_set_enabled(
     app: AppHandle,
     window: WebviewWindow,
-    link: State<PhoneLink>,
-    shared: State<Shared>,
+    link: State<'_, PhoneLink>,
+    shared: State<'_, Shared>,
     enabled: bool,
 ) -> Result<DetailsStatus, String> {
     only_settings(&window)?;
     let updated = {
-        let mut current = shared.settings.lock().unwrap();
+        let mut current = shared.settings.lock();
         current.phone_details = enabled;
         if let Err(err) = settings::save(&current) {
             log::line(format!("could not save settings: {err}"));
@@ -520,8 +521,8 @@ pub struct AnswersStatus {
 }
 
 #[tauri::command]
-pub fn phone_answers_status(shared: State<Shared>) -> AnswersStatus {
-    AnswersStatus { enabled: shared.settings.lock().unwrap().phone_answers }
+pub fn phone_answers_status(shared: State<'_, Shared>) -> AnswersStatus {
+    AnswersStatus { enabled: shared.settings.lock().phone_answers }
 }
 
 /// "Let the phone answer Claude Code's questions". Off by default. A change disconnects the phones once so they
@@ -530,13 +531,13 @@ pub fn phone_answers_status(shared: State<Shared>) -> AnswersStatus {
 pub fn phone_answers_set_enabled(
     app: AppHandle,
     window: WebviewWindow,
-    link: State<PhoneLink>,
-    shared: State<Shared>,
+    link: State<'_, PhoneLink>,
+    shared: State<'_, Shared>,
     enabled: bool,
 ) -> Result<AnswersStatus, String> {
     only_settings(&window)?;
     let updated = {
-        let mut current = shared.settings.lock().unwrap();
+        let mut current = shared.settings.lock();
         current.phone_answers = enabled;
         if let Err(err) = settings::save(&current) {
             log::line(format!("could not save settings: {err}"));
@@ -558,8 +559,8 @@ pub struct DiffsStatus {
 }
 
 #[tauri::command]
-pub fn phone_diffs_status(shared: State<Shared>) -> DiffsStatus {
-    DiffsStatus { enabled: shared.settings.lock().unwrap().phone_diffs }
+pub fn phone_diffs_status(shared: State<'_, Shared>) -> DiffsStatus {
+    DiffsStatus { enabled: shared.settings.lock().phone_diffs }
 }
 
 /// "Show the files an agent changed on the phone". Off by default. A change disconnects the phones once so they
@@ -568,13 +569,13 @@ pub fn phone_diffs_status(shared: State<Shared>) -> DiffsStatus {
 pub fn phone_diffs_set_enabled(
     app: AppHandle,
     window: WebviewWindow,
-    link: State<PhoneLink>,
-    shared: State<Shared>,
+    link: State<'_, PhoneLink>,
+    shared: State<'_, Shared>,
     enabled: bool,
 ) -> Result<DiffsStatus, String> {
     only_settings(&window)?;
     let updated = {
-        let mut current = shared.settings.lock().unwrap();
+        let mut current = shared.settings.lock();
         current.phone_diffs = enabled;
         if let Err(err) = settings::save(&current) {
             log::line(format!("could not save settings: {err}"));
@@ -596,8 +597,8 @@ pub struct UsageStatus {
 }
 
 #[tauri::command]
-pub fn phone_usage_status(shared: State<Shared>) -> UsageStatus {
-    UsageStatus { enabled: shared.settings.lock().unwrap().phone_usage }
+pub fn phone_usage_status(shared: State<'_, Shared>) -> UsageStatus {
+    UsageStatus { enabled: shared.settings.lock().phone_usage }
 }
 
 /// "Show my Claude and Codex plan usage on the phone". Off by default. A change disconnects the phones once so they
@@ -606,13 +607,13 @@ pub fn phone_usage_status(shared: State<Shared>) -> UsageStatus {
 pub fn phone_usage_set_enabled(
     app: AppHandle,
     window: WebviewWindow,
-    link: State<PhoneLink>,
-    shared: State<Shared>,
+    link: State<'_, PhoneLink>,
+    shared: State<'_, Shared>,
     enabled: bool,
 ) -> Result<UsageStatus, String> {
     only_settings(&window)?;
     let updated = {
-        let mut current = shared.settings.lock().unwrap();
+        let mut current = shared.settings.lock();
         current.phone_usage = enabled;
         if let Err(err) = settings::save(&current) {
             log::line(format!("could not save settings: {err}"));
@@ -635,9 +636,9 @@ pub struct ServicesStatus {
 }
 
 #[tauri::command]
-pub fn phone_services_status(shared: State<Shared>) -> ServicesStatus {
-    let ticked = shared.settings.lock().unwrap().phone_services.clone();
-    ServicesStatus { services: hub::SERVICE_IDS.iter().filter(|id| ticked.iter().any(|t| t == *id)).map(|id| id.to_string()).collect() }
+pub fn phone_services_status(shared: State<'_, Shared>) -> ServicesStatus {
+    let ticked = shared.settings.lock().phone_services.clone();
+    ServicesStatus { services: hub::SERVICE_IDS.iter().filter(|id| ticked.iter().any(|t| t == *id)).map(std::string::ToString::to_string).collect() }
 }
 
 /// "Show these services on the phone". None by default, read-only. A change disconnects the phones once so they
@@ -646,15 +647,15 @@ pub fn phone_services_status(shared: State<Shared>) -> ServicesStatus {
 pub fn phone_services_set(
     app: AppHandle,
     window: WebviewWindow,
-    link: State<PhoneLink>,
-    shared: State<Shared>,
+    link: State<'_, PhoneLink>,
+    shared: State<'_, Shared>,
     services: Vec<String>,
 ) -> Result<ServicesStatus, String> {
     only_settings(&window)?;
-    let allowed: Vec<String> = hub::SERVICE_IDS.iter().filter(|id| services.iter().any(|s| s == *id)).map(|id| id.to_string()).collect();
+    let allowed: Vec<String> = hub::SERVICE_IDS.iter().filter(|id| services.iter().any(|s| s == *id)).map(std::string::ToString::to_string).collect();
     let updated = {
-        let mut current = shared.settings.lock().unwrap();
-        current.phone_services = allowed.clone();
+        let mut current = shared.settings.lock();
+        current.phone_services.clone_from(&allowed);
         if let Err(err) = settings::save(&current) {
             log::line(format!("could not save settings: {err}"));
         }
@@ -668,9 +669,9 @@ pub fn phone_services_set(
 
 /// What the island's service pills show, for phones whose user allowed those services.
 #[tauri::command]
-pub fn phone_link_publish_services(window: WebviewWindow, link: State<PhoneLink>, services: Vec<hub::ServiceIn>) -> Result<(), String> {
+pub fn phone_link_publish_services(window: WebviewWindow, link: State<'_, PhoneLink>, services: Vec<hub::ServiceIn>) -> Result<(), String> {
     only_island(&window)?;
-    if link.running.lock().unwrap().is_none() {
+    if link.running.lock().is_none() {
         return Ok(());
     }
     link.hub.publish_services(services);
@@ -679,9 +680,9 @@ pub fn phone_link_publish_services(window: WebviewWindow, link: State<PhoneLink>
 
 /// The plan usage the island shows, for phones that have `usage`.
 #[tauri::command]
-pub fn phone_link_publish_usage(window: WebviewWindow, link: State<PhoneLink>, usage: hub::UsageIn) -> Result<(), String> {
+pub fn phone_link_publish_usage(window: WebviewWindow, link: State<'_, PhoneLink>, usage: hub::UsageIn) -> Result<(), String> {
     only_island(&window)?;
-    if link.running.lock().unwrap().is_none() {
+    if link.running.lock().is_none() {
         return Ok(());
     }
     link.hub.publish_usage(usage);
@@ -690,9 +691,9 @@ pub fn phone_link_publish_usage(window: WebviewWindow, link: State<PhoneLink>, u
 
 /// The island's answer to a phone's request for a file's diff (event "phone-link-getdiff").
 #[tauri::command]
-pub fn phone_link_send_diff(window: WebviewWindow, link: State<PhoneLink>, conn: u64, diff: hub::DiffIn) -> Result<(), String> {
+pub fn phone_link_send_diff(window: WebviewWindow, link: State<'_, PhoneLink>, conn: u64, diff: hub::DiffIn) -> Result<(), String> {
     only_island(&window)?;
-    if link.running.lock().unwrap().is_none() {
+    if link.running.lock().is_none() {
         return Ok(());
     }
     link.hub.send_diff(conn, diff);
@@ -743,8 +744,8 @@ fn only_island(window: &WebviewWindow) -> Result<(), String> {
 }
 
 #[tauri::command]
-pub fn phone_chat_status(shared: State<Shared>) -> ChatStatus {
-    let s = shared.settings.lock().unwrap();
+pub fn phone_chat_status(shared: State<'_, Shared>) -> ChatStatus {
+    let s = shared.settings.lock();
     ChatStatus { enabled: s.phone_chat, models: chat_backend::clean_models(&s.phone_chat_models) }
 }
 
@@ -755,13 +756,13 @@ pub fn phone_chat_status(shared: State<Shared>) -> ChatStatus {
 pub fn phone_chat_set_enabled(
     app: AppHandle,
     window: WebviewWindow,
-    link: State<PhoneLink>,
-    shared: State<Shared>,
+    link: State<'_, PhoneLink>,
+    shared: State<'_, Shared>,
     enabled: bool,
 ) -> Result<ChatStatus, String> {
     only_settings(&window)?;
     let (updated, status) = {
-        let mut current = shared.settings.lock().unwrap();
+        let mut current = shared.settings.lock();
         current.phone_chat = enabled;
         if let Err(err) = settings::save(&current) {
             log::line(format!("could not save settings: {err}"));
@@ -783,14 +784,14 @@ pub fn phone_chat_set_enabled(
 pub fn phone_chat_set_models(
     app: AppHandle,
     window: WebviewWindow,
-    shared: State<Shared>,
+    shared: State<'_, Shared>,
     models: Vec<String>,
 ) -> Result<ChatStatus, String> {
     only_settings(&window)?;
     let cleaned = chat_backend::clean_models(&models);
     let (updated, status) = {
-        let mut current = shared.settings.lock().unwrap();
-        current.phone_chat_models = cleaned.clone();
+        let mut current = shared.settings.lock();
+        current.phone_chat_models.clone_from(&cleaned);
         if let Err(err) = settings::save(&current) {
             log::line(format!("could not save settings: {err}"));
         }
@@ -802,9 +803,9 @@ pub fn phone_chat_set_models(
 
 /// The question Claude Code is waiting on (None: none), for phones that may answer it.
 #[tauri::command]
-pub fn phone_link_publish_question(window: WebviewWindow, link: State<PhoneLink>, question: Option<hub::QuestionIn>) -> Result<(), String> {
+pub fn phone_link_publish_question(window: WebviewWindow, link: State<'_, PhoneLink>, question: Option<hub::QuestionIn>) -> Result<(), String> {
     only_island(&window)?;
-    if link.running.lock().unwrap().is_none() {
+    if link.running.lock().is_none() {
         return Ok(());
     }
     link.hub.publish_question(question, server::now_ms());
@@ -813,9 +814,9 @@ pub fn phone_link_publish_question(window: WebviewWindow, link: State<PhoneLink>
 
 /// What Mochi wears on the computer, for phones that asked for `prefs`.
 #[tauri::command]
-pub fn phone_link_publish_prefs(window: WebviewWindow, link: State<PhoneLink>, outfit: String) -> Result<(), String> {
+pub fn phone_link_publish_prefs(window: WebviewWindow, link: State<'_, PhoneLink>, outfit: String) -> Result<(), String> {
     only_island(&window)?;
-    if link.running.lock().unwrap().is_none() {
+    if link.running.lock().is_none() {
         return Ok(());
     }
     link.hub.publish_outfit(&outfit);
@@ -824,9 +825,9 @@ pub fn phone_link_publish_prefs(window: WebviewWindow, link: State<PhoneLink>, o
 
 /// The island's picture of its sessions and of the request waiting for an answer.
 #[tauri::command]
-pub fn phone_link_publish(window: WebviewWindow, link: State<PhoneLink>, sessions: Vec<SessionIn>, approval: Option<ApprovalIn>) -> Result<(), String> {
+pub fn phone_link_publish(window: WebviewWindow, link: State<'_, PhoneLink>, sessions: Vec<SessionIn>, approval: Option<ApprovalIn>) -> Result<(), String> {
     only_island(&window)?;
-    if link.running.lock().unwrap().is_none() {
+    if link.running.lock().is_none() {
         return Ok(());
     }
     link.hub.publish(sessions, approval, server::now_ms());
@@ -842,7 +843,7 @@ pub fn stop_on_exit(app: &AppHandle) {
 
 /// Called once at launch: the link comes back if the user had turned it on.
 pub fn start_if_enabled(app: &AppHandle) {
-    let enabled = app.state::<Shared>().settings.lock().unwrap().phone_link;
+    let enabled = app.state::<Shared>().settings.lock().phone_link;
     if enabled {
         let link = app.state::<PhoneLink>();
         // A failure is kept in the status and the log; the setting stays on so

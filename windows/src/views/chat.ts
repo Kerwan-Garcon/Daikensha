@@ -221,7 +221,7 @@ export function buildPrompt(onHeightChange: () => void): ViewHost {
     class: "chat-input",
     placeholder: t(STRINGS.placeholderFirst),
     spellcheck: "false",
-  }) as HTMLInputElement;
+  });
   const send = h("button", { class: "send-btn", title: tl(STRINGS.send) }, svg(ICONS.arrowUp, 11));
   const bar = h("div", { class: "chat-bar" }, input, send);
 
@@ -275,7 +275,7 @@ export function buildPrompt(onHeightChange: () => void): ViewHost {
     else picker.open();
   });
 
-  void onEvent<string>("chat-delta", (text) => {
+  void onEvent("chat-delta", (text) => {
     if (!sending || !text) return; // nothing visible yet: the dots stay
     if (!live) {
       live = h("div", { class: "reply" });
@@ -346,7 +346,7 @@ export function buildPrompt(onHeightChange: () => void): ViewHost {
 
   send.addEventListener("click", () => submit());
   input.addEventListener("keydown", (e) => {
-    const key = (e as KeyboardEvent).key;
+    const key = (e).key;
     if (key === "Enter") {
       e.preventDefault();
       submit();

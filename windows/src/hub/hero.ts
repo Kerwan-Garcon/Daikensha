@@ -10,6 +10,7 @@
 import { BotEngine, hexToRGB } from "../mochi/engine";
 import type { BotEmoteName, BotStateName } from "../core/layout";
 import type { Outfit } from "../mochi/wardrobe";
+import { cyclicAt } from "../core/arrays";
 
 interface Animated {
   el: HTMLCanvasElement;
@@ -275,7 +276,7 @@ export function troupe(canvas: HTMLCanvasElement, cast: MochiSpec[], width: numb
           w.nextEvent = 4 + Math.random() * 6;
           const roll = Math.random();
           if (roll < 0.35) w.hopV = 200;
-          else if (roll < 0.6) w.engine.triggerEmote(EMOTES[Math.floor(Math.random() * EMOTES.length)]);
+          else if (roll < 0.6) w.engine.triggerEmote(cyclicAt(EMOTES, Math.floor(Math.random() * EMOTES.length)));
           else if (roll < 0.75) w.engine.greet();
         }
         // Hops: a simple ballistic jump.
@@ -352,7 +353,7 @@ const m = (color: string, size: number, start: number, extra: Partial<MochiSpec>
   color, size, start, ...extra,
 });
 
-export const THEMES: Record<string, Theme> = {
+export const THEMES: Readonly<Record<string, Theme>> & { readonly general: Theme } = {
   dictation: { color: "#FB923C", cast: [m("#F5F6F8", 66, 0.2), m("#FB923C", 52, 0.65), m("#F472B6", 44, 0.95, { outfit: "bow" })] },
   notes: { color: "#3B9EFF", cast: [m("#3B9EFF", 58, 0.1, { outfit: "roundGlasses" }), m("#34D399", 50, 0.5), m("#A78BFA", 46, 0.9)] },
   insights: { color: "#34D399", cast: [m("#F7B32B", 62, 0.3, { outfit: "crown" }), m("#34D399", 48, 0.75), m("#F5F6F8", 40, 1)] },

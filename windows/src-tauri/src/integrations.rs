@@ -10,9 +10,9 @@
 // request goes anywhere the user has not configured.
 
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
-use std::sync::Mutex;
 use std::time::Duration;
 
+use parking_lot::Mutex;
 use serde::Serialize;
 use serde_json::{json, Value};
 use tauri::{AppHandle, Emitter, Manager};
@@ -80,7 +80,7 @@ pub fn start(app: AppHandle) {
 fn enabled(app: &AppHandle, id: &str) -> bool {
     app.try_state::<crate::Shared>()
         .map(|shared| {
-            let settings = shared.settings.lock().unwrap();
+            let settings = shared.settings.lock();
             settings.active_integrations.iter().any(|x| x == id)
         })
         .unwrap_or(false)
@@ -115,7 +115,7 @@ pub async fn poll_once(app: AppHandle, id: &str) {
         "integration_github" => {
             wake_github_pulse();
             github_refresh_if_stale("activity");
-            poll_github(app).await
+            poll_github(app).await;
         }
         "integration_vercel" => poll_vercel(app).await,
         "integration_n8n" => poll_n8n(app).await,
@@ -136,7 +136,7 @@ static SEEN: std::sync::LazyLock<Seen> =
 /// Returns true the first time a given id is seen (and false on the very first
 /// load, which only fills the card).
 fn is_new(key: &'static str, id: &str) -> bool {
-    let mut map = SEEN.0.lock().unwrap();
+    let mut map = SEEN.0.lock();
     match map.insert(key, id.to_string()) {
         Some(previous) => previous != id,
         None => false, // first poll: populate silently, like the Swift pollers
@@ -327,7 +327,7 @@ async fn poll_github(app: AppHandle) {
         _ => 0,
     };
 
-    GITHUB.cache.lock().unwrap().stats = Some((public + private, stars));
+    GITHUB.cache.lock().stats = Some((public + private, stars));
     emit_github(&app);
 }
 
@@ -396,7 +396,7 @@ fn github_card_data(cache: &GitHubCache) -> Value {
 }
 
 fn emit_github(app: &AppHandle) {
-    let data = github_card_data(&GITHUB.cache.lock().unwrap());
+    let data = github_card_data(&GITHUB.cache.lock());
     emit(app, IntegrationUpdate { id: GITHUB_ID, data, error: None, event: None });
 }
 
@@ -416,7 +416,7 @@ fn spawn_github_loops(app: AppHandle) {
         loop {
             let _ = tokio::time::timeout(wait, GITHUB.activity_wake.notified()).await;
             run_github_activity(&app).await;
-            wait = Duration::from_secs(1800);
+            wait = Duration::from_mins(30);
         }
     });
 }
@@ -463,7 +463,7 @@ async fn run_github_pulse(app: &AppHandle) -> bool {
     let pending = pulse.has_pending();
 
     let events = {
-        let mut cache = GITHUB.cache.lock().unwrap();
+        let mut cache = GITHUB.cache.lock();
         // The token changed while this was in flight: it answers for someone else.
         if GITHUB.generation.load(Ordering::SeqCst) != generation {
             return pending;
@@ -490,7 +490,7 @@ async fn run_github_activity(app: &AppHandle) {
     GITHUB.activity_busy.store(false, Ordering::SeqCst);
     let Some(activity) = root.and_then(|r| GitHubActivity::parse(&r, now_ms())) else { return };
     {
-        let mut cache = GITHUB.cache.lock().unwrap();
+        let mut cache = GITHUB.cache.lock();
         if GITHUB.generation.load(Ordering::SeqCst) != generation {
             return;
         }
@@ -510,7 +510,7 @@ fn wake_github_pulse() {
 /// request is already in flight.
 pub fn github_refresh_if_stale(section: &str) {
     let now = now_ms();
-    let cache = GITHUB.cache.lock().unwrap();
+    let cache = GITHUB.cache.lock();
     match section {
         "pulse" => {
             let fetched = cache.pulse.as_ref().map(|p| p.fetched_at);
@@ -534,7 +534,7 @@ pub fn github_token_changed(app: &AppHandle) {
     GITHUB.generation.fetch_add(1, Ordering::SeqCst);
     let has_token = secrets::get("github-token").is_some();
     {
-        let mut cache = GITHUB.cache.lock().unwrap();
+        let mut cache = GITHUB.cache.lock();
         cache.pulse = None;
         cache.activity = None;
         if !has_token {
@@ -556,7 +556,7 @@ pub fn settings_saved(app: &AppHandle, active_integrations: &[String]) {
         return;
     }
     let had_data = {
-        let mut cache = GITHUB.cache.lock().unwrap();
+        let mut cache = GITHUB.cache.lock();
         let had = cache.pulse.is_some() || cache.activity.is_some();
         cache.pulse = None;
         cache.activity = None;
@@ -828,7 +828,7 @@ async fn poll_calcom(app: AppHandle) {
                         .or_else(|| b.get("description").and_then(Value::as_str))
                         .filter(|s| !s.is_empty());
                     Some(json!({
-                        "id": b.get("id").map(|v| v.to_string()).unwrap_or_default(),
+                        "id": b.get("id").map(std::string::ToString::to_string).unwrap_or_default(),
                         "title": b.get("title").and_then(Value::as_str).unwrap_or("Meeting"),
                         "start": start,
                         "status": b.get("status").and_then(Value::as_str).unwrap_or("accepted"),

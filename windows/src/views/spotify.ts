@@ -23,6 +23,7 @@ import { createMiniBot } from "../mochi/minibots";
 import { pillDefinition } from "../core/pills";
 import { N_, t } from "../i18n/i18n";
 import { colorHex } from "../design/tokens";
+import { itemAt } from "../core/arrays";
 
 
 function lighter(hex: string, amount: number): string {
@@ -38,7 +39,7 @@ export interface NowPlayingStatus {
   ok: boolean;
   text: string;
   action: string | null;
-  run(): void;
+  run: () => void;
 }
 
 /** A player the pill and the card show and drive. */
@@ -318,7 +319,7 @@ export function buildSpotifyCard(source: NowPlayingSource = SPOTIFY_SOURCE): Spo
 
   // Now playing: artwork row, progress row, controls row.
   const art = h("div", { class: "np-art" });
-  const artImg = h("img", { alt: "", draggable: "false" }) as HTMLImageElement;
+  const artImg = h("img", { alt: "", draggable: "false" });
   const artNote = svg(ICONS.musicNote, 16);
   artNote.style.color = `${green}b3`;
   art.append(artNote, artImg);
@@ -467,7 +468,7 @@ export function buildSpotifyCard(source: NowPlayingSource = SPOTIFY_SOURCE): Spo
     if (level !== volIconLevel) {
       volIconLevel = level;
       clear(volIcon);
-      volIcon.append(svg([ICONS.volume0, ICONS.volume1, ICONS.volume2, ICONS.volume3][level], 10, { stroke: 2.2 }));
+      volIcon.append(svg(itemAt([ICONS.volume0, ICONS.volume1, ICONS.volume2, ICONS.volume3], level), 10, { stroke: 2.2 }));
     }
     volume.set(s.volume / 100);
     volumeBox.title = t("Volume {0}%", { 0: s.volume });

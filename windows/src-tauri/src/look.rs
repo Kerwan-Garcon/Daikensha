@@ -12,8 +12,7 @@
 // The pixel helpers serve the Windows capture; elsewhere only the tests use them.
 #![cfg_attr(not(windows), allow(dead_code))]
 
-use std::sync::Mutex;
-
+use parking_lot::Mutex;
 use serde::Serialize;
 
 /// The longest side sent. Smaller than a circled capture's: the PNG is not
@@ -26,11 +25,11 @@ pub const LOOK_LINE: &str = "The image is the window the user just dropped you o
 static LOOK: Mutex<Option<Vec<u8>>> = Mutex::new(None);
 
 pub fn peek() -> Option<Vec<u8>> {
-    LOOK.lock().unwrap_or_else(|e| e.into_inner()).clone()
+    LOOK.lock().clone()
 }
 
 pub fn discard() {
-    *LOOK.lock().unwrap_or_else(|e| e.into_inner()) = None;
+    *LOOK.lock() = None;
 }
 
 /// A window found under Mochi, not captured yet.
@@ -70,7 +69,7 @@ pub fn take(target: Target) -> Looked {
     let result = grab(&target);
     let error = match result {
         Ok(png) => {
-            *LOOK.lock().unwrap_or_else(|e| e.into_inner()) = Some(png);
+            *LOOK.lock() = Some(png);
             None
         }
         Err(err) => {
@@ -163,7 +162,7 @@ mod tests {
 
     #[test]
     fn the_picture_is_kept_until_discarded() {
-        *LOOK.lock().unwrap() = Some(vec![1, 2, 3]);
+        *LOOK.lock() = Some(vec![1, 2, 3]);
         assert_eq!(peek(), Some(vec![1, 2, 3]));
         discard();
         assert_eq!(peek(), None);

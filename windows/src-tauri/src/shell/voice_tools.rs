@@ -246,12 +246,12 @@ pub fn search_url(site: &str, query: &str, lang: &str) -> Option<String> {
 }
 
 fn panel_on(app: &AppHandle) -> bool {
-    app.try_state::<crate::Shared>().is_some_and(|s| s.settings.lock().unwrap().shell_panel)
+    app.try_state::<crate::Shared>().is_some_and(|s| s.settings.lock().shell_panel)
 }
 
 fn clipboard_voice_on(app: &AppHandle) -> bool {
     app.try_state::<crate::Shared>().is_some_and(|s| {
-        let s = s.settings.lock().unwrap();
+        let s = s.settings.lock();
         s.shell_panel && s.shell_clipboard && s.shell_clipboard_voice
     })
 }
@@ -402,7 +402,7 @@ pub fn run(app: &AppHandle, name: &str, input: &Value) -> Option<(String, bool)>
                 Err(_) => return Some(("The steps must be a list of { tool, input }.".into(), false)),
             };
             let when = if name == "create_routine" {
-                let days: Vec<u8> = input["days"].as_array().map(|a| a.iter().filter_map(|d| d.as_u64()).map(|d| d.min(99) as u8).collect()).unwrap_or_default();
+                let days: Vec<u8> = input["days"].as_array().map(|a| a.iter().filter_map(serde_json::Value::as_u64).map(|d| d.min(99) as u8).collect()).unwrap_or_default();
                 super::routines::When::Weekly { days, time: s("time") }
             } else {
                 super::routines::When::Once { date: s("date"), time: s("time") }

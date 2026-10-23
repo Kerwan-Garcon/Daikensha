@@ -7,8 +7,7 @@
 // API keys never leave the credential store and file bytes never cross the IPC
 // boundary: the island sends the question and gets the answer's text back.
 
-use std::sync::Mutex;
-
+use parking_lot::Mutex;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use tauri::AppHandle;
@@ -86,7 +85,7 @@ pub struct Turn {
 
 impl Chat {
     pub fn reset(&self) {
-        let mut c = self.inner.lock().unwrap();
+        let mut c = self.inner.lock();
         let epoch = c.epoch + 1;
         *c = Conversation { epoch, ..Default::default() };
     }
@@ -94,9 +93,10 @@ impl Chat {
     /// Starts a turn with `provider`, converting the history if another
     /// provider answered the previous turns.
     pub fn begin(&self, provider: &str) -> Turn {
-        let mut c = self.inner.lock().unwrap();
+        let mut c = self.inner.lock();
         if c.owner.as_deref() != Some(provider) {
-            c.native = c.plain.clone();
+            let Conversation { native, plain, .. } = &mut *c;
+            native.clone_from(plain);
             c.owner = Some(provider.to_string());
             // Its session lacks what another provider answered meanwhile.
             c.cli_session = None;
@@ -114,7 +114,7 @@ impl Chat {
     /// provider's format, and their plain text. Only a successful turn is
     /// recorded, so the history always matches what the model saw.
     pub fn commit(&self, turn: &Turn, user: Value, assistant: Value, user_text: &str, answer: &str) {
-        let mut c = self.inner.lock().unwrap();
+        let mut c = self.inner.lock();
         if c.epoch != turn.epoch || c.owner.as_deref() != Some(turn.provider.as_str()) {
             return;
         }
@@ -127,7 +127,7 @@ impl Chat {
     /// The Claude Code session a successful subscription turn ran in, for the
     /// next one to resume. Dropped like `commit` after a reset or a switch.
     pub fn set_cli_session(&self, turn: &Turn, id: String) {
-        let mut c = self.inner.lock().unwrap();
+        let mut c = self.inner.lock();
         if c.epoch == turn.epoch && c.owner.as_deref() == Some(turn.provider.as_str()) {
             c.cli_session = Some(id);
         }
@@ -259,9 +259,10 @@ pub async fn send(
     }
     let look = matches!(context, Some(ChatContext::Look { .. }));
     let reply = dispatch(app, chat, settings, provider, &model, query, context).await;
-    // The window's picture lives until its question is answered: the
-    // conversation keeps it from there. A failed turn (no key yet…) may retry.
-    if look && reply.is_ok() {
+    // Like a capture, the window's picture lives for its one turn, answered or
+    // not: the island never sends the look context again (the bubble is already
+    // in the chat), so a picture kept after a failure would only linger.
+    if look {
         crate::look::discard();
     }
     reply

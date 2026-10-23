@@ -26,9 +26,10 @@ pub mod wayland;
 
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc::{self, RecvTimeoutError, Sender};
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 use std::time::{Duration, Instant};
 
+use parking_lot::Mutex;
 use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Emitter, Manager, State};
 
@@ -68,7 +69,7 @@ struct Running {
 
 impl Flow {
     fn send(&self, event: KeyEvent) {
-        if let Some(r) = self.running.lock().unwrap().as_ref() {
+        if let Some(r) = self.running.lock().as_ref() {
             let _ = r.tx.send((event, Instant::now()));
         }
     }
@@ -119,7 +120,7 @@ pub fn setup(app: &AppHandle) {
     let flow = Arc::new(Flow { store: Mutex::new(Store::load()), running: Mutex::new(None) });
     app.manage(flow.clone());
     pill::setup(app);
-    let prefs = flow.store.lock().unwrap().prefs.clone();
+    let prefs = flow.store.lock().prefs.clone();
     pill::update(app, |s| {
         s.edge = pill::edge_name(prefs.edge).into();
         s.key = key_id(prefs.key);
@@ -140,11 +141,11 @@ fn key_id(key: logic::FlowKey) -> String {
 }
 
 fn enable(app: &AppHandle, flow: &Arc<Flow>) {
-    let mut running = flow.running.lock().unwrap();
+    let mut running = flow.running.lock();
     if running.is_some() {
         return;
     }
-    let prefs = flow.store.lock().unwrap().prefs.clone();
+    let prefs = flow.store.lock().prefs.clone();
     let (tx, rx) = mpsc::channel::<(KeyEvent, Instant)>();
     let listener: Option<Box<dyn std::any::Any + Send>> = match os::keys_supported() {
         Ok(()) => match os::listen(prefs.key, tx.clone()) {
@@ -175,7 +176,7 @@ fn enable(app: &AppHandle, flow: &Arc<Flow>) {
 }
 
 fn disable(app: &AppHandle, flow: &Arc<Flow>) {
-    let running = flow.running.lock().unwrap().take();
+    let running = flow.running.lock().take();
     if let Some(r) = running {
         let _ = r.tx.send((KeyEvent::Quit, Instant::now()));
     }
@@ -287,7 +288,7 @@ fn run(app: AppHandle, flow: Arc<Flow>, rx: mpsc::Receiver<(KeyEvent, Instant)>)
         }
         // The pill's dots, about 30 times a second while you speak.
         if let Some(l) = &listening {
-            let levels = l.take.lock().unwrap().meter.levels;
+            let levels = l.take.lock().meter.levels;
             let _ = app.emit_to(pill::LABEL, "pill-bands", levels);
         }
     }
@@ -307,12 +308,12 @@ fn begin(app: &AppHandle, flow: &Arc<Flow>) -> Option<Listening> {
         );
         return None;
     }
-    let mic = flow.store.lock().unwrap().prefs.mic.clone();
+    let mic = flow.store.lock().prefs.mic.clone();
     let take = Arc::new(Mutex::new(audio::Take::default()));
     let sink_take = take.clone();
     let source = audio::Source::Mic(if mic.is_empty() { None } else { Some(mic) });
     let capture = audio::Capture::start(source, move |samples| {
-        let mut t = sink_take.lock().unwrap();
+        let mut t = sink_take.lock();
         // Ten minutes at most: a dictation left open by mistake stops growing.
         if t.samples.len() < 16_000 * 600 {
             t.samples.extend_from_slice(samples);
@@ -349,7 +350,7 @@ fn finish(app: &AppHandle, flow: &Arc<Flow>, mut l: Listening, busy: Arc<AtomicB
     l.capture.stop();
     let seconds = l.started.elapsed().as_secs_f64();
     let (samples, peak) = {
-        let mut t = l.take.lock().unwrap();
+        let mut t = l.take.lock();
         (std::mem::take(&mut t.samples), t.peak)
     };
     // Too short or silent: nothing to send to the model.
@@ -381,7 +382,7 @@ fn process(app: &AppHandle, flow: &Arc<Flow>, samples: &[f32], front: Option<&(S
         return Ok(());
     }
     let (prepared, style, cleanup, words, key) = {
-        let store = flow.store.lock().unwrap();
+        let store = flow.store.lock();
         let app_id = front.map(|(id, _)| id.as_str());
         (store.prepare(&raw), store.style_for(app_id), store.prefs.cleanup, store.words.words.clone(), store.prefs.key)
     };
@@ -400,7 +401,7 @@ fn process(app: &AppHandle, flow: &Arc<Flow>, samples: &[f32], front: Option<&(S
     let terminal = front.is_some_and(|(id, _)| is_terminal(id));
     let outcome = paste::paste(&final_text, terminal);
     let entry = {
-        let mut store = flow.store.lock().unwrap();
+        let mut store = flow.store.lock();
         store.record(&final_text, front.map(|(_, n)| n.as_str()), seconds, store::today(), store::now_ms())
     };
     let _ = app.emit_to(crate::HUB_LABEL, "flow-history", entry);
@@ -428,7 +429,7 @@ fn process(app: &AppHandle, flow: &Arc<Flow>, samples: &[f32], front: Option<&(S
 
 /// "Paste again": the last dictation, in the app in front now.
 fn paste_again(app: &AppHandle, flow: &Arc<Flow>) {
-    let Some(text) = flow.store.lock().unwrap().last_text() else { return };
+    let Some(text) = flow.store.lock().last_text() else { return };
     let front = os::foreground_app();
     let terminal = front.as_ref().is_some_and(|(id, _)| is_terminal(id));
     if paste::paste(&text, terminal) == paste::Outcome::Pasted {
@@ -456,9 +457,9 @@ pub struct FlowStatus {
 }
 
 #[tauri::command]
-pub fn flow_status(flow: State<Arc<Flow>>) -> FlowStatus {
+pub fn flow_status(flow: State<'_, Arc<Flow>>) -> FlowStatus {
     FlowStatus {
-        prefs: flow.store.lock().unwrap().prefs.clone(),
+        prefs: flow.store.lock().prefs.clone(),
         models: speech::status(),
         keys: match os::keys_supported() {
             Ok(()) => "ok".into(),
@@ -475,10 +476,10 @@ pub fn flow_status(flow: State<Arc<Flow>>) -> FlowStatus {
 }
 
 #[tauri::command]
-pub fn flow_set_prefs(app: AppHandle, flow: State<Arc<Flow>>, prefs: Prefs) {
+pub fn flow_set_prefs(app: AppHandle, flow: State<'_, Arc<Flow>>, prefs: Prefs) {
     let flow = flow.inner().clone();
     let before = {
-        let mut store = flow.store.lock().unwrap();
+        let mut store = flow.store.lock();
         let before = store.prefs.clone();
         store.prefs = prefs.clone();
         store.save_prefs();
@@ -509,18 +510,18 @@ pub fn flow_set_prefs(app: AppHandle, flow: State<Arc<Flow>>, prefs: Prefs) {
 }
 
 #[tauri::command]
-pub fn flow_history(flow: State<Arc<Flow>>) -> Vec<Entry> {
-    flow.store.lock().unwrap().history.clone()
+pub fn flow_history(flow: State<'_, Arc<Flow>>) -> Vec<Entry> {
+    flow.store.lock().history.clone()
 }
 
 #[tauri::command]
-pub fn flow_delete(flow: State<Arc<Flow>>, id: String) {
-    flow.store.lock().unwrap().delete(&id);
+pub fn flow_delete(flow: State<'_, Arc<Flow>>, id: String) {
+    flow.store.lock().delete(&id);
 }
 
 #[tauri::command]
-pub fn flow_clear(flow: State<Arc<Flow>>, everything: bool) {
-    let mut store = flow.store.lock().unwrap();
+pub fn flow_clear(flow: State<'_, Arc<Flow>>, everything: bool) {
+    let mut store = flow.store.lock();
     if everything {
         store.clear_everything();
     } else {
@@ -551,8 +552,8 @@ pub struct StatsView {
 }
 
 #[tauri::command]
-pub fn flow_stats(flow: State<Arc<Flow>>) -> StatsView {
-    let store = flow.store.lock().unwrap();
+pub fn flow_stats(flow: State<'_, Arc<Flow>>) -> StatsView {
+    let store = flow.store.lock();
     let today = store::today();
     let totals = |from: Option<text::Day>| {
         let (words, seconds, dictations) = store.totals(from);
@@ -583,37 +584,37 @@ pub fn flow_stats(flow: State<Arc<Flow>>) -> StatsView {
 }
 
 #[tauri::command]
-pub fn flow_words(flow: State<Arc<Flow>>) -> Words {
-    flow.store.lock().unwrap().words.clone()
+pub fn flow_words(flow: State<'_, Arc<Flow>>) -> Words {
+    flow.store.lock().words.clone()
 }
 
 #[tauri::command]
-pub fn flow_set_words(flow: State<Arc<Flow>>, words: Words) {
-    let mut store = flow.store.lock().unwrap();
+pub fn flow_set_words(flow: State<'_, Arc<Flow>>, words: Words) {
+    let mut store = flow.store.lock();
     store.words = words;
     store.save_words();
 }
 
 #[tauri::command]
-pub fn flow_snippets(flow: State<Arc<Flow>>) -> Vec<Snippet> {
-    flow.store.lock().unwrap().snippets.clone()
+pub fn flow_snippets(flow: State<'_, Arc<Flow>>) -> Vec<Snippet> {
+    flow.store.lock().snippets.clone()
 }
 
 #[tauri::command]
-pub fn flow_set_snippets(flow: State<Arc<Flow>>, snippets: Vec<Snippet>) {
-    let mut store = flow.store.lock().unwrap();
+pub fn flow_set_snippets(flow: State<'_, Arc<Flow>>, snippets: Vec<Snippet>) {
+    let mut store = flow.store.lock();
     store.snippets = snippets;
     store.save_snippets();
 }
 
 #[tauri::command]
-pub fn flow_styles(flow: State<Arc<Flow>>) -> Vec<AppStyle> {
-    flow.store.lock().unwrap().app_styles.clone()
+pub fn flow_styles(flow: State<'_, Arc<Flow>>) -> Vec<AppStyle> {
+    flow.store.lock().app_styles.clone()
 }
 
 #[tauri::command]
-pub fn flow_set_styles(flow: State<Arc<Flow>>, styles: Vec<AppStyle>) {
-    let mut store = flow.store.lock().unwrap();
+pub fn flow_set_styles(flow: State<'_, Arc<Flow>>, styles: Vec<AppStyle>) {
+    let mut store = flow.store.lock();
     store.app_styles = styles;
     store.save_styles();
 }
@@ -637,7 +638,7 @@ pub fn flow_copy(text: String) -> bool {
 }
 
 #[tauri::command]
-pub fn flow_paste_again(app: AppHandle, flow: State<Arc<Flow>>) {
+pub fn flow_paste_again(app: AppHandle, flow: State<'_, Arc<Flow>>) {
     let flow = flow.inner().clone();
     std::thread::spawn(move || paste_again(&app, &flow));
 }
@@ -672,11 +673,11 @@ pub fn pill_hover(app: AppHandle, inside: bool) {
 }
 
 #[tauri::command]
-pub fn pill_action(app: AppHandle, flow: State<Arc<Flow>>, action: String, id: Option<u64>) {
+pub fn pill_action(app: AppHandle, flow: State<'_, Arc<Flow>>, action: String, id: Option<u64>) {
     let flow = flow.inner().clone();
     match action.as_str() {
         "dictate" => {
-            if flow.running.lock().unwrap().is_none() {
+            if flow.running.lock().is_none() {
                 // Dictation off: the pill only shows for a call or a message.
                 return;
             }

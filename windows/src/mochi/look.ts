@@ -12,6 +12,7 @@
 import { N_, labels } from "../i18n/i18n";
 import type { BotStateName } from "../core/layout";
 import type { EyeShape } from "./engine";
+import { cyclicAt } from "../core/arrays";
 
 /** Order of the wardrobe switch. The raw values are the Mac's, keep them stable. */
 export const MOCHI_LOOKS = ["signature", "portrait", "slime", "sage", "classic"] as const;
@@ -41,7 +42,7 @@ export function parseLook(raw: unknown): MochiLook {
 
 /** The next face in the wardrobe switch. */
 export function nextLook(look: MochiLook): MochiLook {
-  return MOCHI_LOOKS[(MOCHI_LOOKS.indexOf(look) + 1) % MOCHI_LOOKS.length];
+  return cyclicAt(MOCHI_LOOKS, MOCHI_LOOKS.indexOf(look) + 1);
 }
 
 /** Portrait and slime: a character's face — eyebrows, and cross with open eyes and teeth. */

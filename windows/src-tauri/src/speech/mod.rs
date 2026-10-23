@@ -11,9 +11,10 @@ pub mod audio;
 
 use std::io::Write;
 use std::path::PathBuf;
-use std::sync::{Arc, Mutex, OnceLock};
+use std::sync::{Arc, OnceLock};
 use std::time::{Duration, Instant};
 
+use parking_lot::Mutex;
 use serde::Serialize;
 use sherpa_onnx::{
     OfflineRecognizer, OfflineRecognizerConfig, OfflineSpeakerDiarization, OfflineSpeakerDiarizationConfig,
@@ -146,7 +147,7 @@ fn downloads() -> &'static Mutex<Downloads> {
 
 /// Both sets count as one download: dictation and the Notetaker are ready together.
 pub fn status() -> ModelsStatus {
-    let d = downloads().lock().unwrap();
+    let d = downloads().lock();
     let parakeet = if d.running {
         ModelState::Downloading { fraction: d.fraction }
     } else if PARAKEET.is_present() && DIARIZER.is_present() {
@@ -171,7 +172,7 @@ fn emit_status(app: &AppHandle) {
 /// Downloads what is missing, with the progress in `speech-models` events.
 pub fn download(app: AppHandle) {
     {
-        let mut d = downloads().lock().unwrap();
+        let mut d = downloads().lock();
         if d.running {
             return;
         }
@@ -183,7 +184,7 @@ pub fn download(app: AppHandle) {
     tauri::async_runtime::spawn(async move {
         let result = download_all(&app).await;
         {
-            let mut d = downloads().lock().unwrap();
+            let mut d = downloads().lock();
             d.running = false;
             if let Err(err) = &result {
                 d.error = Some(err.clone());
@@ -205,7 +206,7 @@ async fn download_all(app: &AppHandle) -> Result<(), String> {
     let mut done: u64 = 0;
     let client = reqwest::Client::builder()
         .connect_timeout(Duration::from_secs(20))
-        .read_timeout(Duration::from_secs(60))
+        .read_timeout(Duration::from_mins(1))
         .user_agent(concat!("Coucou/", env!("CARGO_PKG_VERSION")))
         .build()
         .map_err(|e| e.to_string())?;
@@ -236,7 +237,7 @@ async fn download_all(app: &AppHandle) -> Result<(), String> {
                 }
                 if last_emit.elapsed() > Duration::from_millis(250) {
                     last_emit = Instant::now();
-                    downloads().lock().unwrap().fraction = (done + got) as f64 / total as f64;
+                    downloads().lock().fraction = (done + got) as f64 / total as f64;
                     emit_status(app);
                 }
             }
@@ -260,7 +261,7 @@ pub fn remove(app: &AppHandle) {
     unload();
     let _ = std::fs::remove_dir_all(PARAKEET.dir());
     let _ = std::fs::remove_dir_all(DIARIZER.dir());
-    downloads().lock().unwrap().error = None;
+    downloads().lock().error = None;
     emit_status(app);
 }
 
@@ -283,14 +284,14 @@ fn threads() -> i32 {
 
 /// The loaded recognizer, loading it on first use (about 2 s).
 pub fn recognizer() -> Option<Arc<OfflineRecognizer>> {
-    if let Some(r) = recognizer_slot().lock().unwrap().clone() {
+    if let Some(r) = recognizer_slot().lock().clone() {
         return Some(r);
     }
     if !PARAKEET.is_present() {
         return None;
     }
-    let _guard = load_lock().lock().unwrap();
-    if let Some(r) = recognizer_slot().lock().unwrap().clone() {
+    let _guard = load_lock().lock();
+    if let Some(r) = recognizer_slot().lock().clone() {
         return Some(r);
     }
     let mut config = OfflineRecognizerConfig::default();
@@ -308,13 +309,13 @@ pub fn recognizer() -> Option<Arc<OfflineRecognizer>> {
         Some(_) => crate::log::line(format!("Parakeet loaded in {:?}", started.elapsed())),
         None => crate::log::line("Parakeet could not be loaded"),
     }
-    *recognizer_slot().lock().unwrap() = r.clone();
+    (*recognizer_slot().lock()).clone_from(&r);
     r
 }
 
 /// Loads the model in the background, so the first dictation is not slowed down.
 pub fn preload() {
-    if !PARAKEET.is_present() || recognizer_slot().lock().unwrap().is_some() {
+    if !PARAKEET.is_present() || recognizer_slot().lock().is_some() {
         return;
     }
     std::thread::spawn(|| {
@@ -324,7 +325,7 @@ pub fn preload() {
 
 /// Frees the model's memory (dictation turned off, models removed).
 pub fn unload() {
-    *recognizer_slot().lock().unwrap() = None;
+    *recognizer_slot().lock() = None;
 }
 
 /// What was said, and each word with its place in the audio.
@@ -350,8 +351,8 @@ pub fn transcribe(samples: &[f32]) -> Option<Transcript> {
         stream.accept_waveform(SAMPLE_RATE as i32, chunk);
         rec.decode(&stream);
         let Some(result) = stream.get_result() else { continue };
-        let start = offset as f64 / SAMPLE_RATE as f64;
-        let words = words_from_tokens(&result.tokens, result.timestamps.as_deref().unwrap_or(&[]), start, chunk.len() as f64 / SAMPLE_RATE as f64);
+        let start = offset as f64 / f64::from(SAMPLE_RATE);
+        let words = words_from_tokens(&result.tokens, result.timestamps.as_deref().unwrap_or(&[]), start, chunk.len() as f64 / f64::from(SAMPLE_RATE));
         let text = result.text.trim();
         if !text.is_empty() {
             if !out.text.is_empty() {
@@ -370,7 +371,7 @@ pub fn transcribe(samples: &[f32]) -> Option<Transcript> {
 pub fn words_from_tokens(tokens: &[String], timestamps: &[f32], offset: f64, length: f64) -> Vec<TimedWord> {
     let mut out: Vec<TimedWord> = Vec::new();
     for (i, token) in tokens.iter().enumerate() {
-        let at = offset + timestamps.get(i).copied().unwrap_or(0.0) as f64;
+        let at = offset + f64::from(timestamps.get(i).copied().unwrap_or(0.0));
         let starts_word = token.starts_with(' ') || token.starts_with('▁') || out.is_empty();
         let piece = token.trim_start_matches([' ', '▁']);
         if starts_word {
@@ -416,7 +417,7 @@ pub fn diarize(samples: &[f32]) -> Vec<Turn> {
     result
         .sort_by_start_time()
         .into_iter()
-        .map(|s| Turn { speaker: s.speaker.to_string(), start: s.start as f64, end: s.end as f64 })
+        .map(|s| Turn { speaker: s.speaker.to_string(), start: f64::from(s.start), end: f64::from(s.end) })
         .collect()
 }
 
@@ -425,7 +426,7 @@ mod tests {
     use super::*;
 
     fn toks(list: &[&str]) -> Vec<String> {
-        list.iter().map(|s| s.to_string()).collect()
+        list.iter().map(std::string::ToString::to_string).collect()
     }
 
     #[test]
@@ -460,12 +461,12 @@ mod tests {
 #[cfg(test)]
 mod with_models {
     #[test]
-    #[ignore]
+    #[ignore = "needs the downloaded speech models and COUCOU_TEST_WAV"]
     fn transcribes_a_recording() {
         let path = std::env::var("COUCOU_TEST_WAV").expect("COUCOU_TEST_WAV");
         let bytes = std::fs::read(&path).unwrap();
         let rate = u32::from_le_bytes([bytes[24], bytes[25], bytes[26], bytes[27]]);
-        let pcm: Vec<f32> = bytes[44..].chunks_exact(2).map(|b| i16::from_le_bytes([b[0], b[1]]) as f32 / 32768.0).collect();
+        let pcm: Vec<f32> = bytes[44..].chunks_exact(2).map(|b| f32::from(i16::from_le_bytes([b[0], b[1]])) / 32768.0).collect();
         let mut r = super::audio::Resampler::new(rate);
         let mut samples = Vec::new();
         r.process(&pcm, &mut samples);

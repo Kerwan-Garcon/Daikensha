@@ -13,6 +13,7 @@ import {
   DEFAULT_LOOK, browPose, easeBrows, isCharacterLook, mouthForEyes,
   type Brows, type MochiLook, type MochiMouth,
 } from "./look";
+import { itemAt } from "../core/arrays";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -37,7 +38,7 @@ interface Tween {
   index: number;
   from: number;
   startMs: number;
-  onComplete?: () => void;
+  onComplete: (() => void) | undefined;
 }
 
 type PropKey =
@@ -615,7 +616,7 @@ export class BotEngine {
     const nowMs = performance.now();
 
     for (const tw of [...this.tweens.values()]) {
-      const k = tw.keys[tw.index];
+      const k = itemAt(tw.keys, tw.index);
       const p = Math.min(1, Math.max(0, (nowMs - tw.startMs) / k[1]));
       this[tw.prop] = tw.from + (k[0] - tw.from) * k[2](p);
       if (p >= 1) {
@@ -1600,7 +1601,7 @@ export class BotEngine {
     x.stroke();
 
     // Fringe: strands ending in points between and over the eyes, longer at the sides.
-    const tips: Array<[number, number]> = [
+    const tips: [number, number][] = [
       [-1.25, 0.55], [-0.92, 0.18], [-0.6, -0.02], [-0.28, -0.1], [0.02, -0.04],
       [0.32, -0.12], [0.62, 0.0], [0.92, 0.18], [1.25, 0.55],
     ];

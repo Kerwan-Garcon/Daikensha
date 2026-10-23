@@ -92,7 +92,7 @@ export function colorDot(
 
   dot.addEventListener("click", () => (closeOpen ? closeOpen() : open()));
   dot.addEventListener("keydown", (e) => {
-    const key = (e as KeyboardEvent).key;
+    const key = (e).key;
     if (key !== "Enter" && key !== " ") return;
     e.preventDefault();
     open();

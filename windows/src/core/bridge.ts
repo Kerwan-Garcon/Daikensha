@@ -8,6 +8,7 @@ import { getCurrentWebview } from "@tauri-apps/api/webview";
 import type { Settings } from "./state";
 import type { RecapHistory, RecapPrefs } from "../recap/summary";
 import type { SpotifyState } from "./spotify";
+import type { EventMap, EventName } from "./events";
 import type { YouTubeMusicState } from "./youtube-music";
 
 export const IS_TAURI =
@@ -182,38 +183,38 @@ export interface PhoneAnswersStatus {
 export const Bridge = {
   boot: () => call<BootInfo>("boot"),
   /** The system's languages as the webview sees them, for Rust's own texts (i18n.rs). */
-  setSystemLanguages: (languages: string[]) => call<void>("set_system_languages", { languages }),
+  setSystemLanguages: (languages: string[]) => call<null>("set_system_languages", { languages }),
 
-  saveSettings: (settings: Settings) => call<void>("save_settings", { settings }),
+  saveSettings: (settings: Settings) => call<null>("save_settings", { settings }),
 
   /** Shrink the window down to the invisible wake strip (hidden) or back to full. */
-  setCollapsed: (collapsed: boolean) => call<void>("set_collapsed", { collapsed }),
+  setCollapsed: (collapsed: boolean) => call<null>("set_collapsed", { collapsed }),
 
   /**
    * Pushes the island shape in window coordinates. Rust flips click-through from
    * its own cursor poll, so the flag is never a frame behind a click.
    */
   setIslandRect: (x: number, y: number, width: number, height: number) =>
-    call<void>("set_island_rect", { x, y, width, height }),
+    call<null>("set_island_rect", { x, y, width, height }),
 
   /** Give the window keyboard focus (chat field) and take it away again. */
-  focusWindow: (focused: boolean) => call<void>("focus_window", { focused }),
+  focusWindow: (focused: boolean) => call<null>("focus_window", { focused }),
 
-  reposition: () => call<void>("reposition"),
+  reposition: () => call<null>("reposition"),
   fitZoom: (dpr: number) => call<boolean>("fit_zoom", { dpr }),
 
   /** Displays the island can be pinned to: `key` is what `settings.screen` stores. */
   listMonitors: () => call<{ key: string; label: string }[]>("list_monitors"),
 
-  openUrl: (url: string) => call<void>("open_url", { url }),
+  openUrl: (url: string) => call<null>("open_url", { url }),
 
   /** Which of these sounds have a file of the user's own in the sounds folder. */
   customSounds: (names: readonly string[]) => call<string[]>("custom_sounds", { names }),
   /** The user's file for one sound, as raw bytes. */
   customSound: (name: string) => call<ArrayBuffer>("custom_sound", { name }),
-  revealSoundsFolder: () => call<void>("reveal_sounds_folder"),
+  revealSoundsFolder: () => call<null>("reveal_sounds_folder"),
   /** Tells the island to read the sounds folder again ("sounds-changed"). */
-  reloadSounds: () => call<void>("reload_sounds"),
+  reloadSounds: () => call<null>("reload_sounds"),
 
   /** "Open terminal" → opens the folder in VS Code when `code` is on PATH. */
   openInVSCode: (path: string | null) => call<boolean>("open_in_vscode", { path }),
@@ -231,12 +232,12 @@ export const Bridge = {
   /** The diff card's ↗: an existing file, in VS Code; never launched by its type. */
   openFileInVSCode: (path: string) => call<boolean>("open_file_in_vscode", { path }),
 
-  quit: () => call<void>("quit_app"),
+  quit: () => call<null>("quit_app"),
 
-  openSettingsWindow: () => call<void>("open_settings_window"),
+  openSettingsWindow: () => call<null>("open_settings_window"),
 
   /** Writes to %LOCALAPPDATA%\Coucou\coucou.log, next to the Rust lines. */
-  log: (message: string) => call<void>("log_line", { message }),
+  log: (message: string) => call<null>("log_line", { message }),
 
   // ── Claude Code hooks ─────────────────────────────────────────────────────
   hooksStatus: () => call<HookStatus>("hooks_status"),
@@ -276,15 +277,15 @@ export const Bridge = {
   codexPlanUsage: () => call<unknown>("codex_plan_usage"),
 
   approvalDecision: (requestId: string, decision: "allow" | "deny") =>
-    call<void>("approval_decision", { requestId, decision }),
+    call<null>("approval_decision", { requestId, decision }),
   /** "The card is up" — until this lands the relay only waits a moment. */
-  approvalAck: (requestId: string) => call<void>("approval_ack", { requestId }),
+  approvalAck: (requestId: string) => call<null>("approval_ack", { requestId }),
   /** Answers a question Claude Code asked: question text → chosen label. */
   approvalAnswer: (requestId: string, answers: Record<string, string | string[]>) =>
-    call<void>("approval_answer", { requestId, answers }),
+    call<null>("approval_answer", { requestId, answers }),
 
   /** "Nobody can act on this" — Claude Code asks in the terminal right away. */
-  approvalDecline: (requestId: string) => call<void>("approval_decline", { requestId }),
+  approvalDecline: (requestId: string) => call<null>("approval_decline", { requestId }),
 
   // ── Phone link (Coucou for Android) ───────────────────────────────────────
   phoneLinkStatus: () => call<PhoneLinkStatus>("phone_link_status"),
@@ -303,11 +304,11 @@ export const Bridge = {
   /** Off by default; only from the switch in Settings. Phones are reconnected so they learn about it. */
   phoneDiffsSetEnabled: (enabled: boolean) => callOrThrow<PhoneDiffsStatus>("phone_diffs_set_enabled", { enabled }),
   /** The answer to a phone's request for a file's diff (the "phone-link-getdiff" event); `conn` says which phone. */
-  phoneLinkSendDiff: (conn: number, diff: PhoneLinkDiff) => call<void>("phone_link_send_diff", { conn, diff }),
+  phoneLinkSendDiff: (conn: number, diff: PhoneLinkDiff) => call<null>("phone_link_send_diff", { conn, diff }),
   phoneServicesStatus: () => call<PhoneServicesStatus>("phone_services_status"),
   /** None by default; only from the ticks in Settings. Phones are reconnected so they learn about it. */
   phoneServicesSet: (services: string[]) => callOrThrow<PhoneServicesStatus>("phone_services_set", { services }),
-  phoneLinkPublishServices: (services: PhoneLinkService[]) => call<void>("phone_link_publish_services", { services }),
+  phoneLinkPublishServices: (services: PhoneLinkService[]) => call<null>("phone_link_publish_services", { services }),
   phoneRelayStatus: () => call<PhoneRelayStatus>("phone_relay_status"),
   /** Off by default; needs a valid wss:// address and a stored access key. */
   phoneRelaySet: (enabled: boolean, url: string) => callOrThrow<PhoneRelayStatus>("phone_relay_set", { enabled, url }),
@@ -316,22 +317,22 @@ export const Bridge = {
   phoneUsageStatus: () => call<PhoneUsageStatus>("phone_usage_status"),
   /** Off by default; only from the switch in Settings. Phones are reconnected so they learn about it. */
   phoneUsageSetEnabled: (enabled: boolean) => callOrThrow<PhoneUsageStatus>("phone_usage_set_enabled", { enabled }),
-  phoneLinkPublishUsage: (usage: PhoneLinkUsage) => call<void>("phone_link_publish_usage", { usage }),
+  phoneLinkPublishUsage: (usage: PhoneLinkUsage) => call<null>("phone_link_publish_usage", { usage }),
   phoneChatStatus: () => call<PhoneChatStatus>("phone_chat_status"),
   /** Off by default; only from the switch in Settings. Phones are reconnected so they learn about it. */
   phoneChatSetEnabled: (enabled: boolean) => callOrThrow<PhoneChatStatus>("phone_chat_set_enabled", { enabled }),
   phoneChatSetModels: (models: string[]) => callOrThrow<PhoneChatStatus>("phone_chat_set_models", { models }),
   phoneLinkPublish: (sessions: PhoneLinkSession[], approval: PhoneLinkApproval | null) =>
-    call<void>("phone_link_publish", { sessions, approval }),
-  phoneLinkPublishQuestion: (question: PhoneLinkQuestion | null) => call<void>("phone_link_publish_question", { question }),
+    call<null>("phone_link_publish", { sessions, approval }),
+  phoneLinkPublishQuestion: (question: PhoneLinkQuestion | null) => call<null>("phone_link_publish_question", { question }),
   /** What Mochi wears ("auto" or an outfit), for phones that asked for it. */
-  phoneLinkPublishPrefs: (outfit: string) => call<void>("phone_link_publish_prefs", { outfit }),
+  phoneLinkPublishPrefs: (outfit: string) => call<null>("phone_link_publish_prefs", { outfit }),
 
   // ── Chat, files, secrets ──────────────────────────────────────────────────
   /** One chat turn. The API key and any file bytes never leave Rust. */
   chatSend: (query: string, context: ChatContext | null) =>
     callOrThrow<{ text: string }>("chat_send", { query, context }),
-  chatReset: () => call<void>("chat_reset"),
+  chatReset: () => call<null>("chat_reset"),
   /**
    * The models a provider offers, for the picker in the chat view. Rust asks
    * the provider only when it has a key (or a server address).
@@ -339,55 +340,55 @@ export const Bridge = {
   chatModels: (provider: string) => callOrThrow<ModelInfo[]>("chat_models", { provider }),
   // ── Coucou Shell (views/shell.ts) ─────────────────────────────────────────
   /** The panel opens or closes: the window grows for it, then shrinks back. */
-  setShellOpen: (open: boolean) => call<void>("set_shell_open", { open }),
+  setShellOpen: (open: boolean) => call<null>("set_shell_open", { open }),
   shellCapabilities: () => call<ShellCapabilities>("shell_capabilities"),
   shellStats: (top: boolean) => callOrThrow<ShellStats>("shell_stats", { top }),
-  shellStatsReset: () => call<void>("shell_stats_reset"),
+  shellStatsReset: () => call<null>("shell_stats_reset"),
   shellControls: () => callOrThrow<ShellControls>("shell_controls"),
-  shellSetVolume: (level: number) => callOrThrow<void>("shell_set_volume", { level }),
-  shellSetMute: (muted: boolean) => callOrThrow<void>("shell_set_mute", { muted }),
-  shellSetRadio: (kind: string, on: boolean) => callOrThrow<void>("shell_set_radio", { kind, on }),
-  shellSetBrightness: (index: number, value: number) => callOrThrow<void>("shell_set_brightness", { index, value }),
-  shellOpenSettings: (page: ShellSettingsPage) => callOrThrow<void>("shell_open_settings", { page }),
+  shellSetVolume: (level: number) => callOrThrow<null>("shell_set_volume", { level }),
+  shellSetMute: (muted: boolean) => callOrThrow<null>("shell_set_mute", { muted }),
+  shellSetRadio: (kind: string, on: boolean) => callOrThrow<null>("shell_set_radio", { kind, on }),
+  shellSetBrightness: (index: number, value: number) => callOrThrow<null>("shell_set_brightness", { index, value }),
+  shellOpenSettings: (page: ShellSettingsPage) => callOrThrow<null>("shell_open_settings", { page }),
   shellWindows: () => callOrThrow<ShellWindow[]>("shell_windows"),
-  shellWindowAction: (id: string, action: ShellWindowAction) => callOrThrow<void>("shell_window_action", { id, action }),
+  shellWindowAction: (id: string, action: ShellWindowAction) => callOrThrow<null>("shell_window_action", { id, action }),
   shellLayouts: () => callOrThrow<ShellLayout[]>("shell_layouts"),
   shellLayoutSave: (name: string) => callOrThrow<ShellLayout[]>("shell_layout_save", { name }),
   shellLayoutApply: (name: string) => callOrThrow<number>("shell_layout_apply", { name }),
   shellLayoutDelete: (name: string) => callOrThrow<ShellLayout[]>("shell_layout_delete", { name }),
   shellApps: () => callOrThrow<ShellApp[]>("shell_apps"),
-  shellAppLaunch: (id: string) => callOrThrow<void>("shell_app_launch", { id }),
+  shellAppLaunch: (id: string) => callOrThrow<null>("shell_app_launch", { id }),
   shellTodos: () => callOrThrow<ShellTodo[]>("shell_todos"),
   shellTodoChange: (change: ShellTodoChange) => callOrThrow<ShellTodo[]>("shell_todo_change", { change }),
   shellWeather: () => callOrThrow<ShellWeather | null>("shell_weather"),
   shellClipboard: () => callOrThrow<ShellClip[]>("shell_clipboard"),
-  shellClipboardCopy: (id: number) => callOrThrow<void>("shell_clipboard_copy", { id }),
+  shellClipboardCopy: (id: number) => callOrThrow<null>("shell_clipboard_copy", { id }),
   shellClipboardRemove: (id: number) => callOrThrow<ShellClip[]>("shell_clipboard_remove", { id }),
-  shellClipboardClear: () => call<void>("shell_clipboard_clear"),
+  shellClipboardClear: () => call<null>("shell_clipboard_clear"),
   shellWallpapers: () => callOrThrow<ShellWallpapers>("shell_wallpapers"),
   shellWallpaperAdd: (paths: string[]) => callOrThrow<ShellWallpapers>("shell_wallpaper_add", { paths }),
   shellWallpaperDelete: (id: string) => callOrThrow<ShellWallpapers>("shell_wallpaper_delete", { id }),
-  shellWallpaperApply: (id: string, screen: number | null) => callOrThrow<void>("shell_wallpaper_apply", { id, screen }),
+  shellWallpaperApply: (id: string, screen: number | null) => callOrThrow<null>("shell_wallpaper_apply", { id, screen }),
   shellBattery: () => callOrThrow<ShellBattery>("shell_battery"),
   shellPowerPrepare: (action: ShellPowerAction) => callOrThrow<ShellCard>("shell_power_prepare", { action }),
-  shellConfirm: (token: string) => callOrThrow<void>("shell_confirm", { token }),
-  shellConfirmCancel: () => call<void>("shell_confirm_cancel"),
+  shellConfirm: (token: string) => callOrThrow<null>("shell_confirm", { token }),
+  shellConfirmCancel: () => call<null>("shell_confirm_cancel"),
   shellRoutines: () => callOrThrow<ShellRoutine[]>("shell_routines"),
   // « Entoure et demande » (shell/capture.rs): the pixels never come to a page, only the preview.
-  circleStart: () => call<void>("circle_start"),
+  circleStart: () => call<null>("circle_start"),
   /** The taskbar back, and the « top bar » mode off (shell/appbar.rs). */
-  shellTopBarOff: () => call<void>("shell_top_bar_off"),
-  circleCapture: (x: number, y: number, width: number, height: number) => callOrThrow<void>("circle_capture", { x, y, width, height }),
-  circleCancel: () => call<void>("circle_cancel"),
+  shellTopBarOff: () => call<null>("shell_top_bar_off"),
+  circleCapture: (x: number, y: number, width: number, height: number) => callOrThrow<null>("circle_capture", { x, y, width, height }),
+  circleCancel: () => call<null>("circle_cancel"),
   circlePreview: () => call<string | null>("circle_preview"),
-  circleDiscard: () => call<void>("circle_discard"),
+  circleDiscard: () => call<null>("circle_discard"),
   shellRoutineDelete: (id: number) => callOrThrow<ShellRoutine[]>("shell_routine_delete", { id }),
 
   /** Settings → Claude → Check: is Claude Code installed and signed in to a subscription? */
   claudeCliStatus: () => call<ClaudeCliStatus>("claude_cli_status"),
   /** Settings → Local models → Connect: does the server answer, and with which models? */
   /** The custom server's key, bound to the address it is entered for. */
-  localSetKey: (url: string, key: string) => call<void>("local_set_key", { url, key }),
+  localSetKey: (url: string, key: string) => call<null>("local_set_key", { url, key }),
 
   localConnect: (provider: "ollama" | "lmstudio" | "custom", url: string) =>
     callOrThrow<LocalServer>("local_connect", { provider, url }),
@@ -395,65 +396,65 @@ export const Bridge = {
   ingestFile: (path: string) => callOrThrow<DroppedFile>("ingest_file", { path }),
   /** Only ever tells you whether a key exists — never its value. */
   secretPresent: (key: string) => call<boolean>("secret_present", { key }),
-  secretSet: (key: string, value: string) => callOrThrow<void>("secret_set", { key, value }),
-  secretClear: (key: string) => callOrThrow<void>("secret_clear", { key }),
+  secretSet: (key: string, value: string) => callOrThrow<null>("secret_set", { key, value }),
+  secretClear: (key: string) => callOrThrow<null>("secret_clear", { key }),
 
   // ── Integrations ──────────────────────────────────────────────────────────
-  refreshIntegration: (id: string) => call<void>("refresh_integration", { id }),
+  refreshIntegration: (id: string) => call<null>("refresh_integration", { id }),
   /** The GitHub card is on screen: refetch that part if it is stale. */
-  githubRefresh: (section: "pulse" | "activity") => call<void>("github_refresh", { section }),
+  githubRefresh: (section: "pulse" | "activity") => call<null>("github_refresh", { section }),
   /** Opens the configured n8n instance in the browser. */
-  openN8n: () => call<void>("open_n8n"),
+  openN8n: () => call<null>("open_n8n"),
   /** Linear: moves an issue to the state its button shows. Throws Linear's reason. */
   linearAdvance: (issueId: string, stateId: string) =>
-    callOrThrow<void>("linear_advance", { issueId, stateId }),
+    callOrThrow<null>("linear_advance", { issueId, stateId }),
   /** Linear: creates an issue assigned to me in the chosen team. Throws Linear's reason. */
-  linearCreate: (title: string) => callOrThrow<void>("linear_create", { title }),
+  linearCreate: (title: string) => callOrThrow<null>("linear_create", { title }),
   /** The teams the Linear key can see, for Settings. */
   linearTeams: () => call<{ id: string; key: string; name: string }[]>("linear_teams"),
 
   /** Tray → Pause. Stops the integration pollers, not just the island. */
-  setPaused: (paused: boolean) => call<void>("set_paused", { paused }),
+  setPaused: (paused: boolean) => call<null>("set_paused", { paused }),
 
   // ── Global shortcuts ──────────────────────────────────────────────────────
   /** How each global shortcut went when Rust last registered them. */
   shortcutsStatus: () => call<ShortcutsReport>("shortcuts_status"),
   /** Lets go of every global shortcut while Settings records a new one. */
-  shortcutsSuspend: (suspended: boolean) => call<void>("shortcuts_suspend", { suspended }),
+  shortcutsSuspend: (suspended: boolean) => call<null>("shortcuts_suspend", { suspended }),
 
   // ── Weekly recap ──────────────────────────────────────────────────────────
   /** Turns and decisions from `since` (Unix seconds) on, plus the recap prefs. */
   recapHistory: (since: number) => call<RecapHistory>("recap_history", { since: Math.floor(since) }),
   recapPrefs: () => call<RecapPrefs>("recap_prefs"),
-  recapSetEnabled: (enabled: boolean) => call<void>("recap_set_enabled", { enabled }),
-  recapSetHideProjects: (hide: boolean) => call<void>("recap_set_hide_projects", { hide }),
+  recapSetEnabled: (enabled: boolean) => call<null>("recap_set_enabled", { enabled }),
+  recapSetHideProjects: (hide: boolean) => call<null>("recap_set_hide_projects", { hide }),
   /** `week` is the Monday (YYYY-MM-DD) the recap opened on its own for. */
-  recapMarkShown: (week: string) => call<void>("recap_mark_shown", { week }),
-  recapClear: () => call<void>("recap_clear"),
+  recapMarkShown: (week: string) => call<null>("recap_mark_shown", { week }),
+  recapClear: () => call<null>("recap_clear"),
   /** Writes the PNG (a data URL) into Pictures or Downloads; returns its path. */
   recapSavePng: (data: string, week: string) => callOrThrow<string>("recap_save_png", { data, week }),
   /** Opens the folder of the image saved last. */
-  recapRevealSaved: () => call<void>("recap_reveal_saved"),
+  recapRevealSaved: () => call<null>("recap_reveal_saved"),
 
   // ── Mochi on the desktop (src-tauri/src/desktop.rs) ───────────────────────
   desktopInfo: () => call<DesktopInfo>("desktop_mochi_info"),
   /** Dragged out of the island: (x, y) is the pointer in island-window coordinates. */
   desktopPickUp: (x: number, y: number) => call<boolean>("desktop_mochi_pick_up", { x, y }),
   /** Linux: the pointer moved during that drag (Windows carries him from Rust). */
-  desktopCarry: (x: number, y: number) => call<void>("desktop_mochi_carry", { x, y }),
-  desktopCarryEnd: (x: number, y: number) => call<void>("desktop_mochi_carry_end", { x, y }),
+  desktopCarry: (x: number, y: number) => call<null>("desktop_mochi_carry", { x, y }),
+  desktopCarryEnd: (x: number, y: number) => call<null>("desktop_mochi_carry_end", { x, y }),
   /** A drag started on the desktop Mochi; resolves to his top-left corner. */
   desktopDragBegin: () => call<[number, number] | null>("desktop_mochi_drag_begin"),
   /** X11: top-left corner, physical pixels. */
-  desktopDragMove: (x: number, y: number) => call<void>("desktop_mochi_drag_move", { x, y }),
-  desktopDragEnd: (x: number, y: number) => call<void>("desktop_mochi_drag_end", { x, y }),
+  desktopDragMove: (x: number, y: number) => call<null>("desktop_mochi_drag_move", { x, y }),
+  desktopDragEnd: (x: number, y: number) => call<null>("desktop_mochi_drag_end", { x, y }),
   /** From the island to his spot. False: no spot on any connected display.
    *  `anywhere`: the first-visit corner then, rather than staying home. */
   desktopFlyOut: (anywhere = false) => call<boolean>("desktop_mochi_fly_out", { anywhere }),
   /** To the island, then hidden. `forget`: he lives in the island again. */
   desktopFlyHome: (forget: boolean) => call<boolean>("desktop_mochi_fly_home", { forget }),
   /** Asleep, the cursor poll stops. */
-  desktopSetAsleep: (asleep: boolean) => call<void>("desktop_mochi_set_asleep", { asleep }),
+  desktopSetAsleep: (asleep: boolean) => call<null>("desktop_mochi_set_asleep", { asleep }),
 
   // ── Spotify (src-tauri/src/spotify.rs) ────────────────────────────────────
   /** Reads the player again (the card came on screen) and reports it. */
@@ -648,12 +649,6 @@ async function callOrThrow<T>(cmd: string, args?: Record<string, unknown>): Prom
   return invoke<T>(cmd, args);
 }
 
-export type BridgeEvent =
-  | { name: "cursor"; payload: { x: number; y: number } }
-  | { name: "tray"; payload: string }
-  | { name: "hook"; payload: Record<string, unknown> }
-  | { name: "screen-changed"; payload: null };
-
 export interface DragDropPayload {
   type: "enter" | "over" | "drop" | "leave";
   paths?: string[];
@@ -677,7 +672,7 @@ export async function onDragDrop(handler: (e: DragDropPayload) => void) {
   const webview = (window as unknown as { chrome?: { webview?: WebView2Bridge } }).chrome?.webview;
   if (!webview) {
     return getCurrentWebview().onDragDropEvent((event) => {
-      handler(event.payload as DragDropPayload);
+      handler(event.payload);
     });
   }
   const hasFiles = (e: DragEvent) => e.dataTransfer?.types.includes("Files") ?? false;
@@ -725,7 +720,8 @@ export async function onDragDrop(handler: (e: DragDropPayload) => void) {
   };
 }
 
-export async function onEvent<T>(name: string, handler: (payload: T) => void) {
+/** Listens to an event from Rust; the payload type comes from EventMap (events.ts). */
+export async function onEvent<N extends EventName>(name: N, handler: (payload: EventMap[N]) => void) {
   if (!IS_TAURI) return () => {};
-  return listen<T>(name, (e) => handler(e.payload));
+  return listen<EventMap[N]>(name, (e) => handler(e.payload));
 }

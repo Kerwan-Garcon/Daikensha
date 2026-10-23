@@ -85,7 +85,7 @@ pub fn assign(words: &[TimedWord], turns: &[Turn], fallback: &str) -> Vec<(Strin
     words
         .iter()
         .map(|w| {
-            let mid = (w.start + w.end) / 2.0;
+            let mid = f64::midpoint(w.start, w.end);
             if let Some(turn) = turns.iter().find(|t| mid >= t.start && mid <= t.end) {
                 return (turn.speaker.clone(), w.clone());
             }
@@ -179,7 +179,7 @@ pub fn build(
     for mut line in all {
         if line.speaker != ME {
             if let Some(id) = ids.get(&line.speaker) {
-                line.speaker = id.clone();
+                line.speaker.clone_from(id);
             } else {
                 let number = speakers.iter().filter(|s| !s.is_me).count() + 2;
                 let id = format!("p{number}");
