@@ -776,6 +776,7 @@ fn open_settings_window(app: AppHandle, page: Option<String>) {
 }
 
 pub fn run() {
+    log::install_crash_log();
     platform::prepare_environment();
     let loaded = settings::load();
     i18n::set_picked(&loaded.language);
@@ -1076,6 +1077,7 @@ pub fn run() {
         .run(|app, event| {
             // Withdraw the phone link's announcement on the local network before the process ends.
             if let tauri::RunEvent::Exit = event {
+                log::line("exiting normally");
                 phone_link::stop_on_exit(app);
                 notes::shutdown(app);
                 shell::appbar::on_exit();
